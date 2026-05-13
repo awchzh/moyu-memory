@@ -223,7 +223,7 @@ def demo() -> dict:
   moyu update          → Download & apply update (preserves data)
   moyu update --dry    → Preview what would happen
 
-  16 capabilities and growing.
+  15 capabilities and growing.
 """,
     }
 

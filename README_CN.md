@@ -1,6 +1,6 @@
 # MOYU — AI Agent 记忆工具包
 
-**16 大记忆能力，让 AI Agent 跨会话真正记得你是谁。**
+**15 大记忆能力，让 AI Agent 跨会话真正记得你是谁。**
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -44,7 +44,7 @@ cd moyu_toolkit && python3 security.py setup
 
 ---
 
-## 16 大能力 — 按领域分组
+## 15 大能力 — 按领域分组
 
 ### 📦 记忆层 — 存储与检索
 
@@ -79,8 +79,7 @@ cd moyu_toolkit && python3 security.py setup
 | 1️⃣2️⃣ | **上下文自适应压缩** | 实时检测上下文占用率。80% 预警通知用户，90% 自动静默压缩——降级低优先级项、截断长记忆、节省 token。支持手动触发（`moyu compress --now`）。 |
 | 1️⃣3️⃣ | **遗忘曲线** | 14 天未访问的记忆自动降级——但**只在上下文有压力时才触发**（低频率用户一条不动）。降级记忆仍可搜索，重新访问即可恢复。 |
 | 1️⃣4️⃣ | **记忆合并** | 检测关键词重叠的相关记忆，自动合并为一条综合摘要。原始细节存入可展开字段，不丢失任何信息。 |
-| 1️⃣5️⃣ | **跨会话桥接** | 自动在会话之间传承主题和关键信息。新窗口开口说"继续上次"——上下文已经就绪。不提旧事——零开销。 |
-| 1️⃣6️⃣ | **自动更新** | 自动检测 GitHub 新版本，一键更新工具包——保留 memory_data 和用户配置。`moyu update` 检查，`moyu update now` 更新。 |
+| 1️⃣5️⃣ | **自动更新** | 自动检测 GitHub 新版本，一键更新工具包——保留 memory_data 和用户配置。`moyu update` 检查，`moyu update now` 更新。 |
 
 ---
 
@@ -102,7 +101,6 @@ cd moyu_toolkit && python3 security.py setup
 | 上下文自适应压缩 | ❌ 无 | **✅ 80%预警 / 90%自动压 / 手动触发** |
 | 遗忘曲线 | ❌ 无 | **✅ 压力驱动生命周期** |
 | 记忆合并 | ❌ 无 | **✅ 关键词重叠自动合并** |
-| 跨会话桥接 | ❌ 无 | **✅ 自动传承上下文** |
 | 自动更新 | ❌ 无 | **✅ GitHub 一键更新，保留数据** |
 | API 切换 | 固定 | **✅ 随意切换** |
 | 平台绑定 | 绑定平台 | **✅ 零绑定** |
