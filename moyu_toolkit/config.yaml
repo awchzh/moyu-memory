@@ -58,3 +58,18 @@ security:
   # safe_word_hash: ""  # SHA256 hash, plaintext not stored
   lockout_threshold: 3   # Lock after this many consecutive failures
   lockout_minutes: 30    # Lockout duration in minutes
+
+compression:
+  # Context-aware compression (V2.0)
+  enabled: true
+  budget_chars: 2000      # Target injection budget in chars (~500 tokens)
+  warning_threshold: 0.8  # Warn when usage exceeds 80%: ⚠️ 建议压缩
+  auto_threshold: 0.9     # Auto-compress at 90% (silent, logged)
+  # Manual trigger command: moyu compress --now
+  # Custom trigger symbol (e.g. 🚚): set in your agent config
+
+forgetting_curve:
+  # Memory lifecycle (V2.0)
+  enabled: true
+  demote_days: 14    # Memories not accessed in 14 days → demoted (not auto-injected)
+  archive_days: 60   # Demoted + not accessed in 60 days → mark as archivable

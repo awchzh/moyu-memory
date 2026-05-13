@@ -1,6 +1,6 @@
 # MOYU — AI Agent Memory Toolkit
 
-**11 memory capabilities for your AI Agent. Remember who you are across conversations. No code rewrite required.**
+**16 memory capabilities for your AI Agent. Remember who you are across conversations. No code rewrite required.**
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -43,21 +43,43 @@ This is your memory's first line of defense. Unlike Integrity Check + Auto Recov
 
 ---
 
-## 11 Capabilities
+## 16 Capabilities — Grouped by Domain
+
+### 📦 Memory Layer — Store & Find
 
 | # | Capability | What it does |
 |---|-----------|-------------|
 | 1️⃣ | **TEMPR Multi-Strategy Retrieval** | Semantic + BM25 + time-weighted — always finds what you need |
 | 2️⃣ | **Working Memory** | Survives context compression — remembers current task |
 | 3️⃣ | **Knowledge Graph** | Auto-extracts entities & relations from conversation (JSON, no database) |
-| 4️⃣ | **Self-Reflection** | Analyzes old memories on wake — finds connections & contradictions |
-| 5️⃣ | **User Profile** | Auto-extracts user preferences, habits, facts from conversation |
+| 4️⃣ | **User Profile** | Auto-extracts user preferences, habits, facts from conversation |
+| 5️⃣ | **Deduplication** | SHA256 hash — same content never stored twice |
+
+### 🧠 Learning Layer — Improve From Interaction
+
+| # | Capability | What it does |
+|---|-----------|-------------|
 | 6️⃣ | **Learn from Corrections** | Detects "no/don't/remember" signals — learns lessons after 3 same mistakes |
-| 7️⃣ | **Deduplication** | SHA256 hash — same content never stored twice |
+| 7️⃣ | **Self-Reflection** | Analyzes old memories on wake — finds connections & contradictions |
+
+### 🛡️ Defense Layer — Protect & Verify
+
+| # | Capability | What it does |
+|---|-----------|-------------|
 | 8️⃣ | **Integrity Verification** | Detects memory file tampering on wake |
 | 9️⃣ | **Auto Recovery** | Automatically restores from backup when tampering detected |
 | 🔟 | **Forensic Analysis** | Analyzes what changed and how — instruction override, prompt injection detection |
-| 1️⃣1️⃣ | **Memory Self-Defense** | First line of defense — prevents accidental deletion and tampering before they happen. Password verification, auto-lockout, and audit trail. |
+| 1️⃣1️⃣ | **Memory Self-Defense** | First line of defense — prevents dangerous operations before they reach your memory files. Password verification, auto-lockout, audit trail. |
+
+### 🌿 Lifecycle Layer — Let Memory Breathe (V2.0)
+
+| # | Capability | What it does |
+|---|-----------|-------------|
+| 1️⃣2️⃣ | **Context-Aware Compression** | Auto-detects context occupancy. At 80% warns the user. At 90% silently compresses — defers low-priority items, truncates long memories, saves tokens. Manual trigger also available (`moyu compress --now`). |
+| 1️⃣3️⃣ | **Forgetting Curve** | Automatically demotes memories not accessed for 14 days — but ONLY when context is under pressure (low-frequency users keep everything). Demoted memories skip automatic injection but remain searchable. Re-accessing restores them. |
+| 1️⃣4️⃣ | **Memory Merge** | Detects related memories by keyword overlap and merges them into a single composite entry. Original details are preserved in an expandable field — nothing is lost. |
+| 1️⃣5️⃣ | **Session Bridge** | Carries topic and key points across sessions automatically. Start a new window, say "continue where we left off" — the context is already there. Say nothing about it — zero overhead. |
+| 1️⃣6️⃣ | **Self-Update** | Checks GitHub for new releases and updates the toolkit in place — preserving memory_data and user config. `moyu update` to check, `moyu update now` to apply. |
 
 ---
 
@@ -76,6 +98,11 @@ This is your memory's first line of defense. Unlike Integrity Check + Auto Recov
 | Auto recovery | ❌ None | **✅ From backup** |
 | Forensic analysis | ❌ None | **✅ Tamper source analysis** |
 | Memory self-defense | ❌ None | **✅ Pre-verification, blocks before damage** |
+| Context-aware compression | ❌ None | **✅ Auto at 90%, warns at 80%, manual trigger** |
+| Forgetting curve | ❌ None | **✅ Pressure-driven lifecycle** |
+| Memory merge | ❌ None | **✅ Keyword overlap merge** |
+| Session bridge | ❌ None | **✅ Cross-session carryover** |
+| Self-update | ❌ None | **✅ GitHub one-click update** |
 | API switching | Fixed | **✅ Hot-swappable** |
 | Platform dependency | Tied to platform | **✅ Zero binding** |
 | Setup time | Out of box | **pip install, 5min** |
@@ -102,6 +129,12 @@ moyu_toolkit/
 ├── learner.py                # Learn from user corrections
 ├── security.py               # Memory self-defense — first line of defense
 ├── moyu.py                    # Unified CLI entry point
+├── context_manager.py         # Context-aware compression (V2.0)
+├── forgetting_curve.py        # Memory lifecycle demotion (V2.0)
+├── memory_merge.py            # Topic-aware memory merge (V2.0)
+├── session_bridge.py          # Cross-session carryover (V2.0)
+├── updater.py                 # Self-update (V2.0)
+├── moyu_wake.py               # Wake-up integration flow (V2.0)
 ├── defense_toolkit/
 │   └── integrity_checker.py  # File integrity + auto recovery
 ├── config.yaml               # API keys & settings (fill in yours)

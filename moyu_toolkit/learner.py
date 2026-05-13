@@ -318,6 +318,21 @@ def stats():
     for l in all_l:
         if not l.get("promoted"):
             print(f"  ⏳ [{l['count']} times] {l['lesson'][:60]}")
+    print()
+
+def signals():
+    """Print active trigger words."""
+    active = _all_signals()
+    learned = _load_learned_signals()
+    print(f"\n🔊 Active trigger words ({len(active)})")
+    print("=" * 40)
+    for s in DEFAULT_SIGNALS:
+        print(f"  🧬 {s}")
+    if learned:
+        print(f"\n🧠 Adaptive:")
+        for s in learned:
+            print(f"  • {s}")
+    print()
 
 def demo() -> dict:
     """Return demo content for moyu_demo.py discovery engine."""

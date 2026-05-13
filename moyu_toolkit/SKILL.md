@@ -1,14 +1,14 @@
 ---
 |name: moyu
 description: MOYU — AI Agent 记忆工具包。TEMPR 多策略检索、工作记忆、知识图谱、自我反思、学习信号、自动恢复、记忆自我保护等 11 大能力。
-tags: [ai-agent, memory, python, agent-memory, llm, rag, knowledge-graph, security]
+tags: [ai-agent, memory, python, agent-memory, llm, rag, knowledge-graph, security, 记忆, 工具包, AI Agent, 向量检索, 知识图谱, 检索增强]
 ---
 
 # MOYU — AI Agent 记忆工具包
 
 > 给你的 AI Agent 装上 11 大记忆能力，跨会话真正记得你是谁。
 
-GitHub 仓库：https://github.com/awchzh/moyu
+GitHub 仓库：https://github.com/awchzh/moyu-memory
 
 ## 11 大能力
 
