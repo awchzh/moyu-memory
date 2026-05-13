@@ -75,7 +75,7 @@ This is your memory's first line of defense. Unlike Integrity Check + Auto Recov
 
 | # | Capability | What it does |
 |---|-----------|-------------|
-| 1️⃣2️⃣ | **Context-Aware Compression** | Auto-detects context occupancy. At 80% warns the user. At 90% silently compresses — defers low-priority items, truncates long memories, saves tokens. Manual trigger also available (`moyu compress --now`). |
+| 1️⃣2️⃣ | **Context-Aware Compression** | Auto-compresses when usage exceeds 90% — defers low-priority items, truncates long memories, saves tokens. Manual trigger (`moyu compress --now`) and status check (`moyu context`) also available. |
 | 1️⃣3️⃣ | **Forgetting Curve** | Automatically demotes memories not accessed for 14 days — but ONLY when context is under pressure (low-frequency users keep everything). Demoted memories skip automatic injection but remain searchable. Re-accessing restores them. |
 | 1️⃣4️⃣ | **Memory Merge** | Detects related memories by keyword overlap and merges them into a single composite entry. Original details are preserved in an expandable field — nothing is lost. |
 | 1️⃣5️⃣ | **Self-Update** | Checks GitHub for new releases and updates the toolkit in place — preserving memory_data and user config. `moyu update` to check, `moyu update now` to apply. |
@@ -97,7 +97,7 @@ This is your memory's first line of defense. Unlike Integrity Check + Auto Recov
 | Auto recovery | ❌ None | **✅ From backup** |
 | Forensic analysis | ❌ None | **✅ Tamper source analysis** |
 | Memory self-defense | ❌ None | **✅ Pre-verification, blocks before damage** |
-| Context-aware compression | ❌ None | **✅ Auto at 90%, warns at 80%, manual trigger** |
+| Context-aware compression | ❌ None | **✅ Auto at 90%, manual trigger** |
 | Forgetting curve | ❌ None | **✅ Pressure-driven lifecycle** |
 | Memory merge | ❌ None | **✅ Keyword overlap merge** |
 | Self-update | ❌ None | **✅ GitHub one-click update** |
