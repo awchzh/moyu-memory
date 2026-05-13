@@ -50,7 +50,7 @@ This is your memory's first line of defense. Unlike Integrity Check + Auto Recov
 | # | Capability | What it does |
 |---|-----------|-------------|
 | 1️⃣ | **TEMPR Multi-Strategy Retrieval** | Semantic + BM25 + time-weighted — always finds what you need |
-| 2️⃣ | **Working Memory** | Survives context compression — remembers current task |
+| 2️⃣ | **Working Memory** | Survives context compression — remembers current task. Built-in workflow knowledge base — tell your AI "remember this" and completed workflows auto-save as markdown. Retrieve with `moyu kb search`, or let your AI's system prompt trigger auto-lookup |
 | 3️⃣ | **Knowledge Graph** | Auto-extracts entities & relations. Local regex mode (no API key needed), upgrades to semantic deep extraction with API key |
 | 4️⃣ | **User Profile** | Auto-extracts preferences, habits, facts. Local regex mode (no API key needed), upgrades to semantic deep extraction with API key |
 | 5️⃣ | **Deduplication** | SHA256 hash — same content never stored twice |
@@ -126,6 +126,8 @@ moyu_toolkit/
 ├── knowledge_graph.py        # Entity-relation graph
 ├── learner.py                # Learn from user corrections
 ├── security.py               # Memory self-defense — first line of defense
+├── self_reflection.py        # Self-Reflection — analyzes connections & contradictions on wake (V2.0.3)
+├── knowledge_base.py         # Workflow knowledge base — searchable recipe book (V2.0.3)
 ├── moyu.py                    # Unified CLI entry point
 ├── context_manager.py         # Context-aware compression (V2.0)
 ├── forgetting_curve.py        # Memory lifecycle demotion (V2.0)

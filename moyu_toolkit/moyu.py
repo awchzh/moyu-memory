@@ -110,6 +110,8 @@ CMD_TABLE = {
     "bridge":     lambda args: _import("session_bridge").status(),
     "update":     lambda args: _update(args),
     "demo":       lambda args: cmd_demo(),
+    "reflect":    lambda args: _call_func("self_reflection", "run", []),
+    "kb":         lambda args: _kb_handler(args),
 }
 
 
@@ -192,6 +194,52 @@ def _update(args):
         print(result["message"])
     else:
         up.stats()
+
+
+def _kb_handler(args):
+    """Handle knowledge base commands: search, list, index, read."""
+    kb = _import("knowledge_base")
+    if not args or args[0] in ("help", "--help"):
+        print("moyu kb commands:")
+        print("  moyu kb index              Rebuild keyword index")
+        print("  moyu kb search  <query>    Search knowledge files")
+        print("  moyu kb list               List all knowledge files")
+        print("  moyu kb read   <file>      Read a knowledge file")
+        return
+    subcmd = args[0]
+    subargs = args[1:]
+    if subcmd == "index":
+        idx = kb.index()
+        print(f"Indexed {idx['total']} knowledge files")
+    elif subcmd == "search":
+        query = " ".join(subargs)
+        if not query:
+            print("Usage: moyu kb search <query>")
+            return
+        results = kb.search(query)
+        if results:
+            print(f"\n📚 Knowledge Base results for: {query}")
+            print("=" * 40)
+            for r in results:
+                print(f"  📄 {r['filename']} (score: {r['score']})")
+                print(f"     path: {r['path']}")
+                if r.get("triggers"):
+                    print(f"     triggers: {', '.join(r['triggers'][:5])}")
+                print()
+        else:
+            print(f"No results for '{query}'. Try `moyu kb index` first, or add files to knowledge/")
+    elif subcmd == "list":
+        kb.stats()
+    elif subcmd == "read":
+        fname = " ".join(subargs)
+        content = kb.read(fname)
+        if content:
+            print(content)
+        else:
+            print(f"File not found. Try `moyu kb list` to see available files.")
+    else:
+        print(f"Unknown kb subcommand: {subcmd}")
+        print("Usage: moyu kb {index|search|list|read}")
 
 
 def show_help():

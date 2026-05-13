@@ -68,3 +68,7 @@ moyu_toolkit/__pycache__/
 .context_bridge.pid
 context_bridge.py
 current_context.md
+
+# 用户本地工作流记录，非工具包内容
+workflow-recipes/
+protocols/
