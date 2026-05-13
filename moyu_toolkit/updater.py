@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "1.3.1"
+VERSION = "2.0.0"
 
 TOOLKIT_DIR = Path(__file__).parent.resolve()
 REPO = "awchzh/moyu-memory"
