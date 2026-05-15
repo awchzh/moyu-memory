@@ -418,7 +418,7 @@ def _forget_set(key: str, value: str):
 
 
 def _update(args):
-    """Handle update command — check and apply updates."""
+    """Handle update command — check, confirm, and apply updates."""
     up = _import("updater")
     if "--dry" in args or "check" in args:
         info = up.check()
@@ -427,7 +427,25 @@ def _update(args):
         else:
             print(f"Current: v{info['current']} → Latest: v{info['latest']}")
             print(f"Update available: {info['is_newer']}")
+            if info.get("body"):
+                print(f"\nChanges:\n{info['body'][:200]}")
     elif "now" in args or "apply" in args:
+        # Preview changes and confirm
+        info = up.check()
+        if "error" in info:
+            print(f"Error: {info['error']}")
+            return
+        if not info.get("is_newer"):
+            print(f"Already up to date (v{info['current']})")
+            return
+        print(f"Update: v{info['current']} → v{info['latest']}")
+        if info.get("body"):
+            print(f"Changes:\n{info['body'][:200]}")
+        print()
+        confirm = input("Apply this update? (y/N): ").strip().lower()
+        if confirm not in ("y", "yes"):
+            print("Update cancelled.")
+            return
         result = up.update()
         print(result["message"])
     else:
