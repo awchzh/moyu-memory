@@ -89,6 +89,7 @@ cd moyu_toolkit && python3 moyu.py <command> [args]
 | `moyu kb search <query>` | Search knowledge files |
 | `moyu kb index` | Rebuild keyword index |
 | `moyu kb read <file>` | Read a knowledge file |
+| `moyu kg search <entity>` | Search knowledge graph for entities and relations |
 
 ### 🔗 Session & Updates
 

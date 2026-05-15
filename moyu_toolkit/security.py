@@ -347,8 +347,22 @@ def unlock():
         return False
 
 
+
+
+def check_password_set() -> bool:
+    """Silently check if a password is set (no print output)."""
+    sec = _read_config()
+    return bool(sec.get("safe_word_hash", ""))
+
+
+def _is_password_set() -> bool:
+    """(deprecated, use check_password_set)"""
+    return check_password_set()
+
+
+# ==================== Public API ====================
+
 def status() -> dict:
-    """View security status"""
     sec = _read_config()
     lock = _check_lock()
     has_pw = bool(sec.get("safe_word_hash", ""))

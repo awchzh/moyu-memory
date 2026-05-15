@@ -153,12 +153,7 @@ def wake(dry_run: bool = False) -> str:
     if merged_count:
         messages.append(f"合并了 {merged_count} 组相关记忆")
 
-    # Warning first (if applicable)
-    warn_msg = cm.warning_message()
-    if warn_msg:
-        messages.append(warn_msg)
-
-    # Compression report (if happened)
+    # Compression report
     report_msg = cm.last_report_message()
     if report_msg:
         messages.append(report_msg)

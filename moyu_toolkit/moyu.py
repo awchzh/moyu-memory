@@ -55,6 +55,15 @@ def cmd_stats():
     mem.stats()
     ctx.status()
     lrn.stats()
+    # User profile stats
+    try:
+        profile = lrn.profile_stats()
+        if profile["count"]:
+            print(f"📋 User Profile ({profile['count']} fields): {', '.join(profile['fields'])}")
+        else:
+            print(f"📋 User Profile: no data yet (auto-extracted from conversation)")
+    except Exception:
+        pass
     try:
         sec = _import("security")
         sec.status()
@@ -72,21 +81,11 @@ def cmd_audit():
 
     # Layer 1: Memory Self-Defense (pre-operation)
     sec_mod = _import("security")
-    import json as _json
-    import os as _os
-    # Read security config directly (avoid sec.status() which prints)
-    sec_cfg_path = _os.path.join(TOOLKIT_DIR, "memory_data", "security_config.json")
-    has_pw = False
-    failures = 0
-    if _os.path.exists(sec_cfg_path):
-        try:
-            with open(sec_cfg_path) as _f:
-                _cfg = _json.load(_f)
-                has_pw = bool(_cfg.get("safe_word_hash", ""))
-        except Exception:
-            pass
-    # Count failures
+    has_pw = sec_mod.check_password_set()
+    # Count failures (from security_failures.json)
+    import json as _json, os as _os
     fail_path = _os.path.join(TOOLKIT_DIR, "memory_data", "security_failures.json")
+    failures = 0
     if _os.path.exists(fail_path):
         try:
             with open(fail_path) as _f:
@@ -211,7 +210,7 @@ CMD_TABLE = {
     "stats":      lambda args: cmd_stats(),
     "status":     lambda args: cmd_status(),
     "learn":      lambda args: _call_func("learner", "learn", [" ".join(args)]),
-    "detect":     lambda args: _call_func("learner", "detect", [" ".join(args)]),
+    "detect":     lambda args: _call_func("learner", "detect_corrections", [" ".join(args)]),
     "inject":     lambda args: print(_import("learner").get_rules_for_injection()),
     "signals":    lambda args: _call_func("learner", "signals", args),
     "setup":      lambda args: _import("security").setup(),
@@ -230,6 +229,35 @@ CMD_TABLE = {
     "reflect":    lambda args: _call_func("self_reflection", "run", []),
     "audit":      lambda args: cmd_audit(),
     "kb":         lambda args: _kb_handler(args),
+    "kg":         lambda args: _kg_handler(args),
+}
+
+HELP_DESCRIPTIONS = {
+    "search": "Search memories (TEMPR multi-strategy)",
+    "stats": "Show all statistics (memory, learner, security)",
+    "status": "Show system status with defense chain visualization",
+    "learn": "Learn from a user correction",
+    "detect": "Detect correction signals in text",
+    "inject": "Get behavioral rules for injection into system prompt",
+    "signals": "View active trigger words (learner)",
+    "setup": "Set a security password",
+    "verify": "Verify a dangerous operation",
+    "unlock": "Unlock security system (after 3 failed attempts)",
+    "check": "Check memory file integrity (SHA256)",
+    "init": "Initialize integrity verification manifest",
+    "audit": "Full security audit (all 3 defense layers)",
+    "reflect": "Run self-reflection (analyze contradictions & connections)",
+    "compress": "Show compression status and context usage",
+    "forget": "Show forgetting curve status and parameters",
+    "ref": "Read original content of a compressed memory",
+    "update": "Check for MOYU updates on GitHub",
+    "demo": "Show all capabilities with examples",
+    "kb": "Knowledge base: {index|search|list|read}",
+    "kg": "Knowledge graph: {search <entity>}",
+    "bridge": "Show session bridge status",
+ "lifecycle":  "Alias for forget (memory lifecycle)",
+    "context":    "Show context usage percentage in one line",
+    "help": "Show this help message",
 }
 
 
@@ -237,7 +265,9 @@ def _call_func(module, func, args):
     m = _import(module)
     fn = getattr(m, func, None)
     if fn:
-        fn(*args)
+        result = fn(*args)
+        if result is not None:
+            print(result)
 
 
 def _verify_op(args):
@@ -575,6 +605,36 @@ def _kb_handler(args):
         print("Usage: moyu kb {index|search|list|read}")
 
 
+def _kg_handler(args):
+    """Handle knowledge graph commands: search"""
+    kg = _import("knowledge_graph")
+    if not args or args[0] in ("help", "--help"):
+        print("moyu kg commands:")
+        print("  moyu kg search <entity>    Search knowledge graph for an entity")
+        return
+    subcmd = args[0]
+    subargs = args[1:]
+    if subcmd == "search":
+        query = " ".join(subargs)
+        if not query:
+            print("Usage: moyu kg search <entity>")
+            return
+        results = kg.search(query)
+        if results:
+            print(f"\n🔗 Knowledge Graph results for: {query}")
+            print("=" * 40)
+            for r in results:
+                print(f"  {r['entity']} — {r.get('relation', '?')} — {r.get('target', '?')}")
+                if r.get("source"):
+                    print(f"     source: {r['source']}")
+                print()
+        else:
+            print(f"No knowledge graph entries found for '{query}'")
+    else:
+        print(f"Unknown kg subcommand: {subcmd}")
+        print("Usage: moyu kg {search}")
+
+
 def _ref_handler(args):
     """Handle ref command — list and read compressed refs."""
     cm = _import("context_manager")
@@ -596,7 +656,18 @@ def _ref_handler(args):
 
 
 def show_help():
-    print(__doc__.strip())
+    """Show all available commands dynamically from CMD_TABLE."""
+    print("\n  MOYU — CLI Entry Point")
+    print("  " + "=" * 40)
+    print("  Usage: moyu <command> [args]")
+    print()
+    cmds = sorted(CMD_TABLE.keys())
+    for cmd in cmds:
+        desc = HELP_DESCRIPTIONS.get(cmd, "??? (no description)")
+        print(f"    {cmd:12s}  {desc}")
+    print()
+    print("  Run `moyu <command> help` for subcommand details.")
+    print()
 
 
 def main():
