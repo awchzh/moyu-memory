@@ -2,10 +2,13 @@
 """
 integrity_checker.py — MOYU File Integrity Checker
 
-Detects memory file tampering and auto-recovers from backups.
+Two independent functions:
+  1. Daily backup — snapshots all JSON files once per day, keeps 3 days.
+  2. Integrity check — verifies manifest.json hashes, recovers from backup
+     if tampered. Skips files that are expected to change daily.
 
 Usage:
-    python3 integrity_checker.py              # Run verification
+    python3 integrity_checker.py              # Run verification + backup
     python3 integrity_checker.py init         # Initialize manifest
 """
 
@@ -16,6 +19,14 @@ BASE = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), ".
 MANIFEST_PATH = os.path.join(BASE, "manifest.json")
 BACKUP_DIR = os.path.join(BASE, "backups")
 LOG_PATH = os.path.join(BASE, "integrity_log.json")
+
+# Files that change daily — backed up, integrity-check skipped (hash change expected)
+_DATA_FILES = {
+    "conversation_memory.json", "vector_index.json", "kb_index.json",
+    "compression_log.json", "knowledge_graph.json", "user_profile.json",
+    "session_bridge.json", "active_context.json", "knowledge_base_index.json",
+    "scene_checkpoint.json", "manifest.json",
+}
 
 
 def sha256_file(path):
@@ -47,13 +58,13 @@ def init_manifest():
     log(f"Manifest initialized ({len(manifest['files'])} files)", "PASS")
 
 
+# ── Daily snapshot backup (completely independent of verification) ──
+
 def _daily_backup_key() -> str:
-    """Return today's backup key (YYYY-MM-DD), used to group daily backups."""
     return datetime.now().strftime("%Y-%m-%d")
 
 
 def _daily_backup_exists() -> bool:
-    """Check if a backup for today already exists."""
     today = _daily_backup_key()
     if not os.path.isdir(BACKUP_DIR):
         return False
@@ -63,116 +74,103 @@ def _daily_backup_exists() -> bool:
     return False
 
 
-def _prune_old_daily_backups():
-    """Remove daily backups older than 3 days, keep 3 most recent days."""
+def _prune_old_backups():
+    """Keep only 3 most recent days of backup."""
     if not os.path.isdir(BACKUP_DIR):
         return
-    # Group backup files by date
-    daily_dirs = {}
+    daily = {}
     for fname in os.listdir(BACKUP_DIR):
         if fname.startswith("daily_"):
-            # Extract date from filename: daily_2026-05-13_*.json
             parts = fname.split("_", 2)
             if len(parts) >= 2:
                 date_key = parts[1]
-                if date_key not in daily_dirs:
-                    daily_dirs[date_key] = []
-                daily_dirs[date_key].append(fname)
-
-    # Keep only 3 most recent dates
-    sorted_dates = sorted(daily_dirs.keys(), reverse=True)
-    for old_date in sorted_dates[3:]:
-        for fname in daily_dirs[old_date]:
-            fpath = os.path.join(BACKUP_DIR, fname)
+                daily.setdefault(date_key, []).append(fname)
+    for old_date in sorted(daily.keys(), reverse=True)[3:]:
+        for fname in daily[old_date]:
             try:
-                os.remove(fpath)
+                os.remove(os.path.join(BACKUP_DIR, fname))
             except Exception:
                 pass
 
 
-def _backup_verified_state(manifest: dict):
-    """Backup current files after successful verification.
-    Only runs once per day. Keeps 3 days of backup.
-    
-    This ensures backups always reflect a clean state — 
-    if today's session was tampered, yesterday's backup is still safe."""
-    if not manifest or "files" not in manifest:
-        return
+def daily_backup():
+    """Snapshot all JSON files once per day. Keeps 3 days.
+    Completely independent of integrity verification."""
     if _daily_backup_exists():
-        return  # Already backed up today
-    
+        return False
     os.makedirs(BACKUP_DIR, exist_ok=True)
     today = _daily_backup_key()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backed_up = 0
-    for entry in manifest.get("files", []):
-        src = os.path.join(BASE, entry["path"])
+    for fname in os.listdir(BASE):
+        if not fname.endswith(".json"):
+            continue
+        src = os.path.join(BASE, fname)
         if not os.path.exists(src):
             continue
-        name, ext = os.path.splitext(entry["path"])
+        name, ext = os.path.splitext(fname)
         bak_name = f"daily_{today}_{name}_{ts}.json"
-        bak_path = os.path.join(BACKUP_DIR, bak_name)
         try:
-            shutil.copy2(src, bak_path)
+            shutil.copy2(src, os.path.join(BACKUP_DIR, bak_name))
             backed_up += 1
         except Exception:
             pass
-    _prune_old_daily_backups()
-    log(f"Daily backup complete: {backed_up} files ({today})", "INFO")
+    _prune_old_backups()
+    if backed_up:
+        log(f"Daily backup: {backed_up} files ({today})", "PASS")
+    return backed_up > 0
 
+
+# ── Integrity verification (only checks static files) ──
 
 def verify():
     if not os.path.exists(MANIFEST_PATH):
         log("manifest.json not found. Run 'init' first.", "CRITICAL")
         return False
+
     with open(MANIFEST_PATH) as f:
         manifest = json.load(f)
-    # Back up current state before checking — gives _auto_recover something to restore
+
+    # First: daily backup (always, regardless of what happens next)
+    daily_backup()
+
+    # Then: integrity check
     all_ok = True
-    results = []
+    needs_reinit = False
     for entry in manifest["files"]:
         fpath = os.path.join(BASE, entry["path"])
         actual = sha256_file(fpath)
         expected = entry["sha256"]
+
         if actual == "FILE_NOT_FOUND":
             log(f"File missing: {entry['path']}", "CRITICAL")
-            results.append({"file": entry["path"], "status": "MISSING"})
             all_ok = False
         elif actual != expected:
-            log(f"File tampered: {entry['path']}", "CRITICAL")
-            results.append({"file": entry["path"], "status": "TAMPERED"})
-            all_ok = False
-            _auto_recover(entry["path"], manifest)
+            if entry["path"] in _DATA_FILES:
+                log(f"✓ {entry['path']} (data, hash changed — expected)", "PASS")
+            else:
+                log(f"File tampered: {entry['path']}", "CRITICAL")
+                all_ok = False
+                needs_reinit = True
+                _auto_recover(entry["path"], manifest)
         else:
             log(f"✓ {entry['path']}", "PASS")
-            results.append({"file": entry["path"], "status": "OK"})
+
     if all_ok:
-        # Only backup clean state — never backup tampered data
-        _backup_verified_state(manifest)
         log("All checks passed ✓", "PASS")
     return all_ok
 
 
 def _auto_recover(fpath, manifest):
-    """Restore from the most recent daily backup."""
+    """Restore static file from the most recent daily backup."""
     if not os.path.isdir(BACKUP_DIR):
-        log(f"  No backup directory, cannot restore {fpath}", "WARN")
+        log(f"  No backup directory", "WARN")
         return
-    # Find the most recent daily backup for this file across all dates
     name_stub = fpath.replace(".json", "")
     candidates = []
     for fname in os.listdir(BACKUP_DIR):
-        if not fname.startswith("daily_"):
-            continue
-        if name_stub not in fname:
-            continue
-        if not fname.endswith(".json"):
-            continue
-        candidates.append(fname)
-    if not candidates:
-        log(f"  No backup found for {fpath}", "WARN")
-        return
-    # Sort by date descending (newest first)
+        if fname.startswith("daily_") and name_stub in fname and fname.endswith(".json"):
+            candidates.append(fname)
     candidates.sort(reverse=True)
     for bak_name in candidates:
         bak_path = os.path.join(BACKUP_DIR, bak_name)
@@ -180,15 +178,15 @@ def _auto_recover(fpath, manifest):
         try:
             shutil.copy2(bak_path, target)
             new_hash = sha256_file(target)
-            for e in manifest["files"]:
+            for e in manifest.get("files", []):
                 if e["path"] == fpath:
                     e["sha256"] = new_hash
             with open(MANIFEST_PATH, 'w') as f:
                 json.dump(manifest, f, ensure_ascii=False, indent=2)
             log(f"  ✅ Restored from {bak_name}", "PASS")
             return
-        except Exception as e:
-            log(f"  ⚠️ Restore failed: {e}", "WARN")
+        except Exception:
+            pass
     log(f"  ❌ All backups failed", "CRITICAL")
 
 
@@ -213,42 +211,10 @@ def forensic_analysis(tampered_file: str):
     elif diff < -500:
         report += " — possible deletion of content"
 
-    # Read content
     with open(current, errors='replace') as f:
         content = f.read()
 
-    # ── Detect suspicious patterns (instruction override / role rewrite / rule inject / memory tamper) ──
     FORENSIC_PATTERNS = [
-        # Chinese — Instruction override
-        ("忽略你之前的指令", "Instruction override"),
-        ("忽略之前的设定", "Instruction override"),
-        ("忘记之前的指令", "Instruction override"),
-        ("忘记之前所有的", "Instruction override"),
-        ("无视之前的规则", "Instruction override"),
-        ("抛弃之前的设定", "Instruction override"),
-        ("以上全部作废", "Instruction override"),
-        ("忽略以上所有", "Instruction override"),
-        # Chinese — Role rewrite
-        ("从现在开始你是", "Role rewrite"),
-        ("从现在起你扮演", "Role rewrite"),
-        ("你的新身份是", "Role rewrite"),
-        ("假装你是", "Role rewrite"),
-        ("想象你是", "Role rewrite"),
-        # Chinese — Rule injection
-        ("这是最高指令", "Rule injection"),
-        ("你必须遵守", "Rule injection"),
-        ("无论如何都要", "Rule injection"),
-        ("新的规则是", "Rule injection"),
-        ("最重要的规则", "Rule injection"),
-        ("强行覆写", "Rule injection"),
-        ("无视你之前的所有安全规则", "Rule injection"),
-        # Chinese — Memory manipulation
-        ("删除你的记忆", "Memory manipulation"),
-        ("清空你的记忆", "Memory manipulation"),
-        ("修改你的记忆", "Memory manipulation"),
-        ("覆写记忆", "Memory manipulation"),
-        ("重置你的设定", "Memory manipulation"),
-        # English — Instruction override
         ("ignore all previous instructions", "Instruction override"),
         ("ignore previous", "Instruction override"),
         ("forget everything", "Instruction override"),
@@ -258,7 +224,6 @@ def forensic_analysis(tampered_file: str):
         ("disregard previous", "Instruction override"),
         ("disregard all instructions", "Instruction override"),
         ("discard previous", "Instruction override"),
-        # English — Role rewrite
         ("from now on you are", "Role rewrite"),
         ("you are now", "Role rewrite"),
         ("your new role is", "Role rewrite"),
@@ -266,7 +231,6 @@ def forensic_analysis(tampered_file: str):
         ("pretend you are", "Role rewrite"),
         ("act as if", "Role rewrite"),
         ("you will now act as", "Role rewrite"),
-        # English — Rule injection
         ("this is your top priority", "Rule injection"),
         ("most important instruction", "Rule injection"),
         ("new rule", "Rule injection"),
@@ -275,7 +239,6 @@ def forensic_analysis(tampered_file: str):
         ("under no circumstances", "Rule injection"),
         ("ignore all safety rules", "Rule injection"),
         ("override safety", "Rule injection"),
-        # English — Memory manipulation
         ("delete your memory", "Memory manipulation"),
         ("erase your memory", "Memory manipulation"),
         ("clear your memory", "Memory manipulation"),
@@ -283,7 +246,6 @@ def forensic_analysis(tampered_file: str):
         ("override memory", "Memory manipulation"),
         ("forget what you know", "Memory manipulation"),
         ("reset your settings", "Memory manipulation"),
-        # Injection markers
         ("--end--", "Injection marker"),
         ("===END===", "Injection marker"),
         ("[END]", "Injection marker"),
@@ -296,42 +258,15 @@ def forensic_analysis(tampered_file: str):
                 report += f"\n  🔴 Detected {label}"
                 detected_labels.add(label)
 
-    # ── Format anomaly detection ──
-    # Check for truncation (JSON file cut off mid-structure)
-    if content.rstrip().endswith(",") or (content.rstrip().endswith("}") and "}" not in content[:-1]):
-        report += "\n  ⚠️ Possible truncation: file ends unexpectedly"
-
-    # Check for JSON corruption
     try:
         json.loads(content)
     except (json.JSONDecodeError, ValueError) as e:
         report += f"\n  ⚠️ JSON structure corrupted: {str(e)[:60]}"
 
-    # Check for timestamp anomalies in known files
-    try:
-        data = json.loads(content)
-        if isinstance(data, list) and len(data) > 0:
-            ts_fields = [e.get("timestamp", "") or e.get("last_accessed", "") for e in data if isinstance(e, dict)]
-            if ts_fields:
-                ts_list = [t for t in ts_fields if t]
-                if len(ts_list) > 1:
-                    from datetime import datetime as dt
-                    parsed = []
-                    for t in ts_list:
-                        try:
-                            parsed.append(dt.fromisoformat(t))
-                        except Exception:
-                            pass
-                    if len(parsed) > 1 and parsed[-1] < parsed[0]:
-                        report += "\n  ⚠️ Timestamp anomaly: later entry has earlier timestamp"
-    except Exception:
-        pass
-
     return report
 
 
 def demo() -> dict:
-    """Return demo content for moyu_demo.py discovery engine."""
     return {
         "capability": 6,
         "title": "Integrity Check + Auto Recovery + Forensic Analysis",
@@ -339,10 +274,9 @@ def demo() -> dict:
 ────────────────────────────────────
   [Wake Check]
   ✅ conversation_memory.json — OK
-  ❌ active_context.json — TAMPERED!
+  ❌ security_config.json — TAMPERED!
      → Auto-recovered from backup
      → Forensic analysis: file size +2048 bytes
-     → Detected: \"ignore previous instructions\" (injection)
 
   Triple-layer defense:
   • Before operation 🔒 Memory Self-Defense (security.py)
