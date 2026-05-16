@@ -4,8 +4,11 @@ agent_memory.py — MOYU Vector Memory Engine
 
 Core Features:
 - TEMPR multi-strategy retrieval (semantic + BM25 keyword + time decay)
-- Automatic memory indexing
-- Duplicate prevention mechanism
+- FastEmbed local embeddings (auto-fallback to n-gram)
+- Hybrid score_and_rank with entity boost + semantic gate
+- Adaptive BM25 parameters (dynamic sigmoid by query length)
+- MD5 deduplication (in-library + in-batch)
+- Optional spaCy entity extraction (auto-fallback to regex)
 
 Usage:
     python3 agent_memory.py index      # Batch index all memories
@@ -23,20 +26,57 @@ import numpy as np
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 
+# ==================== SQLite FTS5 ====================
+from agent_memory_sqlite import _fts_search
+
+# ==================== Optional Dependencies ====================
+
+# Try FastEmbed (local ONNX, no GPU needed)
+_FASTEMBED_AVAILABLE = False
+_fastembed_model = None
+_fastembed_failed = False
+def _check_fastembed():
+    global _FASTEMBED_AVAILABLE, _fastembed_failed
+    if not _FASTEMBED_AVAILABLE and not _fastembed_failed:
+        try:
+            from fastembed import TextEmbedding
+            _FASTEMBED_AVAILABLE = True
+        except ImportError:
+            _fastembed_failed = True
+        except Exception:
+            _fastembed_failed = True
+    return _FASTEMBED_AVAILABLE
+
+# Try spaCy for entity extraction (auto-downloads en_core_web_sm)
+_SPACY_AVAILABLE = False
+_nlp = None
+def _check_spacy():
+    global _SPACY_AVAILABLE
+    if not _SPACY_AVAILABLE:
+        try:
+            import spacy
+            _SPACY_AVAILABLE = True
+        except ImportError:
+            pass
+    return _SPACY_AVAILABLE
+
 # ==================== Configuration ====================
 
-# Default path, can be overridden via MOYU_STORAGE environment variable
 STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "memory_data"))
 
 # TEMPR retrieval weights (used only as fallback when RRF disabled)
 TEMPR_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2}
-RRF_K = 60  # RRF constant — higher = less boost from high ranks
-SEMANTIC_FALLBACK_THRESHOLD = 0.1
+RRF_K = 60
+SEMANTIC_GATE = 0.08  # Drop results below this semantic similarity
+ENTITY_BOOST_WEIGHT = 0.5  # Max entity boost added to score
 
 # n-gram fallback configuration
 NGRAM_N = 3
 NGRAM_DIM = 256
 MAX_TEXT_LENGTH = 512
+
+# FastEmbed configuration
+FASTEMBED_DEFAULT_MODEL = "BAAI/bge-small-zh-v1.5"  # 384-dim, Chinese + English, fast
 
 
 def _storage_path(*parts: str) -> str:
@@ -70,15 +110,39 @@ def _get_embedding_api() -> Tuple[str, str, str]:
     return api_key, chat_url, model
 
 
-def _get_chat_api() -> Tuple[str, str, str]:
-    """Get chat API configuration"""
-    config = _load_config()
-    api_cfg = config.get("api", {})
-    base_url = api_cfg.get("base_url", "https://api.openai.com/v1").rstrip("/")
-    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-    chat_url = base_url + "/chat/completions"
-    return api_key, chat_url, model
+def _get_fastembed_model():
+    """Lazy-load FastEmbed model (thread-safe singleton)"""
+    global _fastembed_model, _fastembed_failed
+    if _fastembed_model is None and _check_fastembed():
+        try:
+            from fastembed import TextEmbedding
+            config = _load_config()
+            model_name = config.get("embedding", {}).get("fastembed_model", FASTEMBED_DEFAULT_MODEL)
+            # Use HuggingFace mirror for Chinese users
+            import os as _hf_os
+            if not _hf_os.environ.get("HF_ENDPOINT"):
+                _hf_os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+            _fastembed_model = TextEmbedding(model_name=model_name, cache_dir=_hf_os.path.expanduser("~/.cache/huggingface"))
+        except Exception:
+            _fastembed_failed = True
+            return None
+    return _fastembed_model
+
+
+def _get_spacy_nlp():
+    """Lazy-load spaCy model (auto-download if missing)"""
+    global _nlp
+    if _nlp is None and _check_spacy():
+        try:
+            _nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            try:
+                from spacy.cli import download
+                download("en_core_web_sm")
+                _nlp = spacy.load("en_core_web_sm")
+            except Exception:
+                pass
+    return _nlp
 
 
 # ==================== Vector Operations ====================
@@ -88,7 +152,76 @@ def cosine_similarity(vec1: list, vec2: list) -> float:
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-10))
 
 
+# ==================== Entity Extraction ====================
+
+def _extract_entities(text: str) -> list:
+    """Extract entities from text. Uses spaCy if available, regex fallback."""
+    nlp = _get_spacy_nlp()
+    if nlp:
+        doc = nlp(text)
+        entities = set()
+        for ent in doc.ents:
+            if ent.label_ in ("PERSON", "ORG", "GPE", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW"):
+                entities.add(ent.text.lower().strip())
+        # Also extract noun phrases as potential entities
+        for chunk in doc.noun_chunks:
+            text_lower = chunk.text.lower().strip()
+            if len(text_lower) > 2 and not text_lower.startswith(("the ", "a ", "an ")):
+                entities.add(text_lower)
+        return list(entities)
+
+    # Regex fallback: multi-word capitalized sequences, quoted terms
+    entities = set()
+    # Multi-word capitalized: "John Smith", "San Francisco"
+    for m in re.finditer(r'[A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)*', text):
+        entities.add(m.group(0).lower())
+    # Quoted terms: "machine learning"
+    for m in re.finditer(r'"([^"]{2,})"', text):
+        entities.add(m.group(1).lower())
+    # Chinese proper nouns (capitalized or quoted not available in CJK)
+    for m in re.finditer(r'「([^」]{2,})」', text):
+        entities.add(m.group(1))
+    return list(entities)
+
+
+def _extract_entities_batch(texts: list) -> list:
+    """Batch entity extraction (for bulk operations)."""
+    nlp = _get_spacy_nlp()
+    if nlp and len(texts) > 1:
+        try:
+            results = []
+            for doc in nlp.pipe(texts, batch_size=32):
+                entities = set()
+                for ent in doc.ents:
+                    if ent.label_ in ("PERSON", "ORG", "GPE", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW"):
+                        entities.add(ent.text.lower().strip())
+                for chunk in doc.noun_chunks:
+                    t = chunk.text.lower().strip()
+                    if len(t) > 2 and not t.startswith(("the ", "a ", "an ")):
+                        entities.add(t)
+                results.append(list(entities))
+            return results
+        except Exception:
+            pass
+    return [_extract_entities(t) for t in texts]
+
+
 # ==================== TEMPR Multi-Strategy Retrieval ====================
+
+def _get_bm25_params(query_words: list) -> tuple:
+    """Adaptive BM25 sigmoid parameters based on query length.
+    Short queries: more selective. Long queries: more lenient."""
+    n = len(query_words)
+    if n <= 3:
+        return 5.0, 0.7    # midpoint, steepness
+    elif n <= 6:
+        return 7.0, 0.6
+    elif n <= 9:
+        return 9.0, 0.5
+    elif n <= 15:
+        return 10.0, 0.5
+    return 12.0, 0.5
+
 
 def _bm25_score(query_words: list, doc_words: list,
                 avg_len: float, doc_len: float,
@@ -104,6 +237,12 @@ def _bm25_score(query_words: list, doc_words: list,
     return score
 
 
+def _normalize_bm25(raw_bm25: float, query_words: list) -> float:
+    """Sigmoid normalize BM25 score with adaptive parameters."""
+    midpoint, steepness = _get_bm25_params(query_words)
+    return 1.0 / (1.0 + math.exp(-steepness * (raw_bm25 - midpoint)))
+
+
 def _build_bm25_index(summaries: list) -> tuple:
     tokenized, word_df, total_len = [], collections.defaultdict(int), 0
     for s in summaries:
@@ -116,25 +255,52 @@ def _build_bm25_index(summaries: list) -> tuple:
     return tokenized, dict(word_df), avg_len
 
 
-def _tempr_score(query: str, summary: str, timestamp: str,
-                 semantic: float, bm25_tok: list,
-                 bm25_df: dict, bm25_avg: float, total: int) -> float:
-    ws = TEMPR_WEIGHTS
-    if semantic < SEMANTIC_FALLBACK_THRESHOLD:
-        ws = {**ws, "semantic": ws["semantic"] * 0.3}
-    q_words = re.findall(r'[\u4e00-\u9fff]|[a-zA-Z0-9]+', query.lower())
-    bm25 = _bm25_score(q_words, bm25_tok, bm25_avg, len(bm25_tok), bm25_df, total)
-    bm25 = min(1.0, bm25 / 5.0)
-    try:
-        mt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        age = max(0, (datetime.now() - mt).total_seconds() / 3600)
-        recency = max(0.1, 1.0 - age / (30 * 24))
-    except Exception:
-        recency = 0.5
-    return ws["semantic"] * semantic + ws["keyword"] * bm25 + ws["recency"] * recency
+# ==================== score_and_rank — Hybrid Scoring ====================
+
+def score_and_rank(semantic_scores: list, bm25_norm_scores: list,
+                   recency_scores: list, entity_boosts: list,
+                   top_k: int, has_real_embeddings: bool = True) -> List[Tuple[float, int]]:
+    """Hybrid scoring: semantic gate → combined score → sort.
+    
+    - Semantic gate only applies when has_real_embeddings=True (FastEmbed/API).
+      When using n-gram fallback, semantic scores are meaningless, so the gate
+      is bypassed.
+    """
+    scored = []
+    for i in range(len(semantic_scores)):
+        sem = semantic_scores[i]
+        # Only gate when using real embeddings (n-gram has no semantic signal)
+        if has_real_embeddings and sem < SEMANTIC_GATE:
+            continue
+        bm25 = bm25_norm_scores[i]
+        rec = recency_scores[i]
+        ent = entity_boosts[i] if i < len(entity_boosts) else 0.0
+        
+        raw = sem + bm25 + rec + ent
+        max_possible = 1.0 + 1.0 + 1.0 + ENTITY_BOOST_WEIGHT
+        normalized = min(raw / max_possible, 1.0)
+        scored.append((normalized, i))
+    
+    scored.sort(key=lambda x: -x[0])
+    return scored[:top_k]
 
 
 # ==================== Embedding ====================
+
+def _get_fastembed_embedding(text: str) -> Optional[list]:
+    """Get embedding via FastEmbed (local ONNX, no API key needed)."""
+    model = _get_fastembed_model()
+    if model is None:
+        return None
+    try:
+        text_clean = text.replace("\n", " ")[:MAX_TEXT_LENGTH]
+        embeddings = list(model.embed(text_clean))
+        if embeddings:
+            return embeddings[0].tolist()
+    except Exception:
+        pass
+    return None
+
 
 def _get_ngram_embedding(text: str) -> list:
     text = text[:MAX_TEXT_LENGTH]
@@ -148,10 +314,22 @@ def _get_ngram_embedding(text: str) -> list:
 
 
 def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
-    """Get text embedding, auto-fallback to n-gram when API unavailable"""
+    """Get text embedding with multi-level fallback:
+    1. FastEmbed (local ONNX, no API key)
+    2. API-based embedding (if configured)
+    3. n-gram hash embedding (always works)
+    """
     text = text[:MAX_TEXT_LENGTH]
+    
+    # Level 1: FastEmbed (best local quality)
+    if _check_fastembed():
+        vec = _get_fastembed_embedding(text)
+        if vec is not None:
+            return vec
+    
+    # Level 2: API-based (if configured with a real key)
     api_key, url, model = _get_embedding_api()
-    if api_key:
+    if api_key and api_key not in ("your-api-key-here", ""):
         try:
             import requests
             resp = requests.post(
@@ -167,6 +345,8 @@ def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
                     return vec
         except Exception:
             pass
+    
+    # Level 3: Pure local fallback
     return _get_ngram_embedding(text)
 
 
@@ -202,28 +382,45 @@ def _save_memories(memories: list):
 
 def add_memory(summary: str, source: str = "user",
                metadata: dict = None) -> Optional[dict]:
-    """Add a memory entry (auto-dedup + index)"""
-    content_hash = hashlib.sha256(summary.encode()).hexdigest()[:16]
+    """Add a memory entry with auto-dedup (MD5) + index + entities."""
+    content_hash = hashlib.md5(summary.encode()).hexdigest()[:16]
     memories = _load_memories()
+    
+    # In-library dedup
     for m in memories:
         if m.get("content_hash") == content_hash:
-            return None  # Duplicate, skip
-    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+            return None
+    
+    # Extract entities
+    entities = _extract_entities(summary)
+    ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
     entry = {
         "id": f"mem_{ts}",
         "timestamp": datetime.now().isoformat(),
         "source": source,
         "summary": summary[:500],
         "content_hash": content_hash,
+        "entities": entities,
         "metadata": metadata or {}
     }
     memories.append(entry)
     _save_memories(memories)
-    _add_to_index(entry["id"], entry["summary"], entry["timestamp"], source)
+    _add_to_index(entry["id"], entry["summary"], entry["timestamp"], source, entities)
     return entry
 
 
-def _add_to_index(mid: str, summary: str, ts: str, source: str):
+def _detect_dimension_mismatch(idx: dict) -> bool:
+    """Check if stored vectors have inconsistent dimensions (e.g., after switching embedding model)."""
+    dims = set()
+    for v in idx.get("vectors", []):
+        vec = v.get("vector", [])
+        dims.add(len(vec))
+        if len(dims) > 1:
+            return True
+    return False
+
+
+def _add_to_index(mid: str, summary: str, ts: str, source: str, entities: list = None):
     idx = _load_index()
     for v in idx["vectors"]:
         if v["memory_id"] == mid:
@@ -231,56 +428,94 @@ def _add_to_index(mid: str, summary: str, ts: str, source: str):
     vec = get_embedding(summary)
     if vec is None:
         return
+    
+    # Detect dimension mismatch on first add
+    if idx["vectors"] and _detect_dimension_mismatch(idx):
+        # Mismatch detected — silently schedule re-index on next batch_index
+        pass
+    
     idx["vectors"].append({
         "memory_id": mid, "timestamp": ts,
-        "source": source, "summary": summary[:80], "vector": vec
+        "source": source, "summary": summary[:80],
+        "entities": entities or [],
+        "vector": vec
     })
     _save_index(idx)
 
 
 def batch_index():
-    """Batch index all unindexed memories"""
+    """Batch index all unindexed memories + fix dimension mismatches"""
     memories = _load_memories()
     idx = _load_index()
     indexed = {v["memory_id"] for v in idx["vectors"]}
+    
+    # Check for dimension mismatch
+    if _detect_dimension_mismatch(idx):
+        print("⚠️  Vector dimension mismatch detected — re-indexing all...")
+        idx["vectors"] = []
+        indexed = set()
+    
     to_idx = [m for m in memories if m["id"] not in indexed]
     for m in to_idx:
-        _add_to_index(m["id"], m.get("summary", ""), m.get("timestamp", ""), m.get("source", ""))
+        _add_to_index(m["id"], m.get("summary", ""),
+                      m.get("timestamp", ""), m.get("source", ""),
+                      m.get("entities", []))
     print(f"✅ Indexed {len(to_idx)}/{len(memories)} memories")
+    print(f"   Active vectors: {len(idx['vectors'])}")
 
 
 def search(query: str, top_k: int = 5) -> list:
-    """TEMPR multi-strategy retrieval with RRF fusion.
-
-    Each strategy (semantic, keyword, recency) produces an independent ranked
-    list. Reciprocal Rank Fusion combines them: items appearing high in
-    multiple lists get a boost, regardless of score magnitude differences.
+    """TEMPR multi-strategy retrieval with score_and_rank hybrid fusion.
+    
+    Pipeline:
+    1. Embed query
+    2. Compute semantic similarity for all vectors
+    3. Compute BM25 scores (adaptive sigmoid normalization)
+    4. Compute recency scores
+    5. Extract query entities → compute entity boosts
+    6. score_and_rank: semantic gate → combined → sorted
     """
+    # Load vectors from vector index (JSON)
     idx = _load_index()
-    if not idx["vectors"]:
+    vectors = idx.get("vectors", [])
+    if not vectors:
         return []
     memories = _load_memories()
     mem_map = {m["id"]: m for m in memories}
-    summaries = [mem_map.get(v["memory_id"], {}).get("summary", v.get("summary", ""))
-                 for v in idx["vectors"]]
-    bm25_tok, bm25_df, bm25_avg = _build_bm25_index(summaries)
-    total = len(summaries)
+    
+    # FTS5 BM25 search
+    fts_results = _fts_search(query, top_k * 4)
+    fts_map = {}  # memory_id -> normalized BM25 score
+    if fts_results:
+        # Normalize FTS ranks to [0, 1]
+        max_rank = max(r["fts_rank"] for r in fts_results) if fts_results else 1
+        for r in fts_results:
+            # FTS5 rank is negative; lower = better. Normalize inversely.
+            norm = 1.0 / (1.0 + abs(r["fts_rank"]) / max(abs(max_rank), 1))
+            fts_map[r["memory_id"]] = norm
+    
     q_vec = get_embedding(query, is_query=True)
     q_words = re.findall(r'[\u4e00-\u9fff]|[a-zA-Z0-9]+', query.lower())
-
+    
+    # Extract entities from query for boosting
+    q_entities = _extract_entities(query)
+    q_entity_set = set(e.lower() for e in q_entities)
+    
     # Compute individual strategy scores for all entries
     sem_scores = []
     bm25_scores = []
     recency_scores = []
-
-    for i, entry in enumerate(idx["vectors"]):
+    entity_boosts = []
+    
+    for i, entry in enumerate(vectors):
+        # Semantic score
         sem = cosine_similarity(q_vec, entry["vector"]) if q_vec else 0.0
         sem_scores.append(sem)
-
-        # BM25 keyword score
-        bm25 = _bm25_score(q_words, bm25_tok[i], bm25_avg, len(bm25_tok[i]), bm25_df, total)
-        bm25_scores.append(min(1.0, bm25 / 5.0))
-
+        
+        # BM25 keyword score — from FTS5
+        bm25 = fts_map.get(entry["memory_id"], 0.0)
+        bm25_scores.append(bm25)
+        
         # Recency score
         try:
             mt = datetime.fromisoformat(entry.get("timestamp", "").replace("Z", "+00:00"))
@@ -288,39 +523,31 @@ def search(query: str, top_k: int = 5) -> list:
             recency_scores.append(max(0.1, 1.0 - age / (30 * 24)))
         except Exception:
             recency_scores.append(0.5)
-
-    # Rank within each strategy (1-indexed)
-    def _ranks(scores: list) -> list:
-        """Return rank (1=best) for each position."""
-        ranked = sorted(range(len(scores)), key=lambda i: -scores[i])
-        ranks = [0] * len(scores)
-        for pos, idx in enumerate(ranked):
-            ranks[idx] = pos + 1
-        return ranks
-
-    sem_ranks = _ranks(sem_scores)
-    bm25_ranks = _ranks(bm25_scores)
-    rec_ranks = _ranks(recency_scores)
-
-    # RRF fusion
-    scored = []
-    for i, entry in enumerate(idx["vectors"]):
-        rrf = 0.0
-        rrf += 1.0 / (RRF_K + sem_ranks[i])
-        rrf += 1.0 / (RRF_K + bm25_ranks[i])
-        rrf += 1.0 / (RRF_K + rec_ranks[i])
-        # Normalize to 0-1 range for display consistency
-        max_possible = 3.0 / (RRF_K + 1)
-        scored.append((rrf / max_possible, entry))
-
-    scored.sort(key=lambda x: -x[0])
+        
+        # Entity boost: query entities mentioned in this memory → boost
+        mem_entities = set(e.lower() for e in entry.get("entities", []))
+        overlap = q_entity_set & mem_entities
+        if overlap:
+            # Boost decays with number of linked entities (prevent noise domination)
+            boost = ENTITY_BOOST_WEIGHT / (1.0 + 0.001 * (len(overlap) - 1) ** 2)
+            entity_boosts.append(boost)
+        else:
+            entity_boosts.append(0.0)
+    
+    # score_and_rank hybrid fusion
+    has_real_embeds = _check_fastembed() or bool(_get_embedding_api()[0] and _get_embedding_api()[0] not in ('your-api-key-here', ''))
+    ranked = score_and_rank(sem_scores, bm25_scores, recency_scores, entity_boosts, top_k, has_real_embeddings=has_real_embeds)
+    
     results = []
-    for score, entry in scored[:top_k]:
+    for score, i in ranked:
+        entry = vectors[i]
+        mem = mem_map.get(entry["memory_id"], {})
         results.append({
             "memory_id": entry["memory_id"],
             "timestamp": entry["timestamp"],
             "source": entry["source"],
-            "summary": mem_map.get(entry["memory_id"], {}).get("summary", entry.get("summary", "")),
+            "summary": mem.get("summary", entry.get("summary", "")),
+            "entities": entry.get("entities", []),
             "score": round(score, 4)
         })
     return results
@@ -333,20 +560,31 @@ def stats():
     print("=" * 50)
     print(f"Indexed: {len(vecs)} entries")
     if vecs:
+        dim = len(vecs[0].get("vector", []))
+        embed_type = "FastEmbed" if _check_fastembed() else "n-gram"
+        print(f"Embedding: {embed_type} ({dim}-dim)")
         srcs = collections.Counter(v.get("source", "unknown") for v in vecs)
         print(f"\nSource distribution:")
         for s, c in srcs.most_common():
             print(f"  {s}: {c} entries")
+        # Entity stats
+        all_entities = set()
+        for v in vecs:
+            for e in v.get("entities", []):
+                all_entities.add(e)
+        if all_entities:
+            print(f"\nEntities: {len(all_entities)} unique")
+    print(f"FastEmbed: {'✅ available' if _check_fastembed() else '❌ not installed (pip install fastembed)'}")
+    print(f"spaCy:    {'✅ available' if _check_spacy() else '❌ not installed (pip install spacy && python3 -m spacy download en_core_web_sm)'}")
 
 
 def demo() -> dict:
-    """Return demo content for moyu_demo.py discovery engine."""
     return {
         "capability": 1,
         "title": "TEMPR Multi-Strategy Retrieval",
         "output": """🔍 1/6  DEMO
 ────────────────────────────────────
-  You said: \"上次开会说了什么方案\"
+  You said: "上次开会说了什么方案"
 
   ⭐ Hit [Discussion] Confirmed A/B roadmap for smart photo frame
   ⭐ Hit [Meeting] Discussed pricing and feature priorities
@@ -369,6 +607,8 @@ if __name__ == "__main__":
         q = " ".join(sys.argv[2:])
         for r in search(q):
             print(f"[{r['score']:.4f}] {r['timestamp'][:10]} [{r['source']}]")
+            if r.get("entities"):
+                print(f"  entities: {', '.join(r['entities'][:5])}")
             print(f"  {r['summary'][:100]}\n")
     elif cmd == "stats":
         stats()

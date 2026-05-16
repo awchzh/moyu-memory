@@ -121,7 +121,55 @@ def daily_backup():
     return backed_up > 0
 
 
-# ── Integrity verification (only checks static files) ──
+# ── Last-known-good hash snapshot (for data files) ──
+
+SNAPSHOT_PATH = os.path.join(BACKUP_DIR, "last_hash_snapshot.json")
+HASH_LOG_PATH = os.path.join(BASE, "hash_change_log.json")
+
+
+def _load_snapshot() -> dict:
+    if os.path.exists(SNAPSHOT_PATH):
+        with open(SNAPSHOT_PATH) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_snapshot(snapshot: dict):
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    with open(SNAPSHOT_PATH, 'w') as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def _log_hash_change(filepath: str, old_hash: str, new_hash: str, file_size_diff: int):
+    """Append a hash change entry to the change log."""
+    entries = []
+    if os.path.exists(HASH_LOG_PATH):
+        try:
+            with open(HASH_LOG_PATH) as f:
+                entries = json.load(f)
+        except Exception:
+            entries = []
+    entries.append({
+        "timestamp": datetime.now().isoformat(),
+        "file": filepath,
+        "hash_before": old_hash,
+        "hash_after": new_hash,
+        "size_diff_bytes": file_size_diff,
+    })
+    entries = entries[-200:]  # keep last 200
+    with open(HASH_LOG_PATH, 'w') as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
+
+
+def hash_change_log() -> list:
+    """Return recent hash change entries for audit display."""
+    if not os.path.exists(HASH_LOG_PATH):
+        return []
+    with open(HASH_LOG_PATH) as f:
+        return json.load(f)
+
+
+# ── Integrity verification ──
 
 def verify():
     if not os.path.exists(MANIFEST_PATH):
@@ -134,9 +182,15 @@ def verify():
     # First: daily backup (always, regardless of what happens next)
     daily_backup()
 
+    # Load the hash snapshot for data file tracking
+    snapshot = _load_snapshot()
+
     # Then: integrity check
     all_ok = True
     needs_reinit = False
+    data_changes = 0
+    critical_changes = 0
+
     for entry in manifest["files"]:
         fpath = os.path.join(BASE, entry["path"])
         actual = sha256_file(fpath)
@@ -145,19 +199,46 @@ def verify():
         if actual == "FILE_NOT_FOUND":
             log(f"File missing: {entry['path']}", "CRITICAL")
             all_ok = False
+            critical_changes += 1
         elif actual != expected:
             if entry["path"] in _DATA_FILES:
-                log(f"✓ {entry['path']} (data, hash changed — expected)", "PASS")
+                # Data files: track change, don't alarm
+                # Skip manifest.json — it updates on every verify()
+                if entry["path"] == "manifest.json":
+                    snapshot[entry["path"]] = actual
+                else:
+                    old_snapshot = snapshot.get(entry["path"])
+                    if old_snapshot and old_snapshot != actual:
+                        log(f"📝 {entry['path']} (hash changed)", "INFO")
+                        _log_hash_change(entry["path"], old_snapshot, actual, 0)
+                        data_changes += 1
+                    snapshot[entry["path"]] = actual
             else:
                 log(f"File tampered: {entry['path']}", "CRITICAL")
                 all_ok = False
+                critical_changes += 1
                 needs_reinit = True
                 _auto_recover(entry["path"], manifest)
         else:
             log(f"✓ {entry['path']}", "PASS")
 
+    # Save updated snapshot
+    _save_snapshot(snapshot)
+
+    # Summary
+    if data_changes:
+        log(f"{data_changes} data file(s) changed since last check", "INFO")
     if all_ok:
         log("All checks passed ✓", "PASS")
+    else:
+        log(f"{critical_changes} critical issue(s) detected", "CRITICAL")
+
+    # Add hash_change_log to manifest for audit display
+    manifest["_data_changes_since_init"] = data_changes
+    manifest["_checked_at"] = datetime.now().isoformat()
+    with open(MANIFEST_PATH, 'w') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
     return all_ok
 
 

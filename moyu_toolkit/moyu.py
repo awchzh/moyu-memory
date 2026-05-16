@@ -111,6 +111,22 @@ def cmd_audit():
     print(f"\n  🔍 Layer 2 — On-wake detection (integrity_checker.py)")
     if has_manifest:
         print(f"     ✅  Manifest initialized")
+        # Show data file change tracking
+        hash_log_path = _os.path.join(storage_base, "hash_change_log.json")
+        if _os.path.exists(hash_log_path):
+            try:
+                with open(hash_log_path) as _f:
+                    changes = _json.load(_f)
+                from datetime import datetime as _dt
+                recent = [c for c in changes if c.get("timestamp","").startswith(_dt.now().strftime("%Y-%m-%d"))]
+                if recent:
+                    print(f"     📝  {len(recent)} data file change(s) today")
+                    for c in recent[-3:]:
+                        print(f"        {c['timestamp'][11:19]}  {c['file'][:30]}")
+                else:
+                    print(f"     ✅  No data file changes today")
+            except Exception:
+                pass
         # Count daily backups
         if _os.path.isdir(backup_dir):
             backups = [f for f in _os.listdir(backup_dir) if f.startswith("daily_")]
@@ -299,6 +315,21 @@ def _handle_search(args):
     for r in results:
         print(f"  [{r['timestamp'][:10]}] {r['summary'][:80]}")
         print(f"  Score: {r.get('score', 0)}")
+    
+    # Track access for forgetting curve density analysis
+    try:
+        fc = _import("forgetting_curve")
+        fc.track_access([r['memory_id'] for r in results])
+    except Exception:
+        pass
+
+def _require_auth(op_type: str, context: str = "") -> bool:
+    """Prompt for security password before dangerous operations.
+    Returns True if allowed (or no password set), False if denied."""
+    sec = _import("security")
+    result = sec.verify_operation(op_type, context)
+    return result
+
 
 def _compress(args):
     """Handle compress command — status, config, and settings."""
@@ -306,6 +337,8 @@ def _compress(args):
     if not args or args[0] in ("stats", "--stats"):
         cm.stats()
     elif args[0] == "--now":
+        if not _require_auth("compress", "Force manual memory compression"):
+            return
         ctx = _import("active_context")
         lrn = _import("learner")
         wm = ctx.format_for_injection()
@@ -349,6 +382,8 @@ def _forget(args):
     elif args[0] in ("config", "show", "--config"):
         _forget_config()
     elif args[0] == "set" and len(args) >= 3:
+        if not _require_auth("forget_set", f"Set forgetting_curve.{args[1]}={args[2]}"):
+            return
         _forget_set(args[1], args[2])
     elif args[0] in ("help", "--help"):
         _forget_help()
@@ -537,6 +572,8 @@ def _update(args):
             if info.get("body"):
                 print(f"\nChanges:\n{info['body'][:200]}")
     elif "now" in args or "apply" in args:
+        if not _require_auth("update_now", "Update MOYU to latest version"):
+            return
         # Preview changes and confirm
         info = up.check()
         if "error" in info:

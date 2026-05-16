@@ -499,12 +499,13 @@ def build_injection(
     memory_search: str = "",
     knowledge_graph: str = "",
     user_profile: str = "",
+    bridge_context: str = None,
 ) -> tuple[str, dict]:
     """Build a compressed injection payload from all available context sources."""
     cfg = _load_compression_config()
 
     if not cfg["enabled"]:
-        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile] if p.strip()]
+        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile, bridge_context] if p and p.strip()]
         return "\n\n".join(parts), {"compressed": False, "reason": "disabled in config"}
 
     sections = []
@@ -519,6 +520,8 @@ def build_injection(
         sections.append(("knowledge_graph", knowledge_graph.strip(), 5, "graph"))
     if memory_search.strip():
         sections.append(("memory_search", memory_search.strip(), 5, "memory"))
+    if bridge_context and bridge_context.strip():
+        sections.append(("bridge_context", bridge_context.strip(), 1, "bridge"))
 
     return prepare_injection(sections,
                              budget=cfg["budget_chars"],

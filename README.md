@@ -1,89 +1,128 @@
 # MOYU — AI Agent Secure Memory Toolkit
 
-**Zero-trust memory infrastructure for your AI Agent. Auditable, recoverable, self-defending memory. No Docker, no database, no registration — pure Python, copy & use.**
+**Your AI remembers everything. But is it safe? Can it survive context compression? Will old memories pile up forever?**
+
+MOYU is a lightweight, zero-trust memory layer for AI Agents. Drop it into any Python project — your Agent gains **secure, self-managing, cross-session memory** in minutes.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Dependencies](https://img.shields.io/badge/dependencies-numpy%20%7C%20requests-green)]()
 
-MOYU is a lightweight, platform-agnostic memory layer for AI Agents. Drop it into Hermes, OpenClaw, LangChain, AutoGen, or your own Python project — your Agent gains **persistent cross-session memory** instantly.
+**No Docker. No database. No registration. No API vendor lock-in. Pure Python, copy & use.**
 
 ---
 
-## Quick Start
+## 🎯 What MOYU is really about
+
+Three things that every other memory solution ignores:
+
+| Your problem | MOYU's answer |
+|-------------|---------------|
+| **"Is my Agent's memory file being tampered?"** | 🔒 **Defense chain** — password gate + integrity check (SHA256) + forensic analysis + auto-recovery from backup |
+| **"My AI's context window is filling up — what do I delete?"** | 🌿 **Lifecycle management** — adaptive compression + forgetting curve (parallel gates) + scene-protected retention |
+| **"Can I take this to another project?"** | 📦 **Zero infrastructure** — one folder, `pip install numpy requests`, works with Hermes / OpenClaw / LangChain / custom Python |
+
+MOYU has 15 capabilities (all of them real, all verified working). But these three are what no one else does.
+
+---
+
+## 30-Second Quick Start
 
 ```bash
 pip install numpy requests pyyaml
 ```
 
-Copy the `moyu_toolkit/` folder into your project. Run your first memory search:
+Copy the `moyu_toolkit/` folder into your project. First search:
 
 ```bash
 cd moyu_toolkit
-python3 agent_memory.py search "what did we talk about"
+python3 moyu.py search "what did we talk about"
 ```
 
-> **Zero-config mode:** Works immediately with local fallback. Add your API key in `config.yaml` when you want semantic search.
-
-**One command to rule them all:**
-
-```
-moyu_toolkit/moyu.py help
-```
-
-## Command Reference
-
-All commands are available through the unified CLI:
+> **Zero-config mode:** Works immediately with local fallback. When you need better retrieval, install FastEmbed (`pip install fastembed`). No API key required.
 
 ```bash
-cd moyu_toolkit && python3 moyu.py <command> [args]
+python3 moyu.py help          # Full command reference
+python3 moyu.py demo          # See all capabilities in action
+python3 moyu.py init          # Initialize integrity protection
 ```
 
-### 🛡️ Security
+---
 
-| Command | Description |
+## 📋 Complete Command Reference
+
+All commands through a unified CLI:
+
+```bash
+python3 moyu.py <command> [args]
+```
+
+### 1️⃣ Defense & Security (MOYU's core differentiator)
+
+| Command | What it does | Why you need it |
+|---------|-------------|-----------------|
+| `moyu setup` | Set a security password | Dangerous ops need password confirmation |
+| `moyu verify <type> [desc]` | Verify a dangerous operation | Blocks memory data corruption before it happens |
+| `moyu unlock` | Unlock after 3 failed attempts | Auto-lockout prevents brute force |
+| `moyu check` | Check all file integrity (SHA256) | Detects tampering — even data files that change daily are tracked |
+| `moyu audit` | Full security audit — all 3 layers | One report: password status + integrity status + recovery readiness |
+| `moyu init` | Initialize integrity manifest | First step to enable the defense chain |
+
+**How the defense chain works:**
+
+```
+Layer 1 (Pre-operation): password verification → blocks dangerous edits
+Layer 2 (On-wake):       integrity check + forensic analysis → detects tampering
+Layer 3 (Post-tamper):   auto-recovery from daily backup → restores clean state
+```
+
+### 2️⃣ Memory & Semantic Retrieval
+
+| Command | What it does |
 |---------|-------------|
-| `moyu setup` | Set a security password (dangerous operations need password confirmation) |
-| `moyu verify <type> [desc]` | Verify a dangerous operation (delete, modify config, etc.) |
-| `moyu unlock` | Unlock the security system (locked after 3 failed attempts) |
-| `moyu check` | Check memory file integrity (SHA256 comparison) |
-| `moyu audit` | Full security audit — all three defense layers at a glance |
-| `moyu init` | Initialize integrity verification manifest |
-
-### 🧠 Memory & Retrieval
-
-| Command | Description |
-|---------|-------------|
-| `moyu search <query>` | Search memories using TEMPR multi-strategy retrieval |
-| `moyu stats` | Show all statistics (memory, context, learner, security) |
+| `moyu search <query>` | Search memories using TEMPR multi-strategy (semantic + keyword + time) |
+| `moyu stats` | All statistics: memory count, embedding type, source distribution, entities |
 | `moyu status` | System status with defense chain visualization |
 | `moyu inject` | Get behavioral rules for injection into system prompt |
 | `moyu signals` | View active trigger words (learner) |
 
-### ⏳ Lifecycle & Compression
+**Search quality:** Local FastEmbed (BAAI/bge-small-zh-v1.5, 512-dim semantic vector). Falls back gracefully to n-gram + BM25 when FastEmbed is not installed. Never breaks.
 
-| Command | Description |
+### 3️⃣ Lifecycle & Compression (auto-context management)
+
+| Command | What it does |
 |---------|-------------|
-| `moyu forget` | Show forgetting curve status (two-stage gating, density analysis) |
-| `moyu forget config` | Show current forgetting curve parameters |
-| `moyu forget set <key> <val>` | Set: `demote_days`, `archive_days`, `density_window`, `enabled` |
-| `moyu forget --summary` | One-line summary of memory lifecycle |
-| `moyu forget history` | Show demotion/retention history with reasons |
 | `moyu compress` | Show compression status and context usage |
-| `moyu compress --now` | Force manual compression |
-| `moyu context` | Show context usage percentage in one line |
+| `moyu compress --now` | Force manual compression (requires password) |
+| `moyu compress config` | Show compression parameters |
+| `moyu compress set <k> <v>` | Adjust thresholds (mild_threshold, auto_threshold, etc.) |
+| `moyu context` | One-line context usage percentage |
+| `moyu forget` | Show forgetting curve status (two-stage gating, density analysis) |
+| `moyu forget config` | Show forgetting curve parameters |
+| `moyu forget set <k> <v>` | Adjust: `demote_days`, `archive_days`, `density_window`, `enabled` |
+| `moyu forget --summary` | One-line memory lifecycle summary |
+| `moyu forget history` | What was demoted, what was kept, and why |
+| `moyu ref <name>` | Read original content of a compressed memory |
+| `moyu ref list` | List all available refs |
 
-### 🔄 Learning & Reflection
+**How the forgetting curve works (parallel gating — OR logic):**
 
-| Command | Description |
+- **Safety window** (default 14 days): nothing demoted before this
+- **Access density**: frequently-used topics survive longer
+- **Scene protection**: related memories protect each other, even past the window
+- All parameters adjustable. Runs automatically every 2 hours via cron.
+
+### 4️⃣ Learning & Reflection (get better from interaction)
+
+| Command | What it does |
 |---------|-------------|
-| `moyu learn <text>` | Learn from a user correction |
-| `moyu detect <text>` | Detect correction signals in text |
-| `moyu reflect` | Run self-reflection (analyze connections & contradictions) |
+| `moyu learn <text>` | Learn from a user correction (extracts pattern after 3 repeats) |
+| `moyu detect <text>` | Detect correction signals in text ("no/don't/remember") |
+| `moyu reflect` | Run self-reflection (cross-time connections, contradictions) |
 
-### 📚 Knowledge Base
+### 5️⃣ Knowledge Base & Graph
 
-| Command | Description |
+| Command | What it does |
 |---------|-------------|
 | `moyu kb list` | List all knowledge files |
 | `moyu kb search <query>` | Search knowledge files |
@@ -91,123 +130,130 @@ cd moyu_toolkit && python3 moyu.py <command> [args]
 | `moyu kb read <file>` | Read a knowledge file |
 | `moyu kg search <entity>` | Search knowledge graph for entities and relations |
 
-### 🔗 Session & Updates
+### 6️⃣ Session & Maintenance
 
-| Command | Description |
+| Command | What it does |
 |---------|-------------|
 | `moyu bridge` | Show session bridge status |
-| `moyu update` | Check for updates on GitHub |
-| `moyu update now` | Download and apply the latest update |
-
-### 🎭 Demo
-
-| Command | Description |
-|---------|-------------|
-| `moyu demo` | Show all 15 capabilities with examples |
-
-
-## File Structure
-
-## 15 Capabilities — Grouped by Domain
-
-### 📦 Memory Layer — Store & Find
-
-| # | Capability | What it does |
-|---|-----------|-------------|
-| 1️⃣ | **TEMPR Multi-Strategy Retrieval** | Semantic + BM25 + time-weighted — always finds what you need |
-| 2️⃣ | **Working Memory** | Survives context compression — remembers current task. Built-in workflow knowledge base — tell your AI "remember this" and completed workflows auto-save as markdown. Retrieve with `moyu kb search`, or let your AI's system prompt trigger auto-lookup |
-| 3️⃣ | **Knowledge Graph** | Auto-extracts entities & relations. Local regex mode (no API key needed), upgrades to semantic deep extraction with API key |
-| 4️⃣ | **User Profile** | Auto-extracts preferences, habits, facts. Local regex mode (no API key needed), upgrades to semantic deep extraction with API key |
-| 5️⃣ | **Deduplication** | SHA256 hash — same content never stored twice |
-
-### 🧠 Learning Layer — Improve From Interaction
-
-| # | Capability | What it does |
-|---|-----------|-------------|
-| 6️⃣ | **Learn from Corrections** | Auto-detects correction signals ("no/don't/remember") on any MOYU command — learns lessons after pattern repeats 3 times. `moyu learn` for manual trigger. |
-| 7️⃣ | **Self-Reflection** | Analyzes old memories on wake — finds connections & contradictions |
-
-### 🛡️ Defense Layer — Protect & Verify
-
-| # | Capability | What it does |
-|---|-----------|-------------|
-| 8️⃣ | **Integrity Verification** | Detects memory file tampering on wake |
-| 9️⃣ | **Integrity Check & Recovery** | Run `moyu check` to verify file integrity. On pass, auto-saves daily backup (keeps 3 days). Recover from any clean backup if tampered. |
-| 🔟 | **Forensic Analysis** | Analyzes what changed and how — instruction override, prompt injection detection |
-| 1️⃣1️⃣ | **Memory Self-Defense** | First line of defense — prevents dangerous operations before they reach your memory files. Password verification, auto-lockout, audit trail. |
-
-### 🌿 Lifecycle Layer — Let Memory Breathe (V2.0)
-
-| # | Capability | What it does |
-|---|-----------|-------------|
-| 1️⃣2️⃣ | **Context-Aware Compression** | Two-tier graduated compression: mild (70%+) truncates long memories, auto (85%+) aggressively demotes non-critical items. Compression preserves traceability — original content saved to `refs/` before truncation, retrievable via `moyu ref <name>`. Manual trigger (`moyu compress --now`), status (`moyu compress`), and parameter adjustment (`moyu compress config` / `moyu compress set`) all available. |
-| 1️⃣3️⃣ | **Forgetting Curve** | Parallel gating (OR): 14-day safety window OR access density trend OR scene association protection. Frequently used topics protect related memories from being forgotten, even past the window. All parameters adjustable via `moyu forget config` and `moyu forget set`. Forgetting visibility via `moyu forget history`. |
-| 1️⃣4️⃣ | **Memory Merge** | Detects related memories by keyword overlap and merges them into a single composite entry. Original details are preserved in an expandable field — nothing is lost. |
-| 1️⃣5️⃣ | **Self-Update** | Checks GitHub for new releases and updates the toolkit in place — preserving memory_data and user config. `moyu update` to check, `moyu update now` to apply. |
+| `moyu update` | Check for GitHub updates |
+| `moyu update now` | Download and apply update (requires password) |
+| `moyu demo` | Interactive demo of all capabilities |
 
 ---
 
-## Comparison
+## 🔬 15 Capabilities — Full Details
 
-| | Built-in (Hermes/OpenClaw) | **MOYU** |
-|--|---------------------------|----------|
-| Storage | Plain text files | Vector index (1536-dim semantic) |
-| Retrieval | Full text dump | **TEMPR triple strategy** |
-| Working memory | ❌ None | **✅ Separate file, survives compression** |
-| Knowledge graph | ❌ None | **✅ JSON-based, zero ops** |
-| Self-reflection | ❌ None | **✅ Automatic** |
-| User profile | ❌ Manual only | **✅ Auto-extraction** |
-| Learn from corrections | ❌ None | **✅ Auto-detect & accumulate** |
-| Integrity check | ❌ None | **✅ manifest + SHA256** |
-| Auto recovery | ❌ None | **✅ `moyu check` manual verify / auto backup last 3 days** |
-| Forensic analysis | ❌ None | **✅ Tamper source analysis** |
-| Memory self-defense | ❌ None | **✅ Pre-verification, blocks before damage** |
-| Context-aware compression | ❌ None | **✅ Auto at 90%, manual trigger** |
-| Forgetting curve | ❌ None | **✅ Pressure-driven lifecycle** |
-| Memory merge | ❌ None | **✅ Keyword overlap merge** |
-| Self-update | ❌ None | **✅ GitHub one-click update** |
-| API switching | Fixed | **✅ Hot-swappable** |
-| Platform dependency | Tied to platform | **✅ Zero binding** |
-| Setup time | Out of box | **pip install, 5min** |
+### 🛡️ Defense Layer (3 capabilities)
+
+| # | Capability | What it does |
+|---|-----------|-------------|
+| 1 | **Memory Self-Defense** | Prevents dangerous operations before they reach memory files. Password verification + auto-lockout + audit trail |
+| 2 | **Integrity Check & Recovery** | SHA256 manifest on wake + daily backups (3 days). Detects tampering — including data file changes |
+| 3 | **Forensic Analysis** | Analyzes what changed and why. Detects instruction override patterns, prompt injection, JSON corruption |
+
+### 🧠 Memory Layer (8 capabilities)
+
+| # | Capability | What it does |
+|---|-----------|-------------|
+| 4 | **TEMPR Semantic Retrieval** | Multi-strategy: FastEmbed semantic + BM25 keyword + time-weighted recency. Hybrid score_and_rank fusion |
+| 5 | **Working Memory** | Survives context compression — remembers the current task. Separate file, auto-injected |
+| 6 | **Knowledge Graph** | Auto-extracts entities & relations from memory. Local regex (no API key) or semantic (with API key) |
+| 7 | **User Profile** | Auto-extracts preferences, habits, facts from interaction |
+| 8 | **Deduplication** | SHA256 hash prevents duplicates |
+| 9 | **Context-Aware Compression** | Two-tier graduated compression (mild at 70%+, aggressive at 85%+). Original content preserved in refs/ |
+| 10 | **Forgetting Curve** | Parallel gating: safety window OR access density OR scene protection. Prevents context saturation without losing important memories |
+| 11 | **Memory Merge** | Detects related memories by keyword overlap and merges them. Originals preserved in expandable field |
+
+### 🔄 Learning Layer (2 capabilities)
+
+| # | Capability | What it does |
+|---|-----------|-------------|
+| 12 | **Learn from Corrections** | Auto-detects correction signals. Learns lessons after 3 repeats. Produces injectable behavioral rules |
+| 13 | **Self-Reflection** | Analyzes old memories on wake. Finds cross-time connections, contradictions, topic shifts |
+
+### 🔗 Integration Layer (2 capabilities)
+
+| # | Capability | What it does |
+|---|-----------|-------------|
+| 14 | **Cross-Session Bridge** | Carries context across sessions. `prefill.json` auto-syncs to system prompt. Every round logged |
+| 15 | **Auto-Update** | Checks GitHub for new releases. Applies in-place without touching memory_data or config |
 
 ---
 
-## Why MOYU
+## 🏆 What makes MOYU different
 
-- **No platform lock-in** — Hermes, OpenClaw, LangChain, or custom Python
-- **No API vendor lock-in** — DeepSeek, OpenAI, MiniMax, Doubao — switch freely
-- **Zero risk sidecar** — doesn't touch your existing memory files
-- **Zero barrier** — no Docker, no database, no registration required
-- **Pure Python, 4 core files, fully hackable**
+| | Hermes/OpenClaw (built-in) | Mem0 | **MOYU** |
+|--|---------------------------|------|----------|
+| Storage | Plain text files | Vector DB (SQLite/Faiss) | **JSON + SQLite FTS5** |
+| Search | Full text dump | Semantic (API/LLM) | **TEMPR triple strategy** |
+| Security | ❌ None | ❌ None | **✅ 3-layer defense chain** |
+| Lifecycle | ❌ None | ❌ None | **✅ Forgetting curve + compression** |
+| Working memory | ❌ None | ❌ None | **✅ Separate file, survives compression** |
+| Cross-session carry | Manual only | ❌ None | **✅ Auto-sync prefill.json** |
+| Platform lock-in | Tied to platform | Tied to SDK | **✅ Zero binding** |
+| API lock-in | Fixed provider | OpenAI only | **✅ Hot-swappable** |
+| Setup time | Out of box | 5 min + API key | **pip install, 30 seconds** |
+| Offline mode | Partial | Requires API key | **✅ Full local fallback** |
 
 ---
 
-## File Structure
+## 🎮 When to use MOYU
+
+- **You want your AI Agent to remember things across conversations** — and you want it to be secure
+- **You keep hitting context limits** — and you need automatic compression that doesn't lose important memories
+- **You're switching between Hermes, OpenClaw, LangChain, or custom code** — and you want one memory solution for all
+- **You want zero infrastructure** — no Docker, no database, no registration
+
+---
+
+## 📁 File Structure
 
 ```
 moyu_toolkit/
-├── agent_memory.py          # Vector memory + TEMPR retrieval
-├── active_context.py         # Working memory (survives compression)
-├── knowledge_graph.py        # Entity-relation graph
-├── learner.py                # Learn from user corrections
-├── security.py               # Memory self-defense — first line of defense
-├── self_reflection.py        # Self-Reflection — analyzes connections & contradictions on wake (V2.0.3)
-├── knowledge_base.py         # Workflow knowledge base — searchable recipe book (V2.0.3)
-├── moyu.py                    # Unified CLI entry point
-├── context_manager.py         # Context-aware compression (V2.0)
-├── forgetting_curve.py        # Memory lifecycle — two-stage gating (V2.0.5)
-├── memory_merge.py            # Topic-aware memory merge (V2.0)
-├── session_bridge.py          # Cross-session carryover (V2.0)
-├── updater.py                 # Self-update (V2.0)
-├── moyu_wake.py               # Wake-up integration flow (V2.0)
+├── agent_memory.py          # Vector memory engine + TEMPR retrieval
+├── agent_memory_sqlite.py   # SQLite FTS5 search index
+├── active_context.py        # Working memory (survives compression)
+├── context_manager.py       # Context-aware compression
+├── forgetting_curve.py      # Memory lifecycle — two-stage gating
+├── memory_merge.py          # Topic-aware memory merge
+├── knowledge_graph.py       # Entity-relation knowledge graph
+├── knowledge_base.py        # Workflow knowledge base
+├── learner.py               # Learn from user corrections
+├── self_reflection.py       # Cross-time analysis
+├── security.py              # Memory self-defense — password + lockout
+├── session_bridge.py        # Cross-session carryover
+├── moyu.py                  # Unified CLI entry point
+├── moyu_wake.py             # Wake-up integration flow
+├── moyu_demo.py             # Interactive demo
+├── updater.py               # Auto-update
 ├── defense_toolkit/
-│   └── integrity_checker.py  # File integrity + auto recovery
-├── config.yaml               # API keys & settings (fill in yours)
+│   └── integrity_checker.py # File integrity + auto recovery
+├── config.yaml              # API keys & settings
 └── requirements.txt
 ```
 
 ---
 
-## License
+## 🚀 Getting Started
+
+```bash
+# Install dependencies
+pip install numpy requests pyyaml
+
+# Optional — enables true semantic search
+pip install fastembed
+
+# Run your first search
+cd moyu_toolkit
+python3 moyu.py search "your first query"
+
+# Secure your memory
+python3 moyu.py init
+python3 moyu.py setup
+```
+
+---
+
+## 📜 License
 
 MIT

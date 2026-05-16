@@ -69,6 +69,7 @@ def wake(dry_run: bool = False) -> str:
 
     # ── Step 0d: Load session bridge ──
     bridge_info = sb.load()
+    bridge_text = sb.inject_format()
 
     # ── Step 0e: Self-reflection (only under pressure, compact mode) ──
     reflection_msg = ""
@@ -77,6 +78,21 @@ def wake(dry_run: bool = False) -> str:
             reflection_msg = sr.run_compact()
     except Exception:
         pass
+
+    # ── Step 0f: File integrity check ──
+    integrity_msg = ""
+    try:
+        ic = __import__("defense_toolkit.integrity_checker", fromlist=["defense_toolkit"])
+        ic.verify()
+        changes = ic.hash_change_log()
+        today = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+        today_changes = [c for c in changes if c.get("timestamp","").startswith(today)] if changes else []
+        if today_changes:
+            integrity_msg = f"{len(today_changes)} 个数据文件有变更（已记录）"
+        else:
+            integrity_msg = "完整性校验通过"
+    except Exception:
+        integrity_msg = "完整性校验未初始化（moyu init）"
 
     # ── Step 1: Collect context ──
     working_memory = ac.format_for_injection()
@@ -130,11 +146,13 @@ def wake(dry_run: bool = False) -> str:
         return ""
 
     # Normal wake — compress
+    bridge_context = bridge_text if bridge_text else None
     result, report = cm.build_injection(
         working_memory=working_memory,
         behavioral_rules=behavioral_rules,
         memory_search=recent_memories,
         user_profile=user_profile,
+        bridge_context=bridge_context,
     )
 
     # ── Step 3: Build status message ──
@@ -147,6 +165,10 @@ def wake(dry_run: bool = False) -> str:
         messages.append(f"降级了 {demoted_count} 条旧记忆")
     if archive_count:
         messages.append(f"可归档 {archive_count} 条")
+    
+    # Integrity check report
+    if integrity_msg:
+        messages.append(integrity_msg)
 
     # Memory merge report
     merged_count = merge_result.get("merged_groups", 0)
