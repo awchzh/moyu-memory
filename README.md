@@ -1,258 +1,256 @@
-# MOYU — AI Agent 安全记忆工具包
+# MOYU — Secure Memory Toolkit for AI Agents
 
-**你的 AI 记得所有对话，但你的记忆真的安全吗？旧记忆会撑爆上下文吗？**
+**Your AI remembers every conversation, but is your memory safe? Will old memories bloat your context window?**
 
-MOYU（墨羽）是一个轻量级的 AI 记忆工具包，给你的 Agent 装上**安全、自动管理、跨会话持久化**的记忆系统。纯 Python，零基础设施，一个文件夹即插即用。支持 Hermes、OpenClaw、LangChain、AutoGen 或任何自定义 Python 项目。
+MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, zero infrastructure, plug-and-play with one folder. Works with Hermes, OpenClaw, LangChain, AutoGen, or any custom Python project.
 
-**v2.4.0** — 25 项能力，6 大分类。
+**v2.4.0** — 25 capabilities, 6 categories.
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
 ```bash
 pip install -r requirements.txt
 ```
 
-将 `moyu_toolkit/` 文件夹复制到你的项目中，直接跑：
+Copy the `moyu_toolkit/` folder into your project and run:
 
 ```bash
 cd moyu_toolkit
-python3 moyu.py search "上次聊了什么"
+python3 moyu.py search "what did we talk about last time"
 ```
 
-> **零配置模式：** 即装即用，无需 API Key。安装 FastEmbed 后可开启语义搜索（`pip install fastembed`）。
+> **Zero-config mode:** Works out of the box without an API key. Install FastEmbed to unlock semantic search (`pip install fastembed`).
 
 ```bash
-python3 moyu.py help          # 查看所有命令
-python3 moyu.py demo          # 查看能力演示
-python3 moyu.py init          # 初始化记忆文件保护
+python3 moyu.py help          # List all commands
+python3 moyu.py demo          # Show capabilities
+python3 moyu.py init          # Initialize file integrity protection
 ```
 
 ---
 
-## 📋 命令参考
+## 📋 Command Reference
 
-所有命令通过统一入口调用：
+All commands through a single entry point:
 
 ```bash
-python3 moyu.py <命令> [参数]
+python3 moyu.py <command> [arguments]
 ```
 
-### 🛡️ 防御与安全（MOYU 独有的差异化能力）
+### 🛡️ Defense & Security (MOYU's competitive edge)
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu setup` | 设置安全密码（危险操作需要密码确认） |
-| `moyu verify <类型> [描述]` | 验证危险操作（删除、修改配置等） |
-| `moyu unlock` | 解锁安全系统（连续 3 次失败后自动锁定 30 分钟） |
-| `moyu check` | 检查所有文件的完整性（SHA256 比对 + 自动恢复） |
-| `moyu audit` | 完整安全审计——四层防御一览 |
-| `moyu init` | 初始化完整性校验清单 |
-| `moyu inject` | 获取注入行为规则（已更名为 `moyu context`，向下兼容） |
+| `moyu setup` | Set security password (required for dangerous operations) |
+| `moyu verify <type> [desc]` | Verify dangerous operations (delete, modify config, etc.) |
+| `moyu unlock` | Unlock security system (auto-locks for 30 min after 3 failed attempts) |
+| `moyu check` | Check file integrity (SHA256 comparison + auto-recovery) |
+| `moyu audit` | Full security audit — all four defense layers |
+| `moyu init` | Initialize integrity manifest |
 
-四层防御链：
+Four-layer defense chain:
 ```
-第 1 层（事前）：内容安检闸 + PII 脱敏 → 注入和敏感信息不入库
-第 2 层（操作前）：密码验证 → 阻止危险操作
-第 3 层（启动时）：完整性校验 + 法医分析 → 检测篡改
-第 4 层（事后）：自动恢复 → 从每日备份还原
+Layer 1 (pre-write): Content security gate + PII redaction → injections & sensitive data blocked
+Layer 2 (pre-op): Password verification → dangerous operations blocked
+Layer 3 (startup): Integrity check + forensic analysis → tampering detected
+Layer 4 (post-op): Auto-restore → restore from daily backup
 ```
 
-**额外防御：**
-- **写入爆发防护** — 60 秒内超过 30 次写入触发细粒度回滚 + 锁定 5 分钟 + 告警
-- **工具调用环检测** — Agent 层拦截无限循环，SHA256 指纹 + 周期识别 + 硬熔断
-- **PII 脱敏** — 中国手机号/身份证/银行卡 + 国际电话/Email/SSN/信用卡/IP，正则自动替换，不进知识图谱
+**Additional defenses:**
+- **Write burst protection** — >30 writes in 60s triggers fine-grained rollback + 5-minute lock + alert
+- **Tool call loop detection** — Intercepts infinite loops at agent layer, SHA256 fingerprint + cycle detection + hard abort
+- **PII redaction** — Chinese & international phone/ID/bank cards + email/SSN/credit cards/IPs, regex-based auto-replacement
 
-### 🧠 记忆与检索
+### 🧠 Memory & Retrieval
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu search <关键词>` | TEMPR 多策略检索（语义 + BM25 关键词 + 时间加权） |
-| `moyu stats` | 显示全部统计（记忆数、嵌入类型、来源分布） |
-| `moyu status` | 系统状态与防御链可视化 |
-| `moyu context` | 获取行为规则（注入到系统提示词中使用） |
-| `moyu signals` | 查看已激活的关键词（来自学习者模块） |
+| `moyu search <query>` | TEMPR multi-strategy search (semantic + BM25 keywords + time-weighted) |
+| `moyu stats` | Show all statistics (memory count, embedding type, source distribution) |
+| `moyu status` | System status + defense chain visualization |
+| `moyu context` | Get behavioral rules (inject into system prompt) |
+| `moyu signals` | View active trigger words (from learner module) |
 
-搜索质量：本地 FastEmbed 512 维语义向量，不装也不崩——自动降级为 n-gram + BM25。支持 SQLite FTS5 全文索引。
+Search quality: Local FastEmbed 512-dim semantic vectors, no crash on missing — auto-degrades to n-gram + BM25. Backed by SQLite FTS5 full-text index.
 
-### 📊 知识层
+### 📊 Knowledge Layer
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu kg search <实体>` | 搜索知识图谱中的实体关系 |
-| `moyu kg search <实体> --snapshot YYYY-MM-DD` | 时间快照查询——查看过去某个时刻的知识图谱状态 |
-| `moyu kg search <实体> --snapshot all` | 包含全部历史关系（含已失效） |
-| `moyu kg history <实体>` | 查看实体完整时间线（所有关系的生命周期） |
-| `moyu kg invalidate --source X --target Y --relation Z` | 标记关系失效（不删除，可回溯） |
-| `moyu kg invalidate --entity E` | 失效某实体及其所有关系 |
-| `moyu kg stats` | 知识图谱统计（活跃/失效/总数） |
-| `moyu kb list` | 列出所有工作流知识文件 |
-| `moyu kb search <关键词>` | 搜索知识文件 |
-| `moyu kb index` | 重建关键词索引 |
-| `moyu kb read <文件>` | 读取知识文件 |
+| `moyu kg search <entity>` | Search entity relationships in knowledge graph |
+| `moyu kg search <entity> --snapshot YYYY-MM-DD` | Time-travel query — view graph state at a past point in time |
+| `moyu kg search <entity> --snapshot all` | Include all historical relations (including expired) |
+| `moyu kg history <entity>` | View entity's complete timeline (lifecycle of all relations) |
+| `moyu kg invalidate --source X --target Y --relation Z` | Mark a relation as expired (preserved for backtracking) |
+| `moyu kg invalidate --entity E` | Expire an entity and all its relations |
+| `moyu kg stats` | Knowledge graph stats (active/expired/total) |
+| `moyu kb list` | List all workflow knowledge files |
+| `moyu kb search <keyword>` | Search knowledge files |
+| `moyu kb index` | Rebuild keyword index |
+| `moyu kb read <file>` | Read a knowledge file |
 
-### ⏳ 生命周期与上下文管理
+### ⏳ Lifecycle & Context Management
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu compress` | 查看上下文压缩状态 |
-| `moyu compress --now` | 手动触发压缩（需密码） |
-| `moyu compress config` | 查看压缩参数 |
-| `moyu compress set <键> <值>` | 调整压缩阈值 |
-| `moyu context` | 一行显示上下文使用率 |
-| `moyu forget` | 查看遗忘曲线状态（三闸门 + 密度分析 + 蒸馏统计） |
-| `moyu forget config` | 查看遗忘曲线参数 |
-| `moyu forget set <键> <值>` | 调整遗忘参数（保护天数、归档天数等） |
-| `moyu forget --summary` | 一行摘要显示记忆生命周期 |
-| `moyu ref <名称>` | 读取被压缩记忆的原始内容 |
-| `moyu ref list` | 列出所有压缩记录 |
+| `moyu compress` | View compression status |
+| `moyu compress --now` | Force manual compression (password required) |
+| `moyu compress config` | View compression parameters |
+| `moyu compress set <key> <value>` | Adjust compression thresholds |
+| `moyu context` | One-line context usage percentage |
+| `moyu forget` | View forgetting curve status (3-gate + density analysis + distillation stats) |
+| `moyu forget config` | View forgetting curve parameters |
+| `moyu forget set <key> <value>` | Adjust forgetting parameters (demote_days, archive_days, etc.) |
+| `moyu ref <name>` | Read original content of a compressed memory |
+| `moyu ref list` | List all compressed memory references |
 
-遗忘曲线 + 知识蒸馏：
-- **三闸门**（OR 逻辑）：安全窗口（14 天）→ 访问密度分析 → 场景关联保护
-- **蒸馏**：降级前自动提取实体关系到知识图谱，原始对话被清除了结构骨架还在
-- **任务画布**：醒来时自动生成 Mermaid 任务路径图——agent 一眼看懂全局进度
+Forgetting curve + knowledge distillation:
+- **Three gates** (OR logic): Safety window (14 days) → Access density analysis → Scene association protection
+- **Distillation**: Entity relations auto-extracted to knowledge graph before demotion — structural knowledge survives when raw memory is cleared
+- **Task map**: Auto-generated Mermaid task graph on wake — agent sees the big picture at a glance
 
-### 🔄 学习与自我反思
+### 🔄 Learning & Self-Reflection
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu learn <文本>` | 从用户纠正中学习（连续 3 次相同纠正 → 自动晋升为永久规则） |
-| `moyu detect <文本>` | 检测文本中的纠正信号 |
-| `moyu reflect` | 自我反思（跨时间关联分析、矛盾检测） |
+| `moyu learn <text>` | Learn from user corrections (3 identical corrections → permanent rule) |
+| `moyu detect <text>` | Detect correction signals in text |
+| `moyu reflect` | Self-reflect (cross-time association analysis, contradiction detection) |
 
-### 🔗 会话与维护
+### 🔗 Session & Maintenance
 
-| 命令 | 说明 |
+| Command | Description |
 |------|------|
-| `moyu bridge` | 查看跨会话桥接状态（prefill + current_context 双同步） |
-| `moyu update` | 检查 GitHub 更新（TOFU 校验） |
-| `moyu update now` | 下载并应用最新更新（需密码） |
-| `moyu demo` | 交互式能力展示 |
+| `moyu bridge` | View cross-session bridge status (prefill + current_context dual sync) |
+| `moyu update` | Check GitHub for updates (TOFU checksum verification) |
+| `moyu update now` | Download and apply latest update (password required) |
+| `moyu demo` | Interactive capability showcase |
 
 ---
 
-## 🔬 25 项能力详情
+## 🔬 25 Capabilities Detailed
 
-### 🛡️ 防御层（8 项）
+### 🛡️ Defense Layer (8)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 1 | **内容安检闸** | 写入前拦截注入攻击（120+ 关键词，8 大类） |
-| 2 | **法医分析** | 检测注入攻击模式、JSON 结构损坏、文件篡改分析 |
-| 3 | **写入爆发防护** | 60s/30 次写入触发细粒度回滚 + 锁定 5 分钟 |
-| 4 | **工具调用环检测** | Agent 层拦截无限循环，SHA256 指纹 + 穷举周期 + 硬熔断 |
-| 5 | **PII 脱敏** | 中英双语：手机/身份证/银行卡/邮箱/SSN/IP，正则自动替换 |
-| 6 | **密码验证** | 危险操作前密码确认 + 失败 3 次锁定 30 分钟 |
-| 7 | **完整性校验与恢复** | SHA256 清单 + 每日备份保持 3 天，检测数据文件变化 |
-| 8 | **告警框架** | 内容安检/写入爆发双路告警 |
+| # | Capability | Description |
+|---|-----------|------|
+| 1 | **Content Security Gate** | Blocks injection attacks before writing (120+ patterns, 8 categories) |
+| 2 | **Forensic Analysis** | Detects injection patterns, JSON corruption, file tampering |
+| 3 | **Write Burst Protection** | >30 writes/60s triggers fine-grained rollback + 5-min lock |
+| 4 | **Tool Call Loop Detection** | Agent-level infinite loop interception, SHA256 fingerprint + exhaustive cycle scan + hard abort |
+| 5 | **PII Redaction** | Bilingual: Chinese & international phones, ID cards, bank cards, emails, SSNs, IPs — regex-based |
+| 6 | **Password Verification** | Pre-op confirmation + auto-lock after 3 failures (30 min) |
+| 7 | **Integrity Check & Recovery** | SHA256 manifest + daily backups (3-day retention) |
+| 8 | **Alert Framework** | Content gate / write burst dual alert channels |
 
-### 🧠 记忆层（4 项）
+### 🧠 Memory Layer (4)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 9 | **TEMPR 多策略检索** | 语义嵌入 + BM25 关键词 + 时间加权，混合评分排序 |
-| 10 | **FastEmbed 本地嵌入** | 本地 ONNX 向量化，无 API 依赖，自动降级 n-gram |
-| 11 | **SQLite FTS5** | 全文索引加速关键词检索 |
-| 12 | **MD5 去重** | 库内 + 批量双重去重 |
+| # | Capability | Description |
+|---|-----------|------|
+| 9 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking |
+| 10 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
+| 11 | **SQLite FTS5** | Full-text index for accelerated keyword search |
+| 12 | **MD5 Dedup** | In-library + batch double dedup |
 
-### 📊 知识层（3 项）
+### 📊 Knowledge Layer (3)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 13 | **知识图谱** | 实体关系提取 + 时间快照查询 + 关系失效 + 完整时间线 + 知识蒸馏 |
-| 14 | **工作流知识库** | Markdown 知识文件索引 + 关键词搜索 |
-| 15 | **用户画像** | 自动提取偏好、习惯、事实 |
+| # | Capability | Description |
+|---|-----------|------|
+| 13 | **Knowledge Graph** | Entity-relation extraction + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
+| 14 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
+| 15 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
 
-### ⏳ 生命周期层（4 项）
+### ⏳ Lifecycle Layer (4)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 16 | **两级渐进压缩** | 70% 温和 / 85% 激进，原始内容保留可溯源（refs/） |
-| 17 | **任务画布** | 醒来时自动生成 Mermaid 任务路径图，一眼看懂全局进度 |
-| 18 | **遗忘曲线** | 三闸门（安全窗口/访问密度/场景保护）+ 知识蒸馏 |
-| 19 | **记忆合并** | 检测关键词重叠的相关记忆并合并，原始内容保留 |
+| # | Capability | Description |
+|---|-----------|------|
+| 16 | **Two-Tier Progressive Compression** | 70% mild / 85% aggressive, originals preserved with traceable refs/ |
+| 17 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
+| 18 | **Forgetting Curve** | Three gates (safety window / access density / scene protection) + knowledge distillation |
+| 19 | **Memory Merge** | Detect keyword-overlapping related memories and merge, originals preserved |
 
-### 🔄 学习与反思（2 项）
+### 🔄 Learning & Reflection (2)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 20 | **从纠正中学习** | 自动检测纠正信号（"不要/不对/应该是"），累计 3 次生成永久规则 |
-| 21 | **自我反思** | 启动时分析记忆库，发现跨时间关联、矛盾、主题偏移 |
+| # | Capability | Description |
+|---|-----------|------|
+| 20 | **Learn from Corrections** | Auto-detect correction signals, 3 identical corrections → permanent behavioral rule |
+| 21 | **Self-Reflection** | Analyze memory base on startup, discover cross-time associations, contradictions, topic shifts |
 
-### 🔗 集成层（4 项）
+### 🔗 Integration Layer (4)
 
-| # | 能力 | 说明 |
-|---|------|------|
-| 22 | **工作记忆** | 独立文件，上下文压缩后仍保留当前任务信息 |
-| 23 | **跨会话桥接** | 对话摘要自动同步 prefill + current_context，新会话续接旧对话 |
-| 24 | **自动更新** | 检查 GitHub 新版并原地更新（TOFU 校验），不覆盖用户数据和配置 |
-| 25 | **唤醒流程** | `moyu_wake` 全模块编排：校验→备份→遗忘→合并→反思→上下文→桥接 |
+| # | Capability | Description |
+|---|-----------|------|
+| 22 | **Working Memory** | Independent file, survives context compression |
+| 23 | **Cross-Session Bridge** | Conversation summaries auto-synced to prefill + current_context, continuity across sessions |
+| 24 | **Auto-Update** | Check GitHub for new versions, in-place update (TOFU checksum), preserves user data and config |
+| 25 | **Wake Orchestration** | `moyu_wake`: full module pipeline — check→backup→forget→merge→reflect→context→bridge |
 
 ---
 
-## 📁 文件结构
+## 📁 File Structure
 
 ```
 moyu_toolkit/
-├── agent_memory.py          # 向量记忆引擎 + TEMPR 检索
-├── agent_memory_sqlite.py   # SQLite FTS5 搜索索引
-├── active_context.py        # 工作记忆（压缩机存活）
-├── context_manager.py       # 上下文感知压缩 + 任务画布
-├── forgetting_curve.py      # 记忆生命周期——三闸门 + 知识蒸馏
-├── memory_merge.py          # 主题感知记忆合并
-├── knowledge_graph.py       # 实体关系知识图谱（含时间回溯）
-├── knowledge_base.py        # 工作流知识库
-├── learner.py               # 从纠正中学习 + 用户画像
-├── security.py              # 记忆自我保护——密码+锁定
-├── session_bridge.py        # 跨会话续接
-├── moyu.py                  # 统一 CLI 入口
-├── moyu_wake.py             # 启动集成流程
-├── moyu_demo.py             # 交互式演示
-├── updater.py               # 自动更新（TOFU 校验）
-├── self_reflection.py       # 自我反思
+├── agent_memory.py          # Vector memory engine + TEMPR retrieval
+├── agent_memory_sqlite.py   # SQLite FTS5 search index
+├── active_context.py        # Working memory (compression-surviving)
+├── context_manager.py       # Context-aware compression + task map
+├── forgetting_curve.py      # Memory lifecycle — three gates + knowledge distillation
+├── memory_merge.py          # Topic-aware memory merging
+├── knowledge_graph.py       # Entity-relation knowledge graph (with time-travel)
+├── knowledge_base.py        # Workflow knowledge base
+├── learner.py               # Learn from corrections + user profile
+├── security.py              # Memory self-protection — password + lockout
+├── session_bridge.py        # Cross-session continuity
+├── moyu.py                  # Unified CLI entry point
+├── moyu_wake.py             # Startup integration pipeline
+├── moyu_demo.py             # Interactive demo
+├── updater.py               # Auto-update (TOFU checksum verification)
+├── self_reflection.py       # Self-reflection
 ├── defense_toolkit/
-│   ├── integrity_checker.py # 文件完整性 + 自动恢复 + 法医分析 + 告警
-│   ├── forensic_patterns.json # 注入检测规则库（120+ 关键词）
-│   └── pii_redactor.py      # PII 脱敏（中英双语）
+│   ├── integrity_checker.py # File integrity + auto-recovery + forensic analysis + alerts
+│   ├── forensic_patterns.json # Injection detection rule base (120+ patterns)
+│   └── pii_redactor.py      # PII redaction (bilingual)
 ├── tests/
-│   └── test_all.py          # 自动化测试（26 项）
-├── config.yaml              # API 密钥与设置
+│   └── test_all.py          # Automated tests (26 items)
+├── config.yaml              # API keys & settings
 └── requirements.txt
 ```
 
 ---
 
-## 🏆 与其他方案的对比
+## 🏆 Comparison
 
-| 维度 | 平台自带 | Mem0 | **MOYU** |
-|------|---------|------|----------|
-| 存储 | 纯文本文件 | 向量数据库 | **JSON + SQLite FTS5** |
-| 搜索 | 全文转储 | 语义（API/LLM） | **TEMPR 三重策略** |
-| 安全 | ❌ 无 | ❌ 无 | **✅ 四层防御链（安检/密码/校验/恢复）** |
-| PII 脱敏 | ❌ 无 | ❌ 无 | **✅ 中英双语（正则，零依赖）** |
-| 工具调用保护 | ❌ 无 | ❌ 无 | **✅ 环检测 + 硬熔断** |
-| 生命周期 | ❌ 无 | ❌ 无 | **✅ 遗忘曲线 + 上下文压缩 + 任务画布** |
-| 知识图谱 | ❌ 无 | ❌ 无 | **✅ 时间回溯 + 快照 + 蒸馏** |
-| 工作记忆 | ❌ 无 | ❌ 无 | **✅ 独立文件，压缩机存活** |
-| 跨会话续接 | 手动 | ❌ 无 | **✅ 自动同步 prefill + current_context** |
-| 平台绑定 | 绑定平台 | 绑定 SDK | **✅ 零绑定** |
-| API 绑定 | 固定平台 | OpenAI | **✅ 热切换** |
-| 部署 | 开箱即用 | 5 分钟 + API Key | **pip install，30 秒** |
-| 离线 | 部分 | 需要 API Key | **✅ 完全本地降级** |
-
----
-
-## 🎮 适合什么场景
-
-- 想让 AI Agent **记住跨会话的对话**，并且确保记忆安全
-- 经常遇到 **上下文超限**，需要自动压缩但不想丢失重要记忆
-- 关心 **PII 泄露**——不想把手机号、身份证号留在记忆文件里
-- 在 **Hermes、OpenClaw、LangChain 或自定义项目之间切换**，需要一个统一的记忆方案
-- 想要 **零基础设施**——不需要 Docker、不需要数据库、不需要注册
+| Dimension | Built-in (Hermes/OpenClaw) | Mem0 | **MOYU** |
+|------|------------------------|------|----------|
+| Storage | Plain text files | Vector DB | **JSON + SQLite FTS5** |
+| Search | Full dump | Semantic (API/LLM) | **TEMPR triple strategy** |
+| Security | ❌ None | ❌ None | **✅ 4-layer defense chain** |
+| PII Redaction | ❌ None | ❌ None | **✅ Bilingual (regex, zero deps)** |
+| Tool Call Protection | ❌ None | ❌ None | **✅ Loop detection + hard abort** |
+| Lifecycle | ❌ None | ❌ None | **✅ Forgetting curve + compression + task map** |
+| Knowledge Graph | ❌ None | ❌ None | **✅ Time-travel + snapshots + distillation** |
+| Working Memory | ❌ None | ❌ None | **✅ Independent file, compression-surviving** |
+| Cross-Session | Manual | ❌ None | **✅ Auto-sync prefill + current_context** |
+| Platform Lock-in | Locked | SDK locked | **✅ Zero lock-in** |
+| API Lock-in | Fixed | OpenAI | **✅ Hot-swappable** |
+| Deployment | Out of box | 5 min + API Key | **pip install, 30 sec** |
+| Offline | Partial | Requires API Key | **✅ Full local degradation** |
 
 ---
 
-## 📜 许可证
+## 🎮 Use Cases
+
+- Want your AI Agent to **remember cross-session conversations** with real security
+- Frequently hit **context limits**, need auto-compression without losing important memories
+- Concerned about **PII leaks** — don't want phone numbers, IDs lingering in memory files
+- Switching between **Hermes, OpenClaw, LangChain, or custom projects**, need a unified memory solution
+- Want **zero infrastructure** — no Docker, no databases, no signups
+
+---
+
+## 📜 License
 
 MIT
