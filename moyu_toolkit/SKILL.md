@@ -1,6 +1,6 @@
 ---
 ||name: moyu
-||description: 墨羽 v2.4.0 — 25 项能力的 AI Agent 安全记忆工具包。四层防御链（内容安检/PII脱敏/密码/校验恢复）、知识图谱时间回溯+蒸馏、TEMPR多策略检索、遗忘曲线、工作记忆、任务画布、跨会话桥接、从纠正中学习、法医分析、自动更新等。
+||description: 墨羽 v2.4.0 — 25 项能力的 AI Agent 安全记忆工具包。四层防御链（内容安检/PII脱敏/密码/校验恢复）、知识图谱时间回溯+蒸馏、TEMPR多策略检索、遗忘曲线、任务画布、跨会话桥接、从纠正中学习、法医分析、自动更新等。
 ||tags: [ai-agent, memory, python, agent-memory, llm, rag, knowledge-graph, security, pii, 记忆, 安全, 工具包, AI Agent, 向量检索, 知识图谱, 检索增强, 自适应压缩, 记忆生命周期, 遗忘曲线, 场景保护]
 |---
 
@@ -10,7 +10,7 @@
 
 GitHub 仓库：https://github.com/awchzh/moyu-memory
 
-## 🛡️ 四层防御链（MOYU 独有）
+## 🛡️ 四层防御链（墨羽独有）
 
 ```
 第 1 层（事前）：内容安检闸 + PII 脱敏 → 注入和敏感信息不入库
