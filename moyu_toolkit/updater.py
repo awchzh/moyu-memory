@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "2.4.3"
+VERSION = "2.4.4"
 
 # Known SHA256 checksums for release zips, keyed by version tag.
 # Verified before extracting updates.
@@ -30,7 +30,9 @@ VERSION = "2.4.3"
 # their own checksum empty; it gets filled in the NEXT release.
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
-    "2.3.0": "",
+    "2.4.4": "",  # To be filled in next release
+    "2.4.3": "71354dd7b291b36aa2b461b7f4706168cfcfef34e2c2e8f81c2ccb4bba33fe0f",
+    "2.4.2": "6a06b1065bd050b272307aae5247598334f4ade5f2b99c6ffaab6709c9bc0a1d",
     "2.4.0": "",
 }
 

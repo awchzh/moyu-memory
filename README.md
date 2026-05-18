@@ -21,7 +21,7 @@ cd moyu_toolkit
 python3 moyu.py search "what did we talk about last time"
 ```
 
-> **Zero-config mode:** Works out of the box without an API key. Install FastEmbed to unlock semantic search (`pip install fastembed`).
+> **Zero-config mode:** Works out of the box without an API key. Install FastEmbed to unlock semantic search (see `requirements.txt`).
 
 ```bash
 python3 moyu.py help          # List all commands
@@ -47,7 +47,7 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 
 **MOYU's strength is in the combination:** content gate + PII redaction + write burst guard + forensic analysis + password gate + integrity check + auto-restore + loop detection — unique layers no other memory toolkit offers.
 
-**Additional opt-in security** (config.yaml, disabled by default): user isolation (per-directory storage) & AES-256-GCM file encryption (`pip install cryptography`).
+**Additional opt-in security** (config.yaml, disabled by default): user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`).
 
 ---
 
@@ -199,7 +199,7 @@ Forgetting curve + knowledge distillation:
 | 5 | **PII Redaction** | Bilingual: Chinese & international phones, ID cards, bank cards, emails, SSNs, IPs, API keys — regex-based, no deps |
 | 6 | **Password Verification** | Pre-op confirmation + auto-lock after 3 failures (30 min) |
 | 7 | **Integrity Check & Recovery** | SHA256 manifest + daily backups (3-day retention) |
-| 8 | **User Isolation & Encryption** (opt-in) | Per-user storage directories + AES-256-GCM file encryption (`pip install cryptography`) |
+| 8 | **User Isolation & Encryption** (opt-in) | Per-user storage directories + AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`) |
 
 ### 🧠 Memory Layer (4)
 

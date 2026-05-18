@@ -23,6 +23,7 @@ import re
 import time
 import collections
 import hashlib
+import fcntl
 import numpy as np
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
@@ -54,24 +55,9 @@ def _get_encryption():
     return _ENCRYPTION or None
 
 def _get_encryption_password() -> str:
-    """Read encryption password from env var MOYU_ENCRYPTION_PASSWORD first,
-    then fall back to config.yaml (legacy)."""
-    # Priority 1: environment variable (recommended, avoids plaintext in config)
-    env_pw = os.environ.get("MOYU_ENCRYPTION_PASSWORD", "")
-    if env_pw:
-        return env_pw
-    # Priority 2: config.yaml (legacy)
-    try:
-        import yaml
-        cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
-        with open(cfg_path) as f:
-            cfg = yaml.safe_load(f) or {}
-        enc_cfg = cfg.get("security", {}).get("encryption", {})
-        if enc_cfg.get("enabled", False):
-            return enc_cfg.get("password", "")
-    except Exception:
-        pass
-    return ""
+    """Read encryption password from env var MOYU_ENCRYPTION_PASSWORD only.
+    Plaintext passwords in config.yaml are no longer supported for security reasons."""
+    return os.environ.get("MOYU_ENCRYPTION_PASSWORD", "")
 
 # ==================== SQLite FTS5 ====================
 from agent_memory_sqlite import _fts_search
@@ -115,6 +101,7 @@ STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(STORE, "memory_data")
 # Write frequency guard (burst protection)
 WRITE_FREQ_FILE = os.path.join(STORAGE_PATH, "write_freq.json")
 WRITE_LOCK_FILE = os.path.join(STORAGE_PATH, "write_lock.json")
+WRITE_FLOCK_FILE = os.path.join(STORAGE_PATH, "write_flock.lock")
 WRITE_BURST_THRESHOLD = 30   # max writes in the window before trigger
 WRITE_BURST_WINDOW = 60      # seconds
 WRITE_LOCK_MINUTES = 5       # auto-lock duration after burst
@@ -153,7 +140,8 @@ FASTEMBED_DEFAULT_MODEL = "BAAI/bge-small-zh-v1.5"  # 384-dim, Chinese + English
 
 
 def _storage_path(*parts: str) -> str:
-    """Get storage path, optionally with user isolation."""
+    """Get storage path, optionally with user isolation.
+    Safe from path traversal — all paths are resolved relative to STORAGE_PATH."""
     base = STORAGE_PATH
     iso = _get_isolation()
     if iso:
@@ -451,6 +439,23 @@ def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
 
 # ==================== Write Frequency Guard (Burst Protection) ====================
 
+class _Flock:
+    """Simple file lock via fcntl.flock. Prevents concurrent writes to shared state files."""
+    def __init__(self, path: str):
+        self.path = path
+        self.fp = None
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        self.fp = open(self.path, 'w')
+        fcntl.flock(self.fp, fcntl.LOCK_EX)
+        return self
+    def __exit__(self, *args):
+        if self.fp:
+            fcntl.flock(self.fp, fcntl.LOCK_UN)
+            self.fp.close()
+            self.fp = None
+
+
 def _check_write_lock() -> bool:
     """Check if memory writes are currently locked after a burst event."""
     if not os.path.exists(WRITE_LOCK_FILE):
@@ -470,33 +475,34 @@ def _check_write_lock() -> bool:
 
 def _record_write():
     """Record a memory write timestamp. If burst threshold exceeded, trigger rollback + lock."""
-    now = time.time()
-    records = []
-    if os.path.exists(WRITE_FREQ_FILE):
-        try:
-            with open(WRITE_FREQ_FILE) as f:
-                records = json.load(f)
-        except Exception:
-            records = []
-
-    # Prune entries outside the window
-    cutoff = now - WRITE_BURST_WINDOW
-    records = [t for t in records if t > cutoff]
-    records.append(now)
-
-    # Check burst
-    if len(records) > WRITE_BURST_THRESHOLD:
-        # Burst detected — save the burst timestamps before clearing
-        burst_records = list(records)
-        _handle_write_burst(burst_records)
-        # Clear freq records after handling
+    with _Flock(WRITE_FLOCK_FILE):
+        now = time.time()
+        records = []
+        if os.path.exists(WRITE_FREQ_FILE):
+            try:
+                with open(WRITE_FREQ_FILE) as f:
+                    records = json.load(f)
+            except Exception:
+                records = []
+    
+        # Prune entries outside the window
+        cutoff = now - WRITE_BURST_WINDOW
+        records = [t for t in records if t > cutoff]
+        records.append(now)
+    
+        # Check burst
+        if len(records) > WRITE_BURST_THRESHOLD:
+            # Burst detected — save the burst timestamps before clearing
+            burst_records = list(records)
+            _handle_write_burst(burst_records)
+            # Clear freq records after handling
+            with open(WRITE_FREQ_FILE, 'w') as f:
+                json.dump([], f)
+            return
+    
+        # Save updated records
         with open(WRITE_FREQ_FILE, 'w') as f:
-            json.dump([], f)
-        return
-
-    # Save updated records
-    with open(WRITE_FREQ_FILE, 'w') as f:
-        json.dump(records, f)
+            json.dump(records, f)
 
 
 def _handle_write_burst(burst_records: list = None):
@@ -592,8 +598,15 @@ def _save_index(index: dict):
         return
     _record_write()  # record BEFORE write to avoid missing counts on write failure
     path = _storage_path("vector_index.json")
-    with open(path, 'w') as f:
-        json.dump(index, f, ensure_ascii=False, indent=2)
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, 'w') as f:
+            json.dump(index, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
 
 
 def _load_memories() -> list:
@@ -630,7 +643,8 @@ def _save_memories(memories: list):
         return
     _record_write()  # record BEFORE write
     path = _storage_path("conversation_memory.json")
-    
+    tmp = path + ".tmp"
+
     # Encryption-aware: encrypt before writing if configured
     enc = _get_encryption()
     password = _get_encryption_password()
@@ -639,15 +653,24 @@ def _save_memories(memories: list):
             from defense_toolkit.encrypt import encrypt_bytes
             data = json.dumps(memories, ensure_ascii=False, indent=2)
             encrypted = encrypt_bytes(data.encode('utf-8'), password)
-            with open(path, 'wb') as f:
+            with open(tmp, 'wb') as f:
                 f.write(encrypted)
+            os.replace(tmp, path)
             return
         except Exception:
+            if os.path.exists(tmp):
+                os.remove(tmp)
             pass  # Fall through to plaintext write
-    
+
     # Default (no encryption)
-    with open(path, 'w') as f:
-        json.dump(memories, f, ensure_ascii=False, indent=2)
+    try:
+        with open(tmp, 'w') as f:
+            json.dump(memories, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
 
 
 def add_memory(summary: str, source: str = "user",

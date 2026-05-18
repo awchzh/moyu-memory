@@ -27,6 +27,7 @@ Usage:
 import json
 import os
 import sqlite3
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -52,8 +53,9 @@ DELETE_REF_DAYS = 7  # Auto-clean refs older than this
 
 
 def _save_ref(name: str, content: str):
-    """Save original content before truncation, so agent can drill down."""
-    safe_name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+    """Save original content before truncation, so agent can drill down.
+    Uses content hash as filename to prevent path traversal."""
+    safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
     path = REFS_DIR / f"{safe_name}.ref"
     with open(path, "w") as f:
         f.write(content)
@@ -69,10 +71,8 @@ def _list_refs() -> list[str]:
 
 def read_ref(name: str):
     """Read a ref file by name (with or without .ref suffix). Returns content or None."""
-    safe_name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
-    if not safe_name.endswith(".ref"):
-        safe_name += ".ref"
-    path = REFS_DIR / safe_name
+    safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
+    path = REFS_DIR / f"{safe_name}.ref"
     if path.exists():
         return path.read_text()
     return None
@@ -80,10 +80,8 @@ def read_ref(name: str):
 
 def delete_ref(name: str):
     """Delete a ref file."""
-    safe_name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
-    if not safe_name.endswith(".ref"):
-        safe_name += ".ref"
-    path = REFS_DIR / safe_name
+    safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
+    path = REFS_DIR / f"{safe_name}.ref"
     if path.exists():
         path.unlink()
 
@@ -429,8 +427,17 @@ def set_config(key: str, value: str):
         cfg["compression"] = {}
     cfg["compression"][key] = val
 
-    with open(cfg_path, "w") as f:
-        yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True)
+    # Atomic write: temp file → replace
+    tmp = cfg_path.with_suffix(".yaml.tmp")
+    try:
+        with open(tmp, "w") as f:
+            yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True)
+        tmp.replace(cfg_path)
+    except Exception as e:
+        if tmp.exists():
+            tmp.unlink()
+        print(f"❌ Failed to write config: {e}")
+        return
 
     print(f"✅ Set compression.{key} = {val}")
     show_config()
@@ -881,6 +888,8 @@ def build_injection(
     memory_search: str = "",
     knowledge_graph: str = "",
     user_profile: str = "",
+    bridge_context: str = "",
+    task_map: str = "",
     quiet: bool = False,  # True = 不附加预警文字，供内部调用
 ) -> tuple[str, dict]:
     """Build a compressed injection payload from all available context sources.
@@ -891,7 +900,7 @@ def build_injection(
     cfg = _load_compression_config()
 
     if not cfg["enabled"]:
-        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile] if p.strip()]
+        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile, bridge_context, task_map] if p.strip()]
         return "\n\n".join(parts), {"compressed": False, "reason": "disabled in config"}
 
     # Auto-append context warning to behavioral_rules
@@ -904,12 +913,16 @@ def build_injection(
 
     if working_memory.strip():
         sections.append(("working_memory", working_memory.strip(), 1, "working_memory"))
+    if bridge_context.strip():
+        sections.append(("bridge_context", bridge_context.strip(), 2, "rule"))
     if behavioral_rules.strip():
         sections.append(("behavioral_rules", behavioral_rules.strip(), 1, "rule"))
     if user_profile.strip():
         sections.append(("user_profile", user_profile.strip(), 3, "profile"))
     if knowledge_graph.strip():
         sections.append(("knowledge_graph", knowledge_graph.strip(), 5, "graph"))
+    if task_map.strip():
+        sections.append(("task_map", task_map.strip(), 4, "memory"))
     if memory_search.strip():
         sections.append(("memory_search", memory_search.strip(), 5, "memory"))
 

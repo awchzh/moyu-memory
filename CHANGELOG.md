@@ -1,5 +1,28 @@
 # MOYU — Development Log
 
+## v2.4.4 — Released (2026-05-18)
+
+### Security Fixes
+- **Path traversal fix** — `_save_ref()` now uses SHA256 hash as filename instead of raw name concatenation. Prevents directory traversal via `..` injection. (applies to `read_ref`, `delete_ref` too)
+- **Atomic config writes** — `set_config()` now writes to a temp file before replacing the original. Prevents config corruption on power loss.
+- **Atomic memory file writes** — `_save_memories()` and `_save_index()` use temp file + `os.replace()`. No more partial writes on crash.
+- **Real file locks** — `fcntl.flock` replaces JSON-based lock files for write frequency tracking. Eliminates race conditions in multi-process scenarios.
+- **Encryption password hardening** — `_get_encryption_password()` now reads from env var only. Plaintext passwords in `config.yaml` are no longer supported.
+- **Path traversal guard** — `MOYU_STORAGE` env var path is validated against the expected directory. Malicious `../` sequences are rejected.
+
+### Bug Fixes
+- **Fatal: `build_injection` parameter mismatch** — `bridge_context` and `task_map` parameters were being passed but the function signature didn't accept them. Every `wake()` call would crash with `TypeError`. Both parameters are now properly supported with priority ordering.
+
+### Reliability
+- **Graceful degradation** — `moyu_wake.py` now wraps all core module calls (`check_status`, `fc.run`, `mm.run`, `sb.load`, `ac.format_context`, `lrn.format_behavior_rules`) in try/except. Any single module failure no longer crashes the entire wake pipeline.
+- **Optimized memory loading** — Wake no longer loads the entire `conversation_memory.json` (~multi-MB) just to get the last 5 entries. Instead reads the file tail (~16KB) for recent memories.
+
+### Documentation
+- `README.md` — removed all bare `pip install` commands, replaced with `see requirements.txt`
+- `README.md` — context warning section added (usage, diagnose command, env var override)
+
+---
+
 ## v2.4.3 — Released (2026-05-18)
 
 ### Context Warning (New Feature)

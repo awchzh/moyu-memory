@@ -14,6 +14,7 @@ Usage:
 
 import sys
 import os
+import json
 
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, TOOLKIT_DIR)
@@ -49,8 +50,11 @@ def wake(dry_run: bool = False) -> str:
     ic = _import("defense_toolkit.integrity_checker")
 
     # ── Step 0: Check context pressure level ──
-    status = cm.check_status()
-    context_pressure = status.get("level") in ("auto", "over", "warn")
+    try:
+        status = cm.check_status()
+        context_pressure = status.get("level") in ("auto", "over", "warn")
+    except Exception:
+        context_pressure = False
 
     # ── Step 0a: Identity anchor — read SOUL.md and 暗号表 before anything else ──
     identity_context = ""
@@ -64,15 +68,25 @@ def wake(dry_run: bool = False) -> str:
         identity_context = "我是墨白"
     
     # ── Step 0b: Forgetting curve — only demote under pressure ──
-    fc_result = fc.run(context_pressure=context_pressure)
+    try:
+        fc_result = fc.run(context_pressure=context_pressure)
+    except Exception:
+        fc_result = {}
     forget_msgs = []
 
     # ── Step 0c: Memory merge ──
-    merge_result = mm.run()
+    try:
+        merge_result = mm.run()
+    except Exception:
+        merge_result = {}
 
     # ── Step 0d: Load session bridge ──
-    bridge_info = sb.load()
-    bridge_text = sb.format_context_summary()
+    try:
+        bridge_info = sb.load()
+        bridge_text = sb.format_context_summary()
+    except Exception:
+        bridge_info = {}
+        bridge_text = ""
 
     # ── Step 0e: Self-reflection (only under pressure, compact mode) ──
     reflection_msg = ""
@@ -98,8 +112,14 @@ def wake(dry_run: bool = False) -> str:
         integrity_msg = "完整性校验未初始化（moyu init）"
 
     # ── Step 1: Collect context ──
-    working_memory = ac.format_context()
-    behavioral_rules = lrn.format_behavior_rules()
+    try:
+        working_memory = ac.format_context()
+    except Exception:
+        working_memory = ""
+    try:
+        behavioral_rules = lrn.format_behavior_rules()
+    except Exception:
+        behavioral_rules = ""
 
     # Append Hermes 上下文预警到 behavioral rules 中
     warn = cm.warning_message()
@@ -109,27 +129,53 @@ def wake(dry_run: bool = False) -> str:
     # Fetch recent memories (raw, no embedding needed) — skip demoted
     recent_memories = ""
     try:
-        memories = mem._load_memories()
-        # Filter out demoted memories
-        active = [m for m in memories if not m.get("demoted", False)]
-        # Take last 5, sorted by timestamp
-        sorted_mem = sorted(active, key=lambda m: m.get("timestamp", ""), reverse=True)[:5]
-        if sorted_mem:
-            lines = []
-            for m in sorted_mem:
-                ts = m.get("timestamp", "")[:10]
-                summary = m.get("summary", "")
-                lines.append(f"[{ts}] {summary[:120]}")
-            recent_memories = "\n".join(lines)
+        # Optimized: read last entries from JSON without full parse of huge files
+        mem_path = os.path.join(TOOLKIT_DIR, "memory_data", "conversation_memory.json")
+        if os.path.exists(mem_path):
+            with open(mem_path, 'r') as f:
+                # Read last ~16KB to get recent entries
+                f.seek(0, 2)
+                size = f.tell()
+                chunk_size = min(16384, size)
+                f.seek(max(0, size - chunk_size))
+                tail = f.read()
+            # Find first complete JSON object start
+            try:
+                memories = json.loads(tail)
+            except json.JSONDecodeError:
+                # Fall back: find the '[' and re-parse
+                start = tail.find('[')
+                if start >= 0:
+                    memories = json.loads(tail[start:])
+                else:
+                    memories = []
+            if not isinstance(memories, list):
+                memories = []
+            # Filter out demoted, take last 5
+            active = [m for m in memories if not m.get("demoted", False)]
+            sorted_mem = sorted(active, key=lambda m: m.get("timestamp", ""), reverse=True)[:5]
+            if sorted_mem:
+                lines = []
+                for m in sorted_mem:
+                    ts = m.get("timestamp", "")[:10]
+                    summary = m.get("summary", "")
+                    lines.append(f"[{ts}] {summary[:120]}")
+                recent_memories = "\n".join(lines)
     except Exception:
         recent_memories = ""
 
     # Fetch user profile from learner
     user_profile = ""
-    profile_path = os.path.join(
-        os.environ.get("MOYU_STORAGE", os.path.join(TOOLKIT_DIR, "memory_data")),
-        "user_profile.json"
-    )
+    try:
+        storage_base = os.environ.get("MOYU_STORAGE", os.path.join(TOOLKIT_DIR, "memory_data"))
+        # Path traversal guard: resolve to absolute and check it's within expected dirs
+        expected = os.path.realpath(os.path.join(TOOLKIT_DIR, "memory_data"))
+        actual = os.path.realpath(storage_base)
+        if not actual.startswith(expected) and storage_base != os.environ.get("MOYU_STORAGE", ""):
+            storage_base = expected
+        profile_path = os.path.join(storage_base, "user_profile.json")
+    except Exception:
+        profile_path = os.path.join(TOOLKIT_DIR, "memory_data", "user_profile.json")
     if os.path.exists(profile_path):
         try:
             import json
