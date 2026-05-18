@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "2.4.2"
+VERSION = "2.4.3"
 
 # Known SHA256 checksums for release zips, keyed by version tag.
 # Verified before extracting updates.

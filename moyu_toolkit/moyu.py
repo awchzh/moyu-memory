@@ -352,6 +352,8 @@ def _compress(args):
         cm.show_config()
     elif args[0] == "set" and len(args) >= 3:
         cm.set_config(args[1], args[2])
+    elif args[0] == "diagnose":
+        cm.diagnose()
     elif args[0] in ("help", "--help"):
         _compress_help()
     else:
@@ -369,7 +371,10 @@ def _compress_help():
     print("    mild_threshold    — Mild compression trigger (0.7 = 70%)")
     print("    auto_threshold    — Aggressive compression trigger (0.85 = 85%)")
     print("    budget_chars      — Target context budget")
+    print("    warn_threshold    — Hermes context warning threshold (0.7 = 70%)")
+    print("    warn_language     — Warning language (en = English, zh = Chinese)")
     print("    enabled           — true/false")
+    print("  moyu compress diagnose         Show detailed scan results for all agents")
 
 
 def _forget(args):

@@ -1,4 +1,29 @@
-# 墨羽 · 开发履历
+# MOYU — Development Log
+
+## v2.4.3 — Released (2026-05-18)
+
+### Context Warning (New Feature)
+- **Auto-detect running agent** — scans for Hermes, Claude Code, OpenClaw, Cursor, Continue in priority order. Reads real-time context usage from local session data (SQLite/JSONL). First match wins.
+- **Warning injection** — when agent context crosses `warn_threshold` (default 70%), appends a bilingual warning (en/zh) to behavioral rules via `build_injection()`. Works for any agent calling the MOYU API.
+- **CLI control** — `moyu compress set warn_threshold 0.6`, `moyu compress set warn_language zh`, `moyu compress config` to view all parameters.
+- **One-line status** — `moyu context` shows both MOYU budget usage and real agent context percentage in one command.
+
+### Diagnostics & Troubleshooting
+- **`moyu compress diagnose`** — scans every supported agent path and reports ✅/❌ per path, plus system info and env var status. Helps users debug detection issues without guessing.
+- **Environment variable override** — `MOYU_FORCE_PROVIDER` + `MOYU_PROVIDER_PATH` bypasses auto-detection for custom installations.
+
+### Cross-Platform Hardening
+- **Hermes Windows fallback** — added `%LOCALAPPDATA%\hermes\state.db` as secondary Windows path.
+- **Hermes parser fix** — replaced `ended_at IS NULL` with `ORDER BY started_at DESC` to handle sessions without proper end timestamps.
+- **SQLite safety** — all `sqlite3.connect()` calls now use `with` statements, preventing file handle leaks on exceptions.
+- **Ref cleanup** — auto-deletes `.ref` files older than 7 days at every `prepare_injection()` call, preventing unbounded disk growth.
+- **API compatibility** — `build_context_prompt` alias added for backward compatibility with existing integrations.
+
+### Documentation
+- **README.md** — full context warning section with usage examples, agent support table, env var override instructions, and diagnose command docs.
+- **CHANGELOG.md** — converted to English for GitHub release tracking.
+
+---
 
 ## v2.3.0 — 已发布 (2026-05-16)
 

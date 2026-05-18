@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 """
-context_manager.py — MOYU Context-Aware Compression (V2.1)
+context_manager.py — MOYU Context-Aware Compression (V2.2)
 
 Two-tier graduated compression:
   Mild (70%+)  — truncate long memories, defer low-priority items
   Auto (85%+)  — aggressive: demote non-critical, aggressive truncate
 
+Provider context warning:
+  Auto-detects the user's Agent (Hermes/Claude Code/OpenClaw/Cursor/Continue).
+  Reads its local session data (SQLite/JSONL) to determine real context usage.
+  When usage exceeds warn_threshold (default 70%), warning_message() returns an
+  alert that gets auto-appended to behavioral_rules via build_injection().
+
 Config (config.yaml → compression):
   enabled: true
   budget_chars: 2000
-  mild_threshold: 0.7   → start mild compression at 70%
-  auto_threshold: 0.85  → aggressive compression at 85%
+  mild_threshold: 0.7
+  auto_threshold: 0.85
+  warn_threshold: 0.7   → warn user when Hermes window reaches 70%
 
 Usage:
     python3 context_manager.py stats      # Show compression history
@@ -19,6 +26,7 @@ Usage:
 
 import json
 import os
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -28,16 +36,19 @@ COMPRESS_LOG = STORAGE / "compression_log.json"
 
 # ── Defaults (overridable via config) ──
 
-DEFAULT_BUDGET = 2000       # Target context budget in chars (~500 tokens)
-DEFAULT_WARN = 0.8          # Warning threshold (80%) — display only
+DEFAULT_BUDGET = 2000       # Target injection budget in chars (~500 tokens)
+DEFAULT_WARN = 0.7          # Warning threshold (70%) — display only
 DEFAULT_MILD = 0.7          # Mild compression (70%) — truncate/defer
 DEFAULT_AUTO = 0.85         # Aggressive compression (85%) — demote/truncate hard
 MIN_BUDGET = 500            # Never compress below this
 
-ALLOWED_KEYS = {"mild_threshold", "auto_threshold", "budget_chars", "enabled"}
+ALLOWED_KEYS = {"mild_threshold", "auto_threshold", "budget_chars", "enabled", "warn_threshold", "warn_language"}
 
 
 # ── Refs (compression→traceability drill-down) ──
+
+
+DELETE_REF_DAYS = 7  # Auto-clean refs older than this
 
 
 def _save_ref(name: str, content: str):
@@ -75,6 +86,22 @@ def delete_ref(name: str):
     path = REFS_DIR / safe_name
     if path.exists():
         path.unlink()
+
+
+def _cleanup_old_refs():
+    """Remove ref files older than DELETE_REF_DAYS to prevent unbounded growth."""
+    if not REFS_DIR.exists():
+        return
+    now = datetime.now()
+    for f in REFS_DIR.iterdir():
+        if f.suffix != ".ref":
+            continue
+        try:
+            mtime = datetime.fromtimestamp(f.stat().st_mtime)
+            if (now - mtime).days >= DELETE_REF_DAYS:
+                f.unlink()
+        except Exception:
+            continue
 
 
 def _load_compress_log() -> dict:
@@ -118,6 +145,8 @@ def _load_compression_config() -> dict:
         "budget_chars": cfg.get("budget_chars", DEFAULT_BUDGET),
         "mild_threshold": cfg.get("mild_threshold", DEFAULT_MILD),
         "auto_threshold": cfg.get("auto_threshold", DEFAULT_AUTO),
+        "warn_threshold": cfg.get("warn_threshold", DEFAULT_WARN),
+        "warn_language": cfg.get("warn_language", "en"),
     }
 
 
@@ -125,7 +154,7 @@ def _load_compression_config() -> dict:
 
 
 class InjectionPayload:
-    """Represents everything about to be placed into context."""
+    """Represents everything about to be injected into context."""
 
     def __init__(self, budget: int = DEFAULT_BUDGET,
                  mild_at: float = DEFAULT_MILD,
@@ -140,7 +169,7 @@ class InjectionPayload:
 
     def add(self, name: str, content: str, priority: int = 5, category: str = "memory"):
         """
-        Register a context section.
+        Register an injection candidate.
         Priority: 1=critical (never dropped), 10=optional (dropped first)
         Category: working_memory, rule, memory, graph, profile
         """
@@ -287,18 +316,18 @@ class InjectionPayload:
 # ── API ──
 
 
-def prepare_context(
+def prepare_injection(
     sections: list[tuple[str, str, int, str]],
     budget: int = DEFAULT_BUDGET,
     mild_at: float = DEFAULT_MILD,
     auto_at: float = DEFAULT_AUTO,
 ) -> tuple[str, dict]:
-    """
-    Build compressed context string from sections.
+    """Build compressed injection string from sections.
 
     Each section: (name, content, priority, category)
     Returns: (compressed_string, compression_report)
     """
+    _cleanup_old_refs()  # Trim stale refs before adding new ones
     payload = InjectionPayload(budget=budget, mild_at=mild_at, auto_at=auto_at)
 
     for name, content, priority, category in sections:
@@ -329,13 +358,13 @@ def prepare_context(
     _save_compress_log(log)
 
     report = {
-        "context_chars": payload.total_chars(),
-        "context_tokens": payload.total_tokens(),
+        "injected_chars": payload.total_chars(),
+        "injected_tokens": payload.total_tokens(),
         "budget": budget,
         "usage_pct": payload.usage_pct(),
         "compressed": len(actions) > 0,
         "actions": actions,
-        "sections_included": len(payload.sections),
+        "sections_injected": len(payload.sections),
         "sections_total": len(sections) + len(actions),
     }
 
@@ -352,6 +381,8 @@ def show_config():
     print(f"  {'budget_chars':25s}  {cfg['budget_chars']}")
     print(f"  {'mild_threshold':25s}  {cfg['mild_threshold']}  (70% = start mild)")
     print(f"  {'auto_threshold':25s}  {cfg['auto_threshold']}  (85% = aggressive)")
+    print(f"  {'warn_threshold':25s}  {cfg['warn_threshold']}  (70% = warn user)")
+    print(f"  {'warn_language':25s}  {cfg['warn_language']}  (en = English, zh = Chinese)")
     print()
 
 
@@ -382,6 +413,10 @@ def set_config(key: str, value: str):
             val = int(value)
             if val < MIN_BUDGET:
                 raise ValueError(f"Minimum budget is {MIN_BUDGET}")
+        elif key == "warn_language":
+            val = str(value).strip()
+            if val not in ("en", "zh"):
+                raise ValueError("Must be 'en' or 'zh'")
         else:
             val = float(value)
             if not (0.1 <= val <= 1.0):
@@ -463,19 +498,22 @@ def last_report_message() -> str:
 
 
 def status_line() -> str:
-    """Return a single-line context status."""
+    """MOYU 注入预算 + Hermes 真实上下文窗口，一行一条。"""
     cfg = _load_compression_config()
     payload = InjectionPayload(budget=cfg["budget_chars"],
                                 mild_at=cfg["mild_threshold"],
                                 auto_at=cfg["auto_threshold"])
-    pct = payload.usage_pct()
-    level = payload.level()
-    if pct == 0:
-        return ""
-    left = 100 - int(pct)
-    mild_pct = int(cfg["mild_threshold"] * 100)
-    auto_pct = int(cfg["auto_threshold"] * 100)
-    return f"📊 Context: {pct:.0f}% ({left}% left) — mild {mild_pct}% / auto {auto_pct}%"
+    lines = []
+    budget_pct = payload.usage_pct()
+    if budget_pct > 0:
+        left = 100 - int(budget_pct)
+        mild_pct = int(cfg["mild_threshold"] * 100)
+        auto_pct = int(cfg["auto_threshold"] * 100)
+        lines.append(f"MOYU预算: {budget_pct:.0f}% ({left}% left) — mild {mild_pct}% / auto {auto_pct}%")
+    lines.append(provider_context_line())
+    warn_pct = int(cfg.get("warn_threshold", DEFAULT_WARN) * 100)
+    lines.append(f"预警线: {warn_pct}%")
+    return "\n".join(lines) if lines else ""
 
 
 def check_status() -> dict:
@@ -489,88 +527,380 @@ def check_status() -> dict:
         "usage_pct": payload.usage_pct(),
         "mild_threshold": cfg["mild_threshold"],
         "auto_threshold": cfg["auto_threshold"],
+        "warn_threshold": cfg["warn_threshold"],
         "budget": cfg["budget_chars"],
     }
 
 
-# ═══════════════════════════════════════════════════════════
-# Mermaid task map — structured task-path visualization
-# ═══════════════════════════════════════════════════════════
+# ── Provider 上下文监测（自动扫描 + 多 Agent 适配） ──
 
-def build_task_map(memory_summaries: list) -> str:
-    """Generate a Mermaid graph TD from recent memory summaries.
+PROVIDER_CACHE = {"name": None, "data": None}  # 缓存扫描结果，避免反复读
 
-    Gives the agent a bird's-eye view of what's been done, what's in progress,
-    and what's blocked — without reading through all the raw summaries.
 
-    Args:
-        memory_summaries: list of {timestamp, summary} dicts, newest first.
+def _scan_providers():
+    """自动扫描本地常见 Agent，返回 (provider_name, context_data) 或 (None, None)。"""
+    # ── 环境变量覆盖 ──
+    force_provider = os.environ.get("MOYU_FORCE_PROVIDER")
+    force_path = os.environ.get("MOYU_PROVIDER_PATH")
+    if force_provider and force_path:
+        path = os.path.expandvars(os.path.expanduser(force_path))
+        if os.path.exists(path):
+            try:
+                with sqlite3.connect(path) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.execute(
+                        "SELECT input_tokens, api_call_count FROM sessions "
+                        "ORDER BY started_at DESC LIMIT 1"
+                    )
+                    row = cur.fetchone()
+                if row:
+                    total = row["input_tokens"] or 0
+                    calls = row["api_call_count"] or 0
+                    pct = min(100, round((total / 128000) * 100))
+                    return force_provider, dict(pct=pct, total_tokens=total, context_length=128000,
+                                                 api_calls=calls, likely_compressed=calls > 50 or total > 128000)
+            except Exception:
+                pass
 
-    Returns:
-        Mermaid graph TD string (empty if < 2 summaries), or "".
-    """
-    if len(memory_summaries) < 2:
-        return ""
+    import platform
+    import glob as _glob
+    import json as _j
+    _is_win = platform.system() == "Windows"
 
-    # Build nodes from oldest to newest (display order)
-    items = list(reversed(memory_summaries))[:10]
-    nodes = []
-
-    # Status detection keywords
-    DONE_KW = ["✅", "完成", "通过", "已发布", "已推", "修好了", "done", "pass"]
-    BLOCK_KW = ["❌", "失败", "阻塞", "block", "待定", "卡住"]
-    DECISION_KW = ["用户说", "用户选择", "决定", "→", "选"]
-
-    for i, m in enumerate(items):
-        label = m.get("summary", "")[:50].replace('"', "'")
-        ts = m.get("timestamp", "")[:10]
-
-        # Detect status
-        lower = label.lower()
-        if any(kw.lower() in lower for kw in BLOCK_KW):
-            style = "🔴"
-        elif any(kw.lower() in lower for kw in DONE_KW):
-            style = "✅"
-        elif any(kw.lower() in lower for kw in DECISION_KW):
-            style = "🔀"
-        elif i == len(items) - 1 and not any(kw.lower() in lower for kw in DONE_KW):
-            style = "🔄"  # last one, no explicit done marker → in progress
+    def _candidates(mac, win, linux=None):
+        """按平台返回候选路径列表。"""
+        if _is_win:
+            return [os.path.expandvars(p) for p in (win if isinstance(win, list) else [win])]
+        elif platform.system() == "Darwin":
+            return [os.path.expanduser(p) for p in (mac if isinstance(mac, list) else [mac])]
         else:
-            style = "  "
+            paths = linux if linux else mac
+            return [os.path.expanduser(p) for p in (paths if isinstance(paths, list) else [paths])]
 
-        short = label[:35] + ("..." if len(label) > 35 else "")
-        nodes.append(f"    N{i}[{style} {short}]")
+    # ── Hermes ──
+    def _parse_hermes():
+        for db in _candidates(
+            mac="~/.hermes/state.db",
+            win=[
+                "%USERPROFILE%\\.hermes\\state.db",
+                "%LOCALAPPDATA%\\hermes\\state.db",
+            ],
+        ):
+            if not os.path.exists(db):
+                continue
+            try:
+                with sqlite3.connect(db) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.execute(
+                        "SELECT input_tokens, api_call_count FROM sessions "
+                        "ORDER BY started_at DESC LIMIT 1"
+                    )
+                    row = cur.fetchone()
+                if not row:
+                    continue
+                total = row["input_tokens"] or 0
+                calls = row["api_call_count"] or 0
+                pct = min(100, round((total / 128000) * 100))
+                return dict(pct=pct, total_tokens=total, context_length=128000,
+                            api_calls=calls, likely_compressed=calls > 50 or total > 128000)
+            except Exception:
+                continue
+        return None
 
-    # Connect edges — linear chain (simple, reliable, never wrong)
-    edges = " --> ".join(f"N{i}" for i in range(len(nodes)))
+    # ── Claude Code ──
+    def _parse_claude():
+        for base in _candidates(
+            mac="~/.claude/projects",
+            win="%USERPROFILE%\\.claude\\projects",
+        ):
+            if not os.path.isdir(base):
+                continue
+            files = sorted(_glob.glob(os.path.join(base, "**", "*.jsonl"), recursive=True),
+                           key=os.path.getmtime, reverse=True)
+            if not files:
+                continue
+            try:
+                with open(files[0], "r") as f:
+                    lines = f.readlines()
+                tail = [l for l in lines[-20:] if l.strip()]
+                if not tail:
+                    continue
+                total_in = 0
+                calls = 0
+                for line in tail:
+                    try:
+                        obj = _j.loads(line)
+                        inp = obj.get("input_tokens", obj.get("inputTokens", 0))
+                        if inp:
+                            total_in += inp
+                            calls += 1
+                    except Exception:
+                        continue
+                if calls == 0:
+                    continue
+                pct = min(100, round((total_in / 200000) * 100))
+                return dict(pct=pct, total_tokens=total_in, context_length=200000,
+                            api_calls=calls, likely_compressed=calls > 30 or total_in > 200000)
+            except Exception:
+                continue
+        return None
 
-    return "```mermaid\ngraph LR\n" + "\n".join(nodes) + "\n    " + edges + "\n```"
+    # ── OpenClaw ──
+    def _parse_openclaw():
+        for base in _candidates(
+            mac="~/.openclaw/agents",
+            win="%USERPROFILE%\\.openclaw\\agents",
+        ):
+            if not os.path.isdir(base):
+                continue
+            files = sorted(_glob.glob(os.path.join(base, "**", "sessions", "*.jsonl"), recursive=True),
+                           key=os.path.getmtime, reverse=True)
+            if not files:
+                continue
+            try:
+                with open(files[0], "r") as f:
+                    lines = f.readlines()
+                tail = [l for l in lines[-20:] if l.strip()]
+                if not tail:
+                    continue
+                total_in = 0
+                calls = 0
+                for line in tail:
+                    try:
+                        obj = _j.loads(line)
+                        inp = obj.get("inputTokens", obj.get("totalTokens", 0))
+                        if inp:
+                            total_in += inp
+                            calls += 1
+                    except Exception:
+                        continue
+                if calls == 0:
+                    continue
+                pct = min(100, round((total_in / 128000) * 100))
+                return dict(pct=pct, total_tokens=total_in, context_length=128000,
+                            api_calls=calls, likely_compressed=calls > 30 or total_in > 128000)
+            except Exception:
+                continue
+        return None
+
+    # ── Cursor ──
+    def _parse_cursor():
+        candidates = _candidates(
+            mac=[
+                "~/Library/Application Support/Cursor/User/workspaceStorage",
+                "~/.config/Cursor/User/workspaceStorage",
+            ],
+            win=[
+                "%APPDATA%\\Cursor\\User\\workspaceStorage",
+            ],
+            linux=["~/.config/Cursor/User/workspaceStorage"],
+        )
+        for cand in candidates:
+            dbs = sorted(_glob.glob(os.path.join(cand, "**", "state.vscdb"), recursive=True),
+                         key=os.path.getmtime, reverse=True)
+            if not dbs:
+                continue
+            try:
+                with sqlite3.connect(dbs[0]) as conn:
+                    cursor = conn.execute(
+                        "SELECT count(*) FROM cursor_messages WHERE created_at > datetime('now', '-1 day')"
+                    )
+                    count = cursor.fetchone()[0] or 0
+                if count > 0:
+                    pct = min(100, round((count * 1500 / 128000) * 100))
+                    return dict(pct=pct, total_tokens=count * 1500,
+                                context_length=128000, api_calls=count,
+                                likely_compressed=count > 40 or (count * 1500) > 128000)
+            except Exception:
+                continue
+        return None
+
+    # ── Continue ──
+    def _parse_continue():
+        for base in _candidates(
+            mac="~/.continue/sessions",
+            win="%USERPROFILE%\\.continue\\sessions",
+        ):
+            if not os.path.isdir(base):
+                continue
+            files = sorted(_glob.glob(os.path.join(base, "*.json")),
+                           key=os.path.getmtime, reverse=True)
+            if not files:
+                continue
+            try:
+                with open(files[0], "r") as f:
+                    data = _j.load(f)
+                messages = data.get("messages", data.get("history", []))
+                calls = len(messages)
+                if calls < 2:
+                    continue
+                total_in = calls * 1000
+                pct = min(100, round((total_in / 128000) * 100))
+                return dict(pct=pct, total_tokens=total_in, context_length=128000,
+                            api_calls=calls, likely_compressed=calls > 40 or total_in > 128000)
+            except Exception:
+                continue
+        return None
+
+    # ── 检测顺序 ──
+    detectors = [
+        ("Hermes", _parse_hermes),
+        ("Claude Code", _parse_claude),
+        ("OpenClaw", _parse_openclaw),
+        ("Cursor", _parse_cursor),
+        ("Continue", _parse_continue),
+    ]
+
+    for name, parser in detectors:
+        data = parser()
+        if data:
+            return name, data
+    return None, None
 
 
-# ═══════════════════════════════════════════════════════════
-# Public API
-# ═══════════════════════════════════════════════════════════
+def get_context():
+    """获取当前检测到的 Agent 上下文占用率。
+    返回 (provider_name, context_data dict) 或 (None, None)。
+    结果会缓存，避免每次调用都扫描磁盘。
+    """
+    if PROVIDER_CACHE["data"]:
+        return PROVIDER_CACHE["name"], PROVIDER_CACHE["data"]
 
-def build_context_prompt(
+    name, data = _scan_providers()
+    if name and data:
+        PROVIDER_CACHE["name"] = name
+        PROVIDER_CACHE["data"] = data
+    return name, data
+
+
+def reset_provider_cache():
+    """重置 provider 缓存，下次调用时重新扫描。"""
+    PROVIDER_CACHE["name"] = None
+    PROVIDER_CACHE["data"] = None
+
+
+def provider_context_line() -> str:
+    """检测到的 Agent 上下文状态一行概览。"""
+    name, data = get_context()
+    if not name or not data:
+        return "Agent窗口: 未检测到支持的 Agent（当前支持: Hermes/Claude Code/OpenClaw/Cursor/Continue，暂不支持 Windsurf/Copilot/Aider 等）\n⚠️ 注意：你的 Agent 可能有自己的压缩阈值（如 Hermes 默认 50%），请在 MOYU 设置合适的警戒线低于它：moyu compress set warn_threshold 0.4"
+    flag = " ⚠️ 已深度压缩" if data["likely_compressed"] else ""
+    return (
+        f"{name}窗口: {data['pct']}%"
+        f" (累计{data['total_tokens']:,}/{data['context_length']:,}, {data['api_calls']}次调用)"
+        f"{flag}"
+    )
+
+
+def warning_message() -> str:
+    """如果上下文接近压缩阈值，返回警告文字。"""
+    name, data = get_context()
+    if not name or not data:
+        return ""
+    cfg = _load_compression_config()
+    warn_at = cfg.get("warn_threshold", DEFAULT_WARN)
+    warn_pct = int(warn_at * 100)
+    lang = cfg.get("warn_language", "en")
+    if data["likely_compressed"]:
+        if lang == "zh":
+            return f"{name}上下文用到 {data['pct']}% 了，对话已深，可以考虑 /new"
+        return f"{name} context at {data['pct']}%, conversation deeply compressed — /new recommended"
+    if data["pct"] >= warn_pct:
+        if lang == "zh":
+            return f"{name}上下文用到 {data['pct']}% 了，快到 {warn_pct}% 预警线（注意你的 Agent 有自己的压缩阈值，低于它才有效：moyu compress set warn_threshold 0.4）"
+        return f"{name} context at {data['pct']}%, approaching {warn_pct}% warning — your Agent may have its own compression threshold, set MOYU warn below it: moyu compress set warn_threshold 0.4"
+    return ""
+
+
+def diagnose():
+    """逐项扫描 Provider 并输出详细结果，用于排查检测不到的问题。"""
+    import platform
+    import glob as _glob
+    import json as _j
+    _is_win = platform.system() == "Windows"
+    system = platform.system()
+    print(f"系统: {system}")
+    print(f"环境变量 MOYU_FORCE_PROVIDER: {os.environ.get('MOYU_FORCE_PROVIDER', '(未设置)')}")
+    print(f"环境变量 MOYU_PROVIDER_PATH: {os.environ.get('MOYU_PROVIDER_PATH', '(未设置)')}")
+    print()
+
+    def _candidates(mac, win, linux=None):
+        if _is_win:
+            return [os.path.expandvars(p) for p in (win if isinstance(win, list) else [win])]
+        elif system == "Darwin":
+            return [os.path.expanduser(p) for p in (mac if isinstance(mac, list) else [mac])]
+        else:
+            paths = linux if linux else mac
+            return [os.path.expanduser(p) for p in (paths if isinstance(paths, list) else [paths])]
+
+    checks = [
+        ("Hermes", lambda: _candidates("~/.hermes/state.db",
+                                        ["%USERPROFILE%\\.hermes\\state.db", "%LOCALAPPDATA%\\hermes\\state.db"])),
+        ("Claude Code", lambda: _candidates("~/.claude/projects",
+                                              "%USERPROFILE%\\.claude\\projects")),
+        ("OpenClaw", lambda: _candidates("~/.openclaw/agents",
+                                          "%USERPROFILE%\\.openclaw\\agents")),
+        ("Continue", lambda: _candidates("~/.continue/sessions",
+                                          "%USERPROFILE%\\.continue\\sessions")),
+    ]
+
+    for name, path_fn in checks:
+        paths = path_fn()
+        print(f"[{name}]")
+        for p in paths:
+            exists = "✅" if os.path.exists(p) else "❌"
+            kind = "目录" if os.path.isdir(p) else "文件"
+            print(f"  {exists} {kind}: {p}")
+        print()
+
+    # Cursor has macOS-only paths
+    print("[Cursor]")
+    if _is_win:
+        print("  ❌ 路径: %APPDATA%\\Cursor\\User\\workspaceStorage")
+    elif system == "Darwin":
+        for p in ["~/Library/Application Support/Cursor/User/workspaceStorage",
+                   "~/.config/Cursor/User/workspaceStorage"]:
+            ep = os.path.expanduser(p)
+            exists = "✅" if os.path.exists(ep) else "❌"
+            print(f"  {exists} 目录: {ep}")
+    else:
+        print("  ❌ 路径: ~/.config/Cursor/User/workspaceStorage")
+
+    print()
+    name, data = get_context()
+    if name and data:
+        print(f"✅ 检测结果: {name} — {data['pct']}% ({data['api_calls']}次调用)")
+    else:
+        print("❌ 检测结果: 未找到任何支持的 Agent")
+        print("  提示: 设置 MOYU_FORCE_PROVIDER 和 MOYU_PROVIDER_PATH 绕过自动检测")
+
+
+def build_injection(
     working_memory: str = "",
     behavioral_rules: str = "",
     memory_search: str = "",
     knowledge_graph: str = "",
     user_profile: str = "",
-    bridge_context: str = None,
-    task_map: str = "",
+    quiet: bool = False,  # True = 不附加预警文字，供内部调用
 ) -> tuple[str, dict]:
-    """Build a compressed context prompt from all available context sources."""
+    """Build a compressed injection payload from all available context sources.
+
+    Automatically appends Hermes context warning to behavioral_rules.
+    Set quiet=True to suppress (for internal calls like moyu_wake).
+    """
     cfg = _load_compression_config()
 
     if not cfg["enabled"]:
-        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile, bridge_context] if p and p.strip()]
+        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile] if p.strip()]
         return "\n\n".join(parts), {"compressed": False, "reason": "disabled in config"}
 
-    sections = []
+    # Auto-append context warning to behavioral_rules
+    if not quiet:
+        warn = warning_message()
+        if warn:
+            behavioral_rules = (behavioral_rules + "\n\n" + warn).strip()
 
-    if task_map.strip():
-        sections.append(("task_map", task_map.strip(), 1, "task_map"))
+    sections = []
 
     if working_memory.strip():
         sections.append(("working_memory", working_memory.strip(), 1, "working_memory"))
@@ -582,10 +912,8 @@ def build_context_prompt(
         sections.append(("knowledge_graph", knowledge_graph.strip(), 5, "graph"))
     if memory_search.strip():
         sections.append(("memory_search", memory_search.strip(), 5, "memory"))
-    if bridge_context and bridge_context.strip():
-        sections.append(("bridge_context", bridge_context.strip(), 1, "bridge"))
 
-    return prepare_context(sections,
+    return prepare_injection(sections,
                              budget=cfg["budget_chars"],
                              mild_at=cfg["mild_threshold"],
                              auto_at=cfg["auto_threshold"])
@@ -609,6 +937,10 @@ def demo() -> dict:
     }
 
 
+# ── Alias: remote compatibility ──
+build_context_prompt = build_injection
+
+
 if __name__ == "__main__":
     import sys
     args = sys.argv[1:]
@@ -618,5 +950,7 @@ if __name__ == "__main__":
         show_config()
     elif args[0] == "set" and len(args) >= 2:
         set_config(args[1], args[2] if len(args) > 2 else "0")
+    elif args[0] == "diagnose":
+        diagnose()
     else:
         print(__doc__)

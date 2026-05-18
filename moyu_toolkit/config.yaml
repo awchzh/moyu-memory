@@ -13,6 +13,8 @@ compression:
   budget_chars: 2000
   enabled: true
   mild_threshold: 0.7
+  warn_language: zh
+  warn_threshold: 0.7
 forgetting_curve:
   archive_days: 60
   demote_days: 14

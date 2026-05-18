@@ -60,6 +60,9 @@ logs/
 /mobai_framework.md
 /digest_reminder.json
 
+# 工具包专用，不进 GitHub（只放 SkillHub zip）
+moyu_toolkit/SKILL.md
+
 # 工具包内部数据（用户自己的数据）
 moyu_toolkit/memory_data/
 moyu_toolkit/__pycache__/

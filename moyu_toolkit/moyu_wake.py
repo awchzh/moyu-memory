@@ -101,6 +101,11 @@ def wake(dry_run: bool = False) -> str:
     working_memory = ac.format_context()
     behavioral_rules = lrn.format_behavior_rules()
 
+    # Append Hermes 上下文预警到 behavioral rules 中
+    warn = cm.warning_message()
+    if warn:
+        behavioral_rules = (behavioral_rules + "\n\n" + warn).strip()
+
     # Fetch recent memories (raw, no embedding needed) — skip demoted
     recent_memories = ""
     try:
@@ -166,6 +171,7 @@ def wake(dry_run: bool = False) -> str:
         user_profile=user_profile,
         bridge_context=bridge_context,
         task_map=task_map,
+        quiet=True,  # warning already appended manually above
     )
 
     # ── Step 3: Build status message ──
