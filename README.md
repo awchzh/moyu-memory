@@ -4,12 +4,23 @@
 
 MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, zero infrastructure, plug-and-play with one folder. Works with Hermes, OpenClaw, LangChain, AutoGen, or any custom Python project.
 
-**v2.4.3** — Context warning: your agent tells you before it compresses. Auto-detect + configurable threshold + multi-platform paths. Diagnose any detection issue with one command.
+**v2.4.7** — Audit log, memory source-based lifecycle, pip packaging. Now available via `pip install moyu-memory`.
 
 ---
 
 ## 🚀 Quick Start
 
+**One-line install (recommended):**
+```bash
+pip install moyu-memory
+```
+
+Then use it anywhere:
+```bash
+moyu search "what did we talk about last time"
+```
+
+**Or copy the toolkit (no pip needed):**
 ```bash
 pip install -r requirements.txt
 ```
