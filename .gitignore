@@ -67,6 +67,9 @@ moyu_toolkit/SKILL.md
 moyu_toolkit/memory_data/
 moyu_toolkit/__pycache__/
 
+# Build artifacts
+*.egg-info/
+
 # Temp files
 .context_bridge.pid
 context_bridge.py

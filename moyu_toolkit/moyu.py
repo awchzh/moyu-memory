@@ -596,7 +596,11 @@ def _update(args):
             print("Update cancelled.")
             return
         result = up.update()
-        print(result["message"])
+        if result.get("pip_upgrade"):
+            print(f"⬆️  v{info['latest']} 已发布。运行以下命令升级：")
+            print(f"   pip install --upgrade moyu")
+        else:
+            print(result["message"])
     else:
         up.stats()
 

@@ -259,7 +259,10 @@ def wake(dry_run: bool = False) -> str:
     try:
         update_info = up.check()
         if update_info.get("is_newer"):
-            messages.append(f"有 v{update_info['latest']} 更新可用，moyu update now 升级")
+            if update_info.get("pip_upgrade"):
+                messages.append(f"有 v{update_info['latest']} 更新可用，pip install --upgrade moyu 升级")
+            else:
+                messages.append(f"有 v{update_info['latest']} 更新可用，moyu update now 升级")
     except Exception:
         pass
 

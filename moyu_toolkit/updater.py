@@ -38,7 +38,7 @@ _CHECKSUMS = {
     "2.4.0": "",
 }
 
-from moyu_toolkit._moyu_paths import get_package_dir
+from moyu_toolkit._moyu_paths import get_package_dir, _is_installed_package
 TOOLKIT_DIR = Path(get_package_dir())
 REPO = "awchzh/moyu-memory"
 GITHUB_API = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -102,6 +102,15 @@ def update(dry_run: bool = False) -> dict:
 
     if not info.get("is_newer"):
         return {"status": "ok", "message": f"Already up to date ({_current_version()})"}
+
+    # ── Pip-installed mode: can't overwrite site-packages ──
+    if _is_installed_package():
+        return {
+            "status": "ok",
+            "message": f"v{info['latest']} available. Run: pip install --upgrade moyu",
+            "version": info['latest'],
+            "pip_upgrade": True,
+        }
 
     # Download the zipball
     zip_url = f"https://github.com/{REPO}/archive/refs/tags/v{info['latest']}.zip"
