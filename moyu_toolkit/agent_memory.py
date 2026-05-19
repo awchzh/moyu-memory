@@ -152,7 +152,7 @@ def _storage_path(*parts: str) -> str:
 
 
 def _load_config() -> dict:
-    """Load config.yaml (if exists)"""
+    """Load config.yaml (if exists). On parse failure, returns conservative defaults."""
     config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
     if os.path.exists(config_path):
         try:
@@ -160,7 +160,11 @@ def _load_config() -> dict:
             with open(config_path) as f:
                 return yaml.safe_load(f) or {}
         except Exception:
-            pass
+            # Config corrupted — return conservative (safer) defaults
+            return {
+                "security": {"isolation": {"enabled": True}},
+                "alert": {"channel": "none"},
+            }
     return {}
 
 
@@ -432,6 +436,7 @@ def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
                     return vec
         except Exception:
             pass
+        print("⚠️ Embedding API failed — falling back to n-gram (no semantic guarantee)", file=__import__("sys").stderr)
     
     # Level 3: Pure local fallback
     return _get_ngram_embedding(text)

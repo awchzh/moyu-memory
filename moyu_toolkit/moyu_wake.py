@@ -38,6 +38,15 @@ def wake(dry_run: bool = False) -> str:
 
     Returns a status message the agent can speak to the user.
     """
+    # ── Check for failed update marker ──
+    _fail_marker = TOOLKIT_DIR / ".UPDATE_FAILED"
+    if _fail_marker.exists():
+        try:
+            msg = _fail_marker.read_text().strip()
+        except Exception:
+            msg = "Unknown"
+        return f"🔴 更新失败，工具包可能处于新旧代码混合状态。请联系维护者手动恢复。\n  {msg}"
+
     ac = _import("active_context")
     lrn = _import("learner")
     mem = _import("agent_memory")

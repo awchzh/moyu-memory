@@ -127,25 +127,35 @@ def _save_compress_log(log: dict):
 
 
 def _load_compression_config() -> dict:
-    """Load compression settings from config.yaml, with defaults."""
-    cfg = {}
+    """Load compression settings from config.yaml, with defaults.
+    On config load failure, returns conservative values (tighter, not looser)."""
     try:
         import yaml
         cfg_path = Path(__file__).parent / "config.yaml"
         if cfg_path.exists():
             with open(cfg_path) as f:
                 raw = yaml.safe_load(f) or {}
-            cfg = raw.get("compression", {})
+        else:
+            raw = {}
+        cfg = raw.get("compression", {})
+        return {
+            "enabled": cfg.get("enabled", True),
+            "budget_chars": cfg.get("budget_chars", DEFAULT_BUDGET),
+            "mild_threshold": cfg.get("mild_threshold", DEFAULT_MILD),
+            "auto_threshold": cfg.get("auto_threshold", DEFAULT_AUTO),
+            "warn_threshold": cfg.get("warn_threshold", DEFAULT_WARN),
+            "warn_language": cfg.get("warn_language", "en"),
+        }
     except Exception:
-        pass
-    return {
-        "enabled": cfg.get("enabled", True),
-        "budget_chars": cfg.get("budget_chars", DEFAULT_BUDGET),
-        "mild_threshold": cfg.get("mild_threshold", DEFAULT_MILD),
-        "auto_threshold": cfg.get("auto_threshold", DEFAULT_AUTO),
-        "warn_threshold": cfg.get("warn_threshold", DEFAULT_WARN),
-        "warn_language": cfg.get("warn_language", "en"),
-    }
+        # Config broken → return conservative values (never looser than defaults)
+        return {
+            "enabled": True,
+            "budget_chars": MIN_BUDGET,
+            "mild_threshold": 0.5,
+            "auto_threshold": 0.75,
+            "warn_threshold": 0.4,
+            "warn_language": "en",
+        }
 
 
 # ── Injection Payload ──
@@ -171,6 +181,8 @@ class InjectionPayload:
         Priority: 1=critical (never dropped), 10=optional (dropped first)
         Category: working_memory, rule, memory, graph, profile
         """
+        # Safety clamp: prevent priority abuse to bypass compression
+        priority = max(1, min(10, priority))
         char_count = len(content)
         token_est = char_count // 4
         self.sections.append({
@@ -326,6 +338,11 @@ def prepare_injection(
     Returns: (compressed_string, compression_report)
     """
     _cleanup_old_refs()  # Trim stale refs before adding new ones
+
+    # Safety clamp: budget never exceeds config limit (prevents caller bypass)
+    cfg = _load_compression_config()
+    budget = min(budget, cfg.get("budget_chars", DEFAULT_BUDGET))
+
     payload = InjectionPayload(budget=budget, mild_at=mild_at, auto_at=auto_at)
 
     for name, content, priority, category in sections:
@@ -553,8 +570,9 @@ def _scan_providers():
         path = os.path.expandvars(os.path.expanduser(force_path))
         if os.path.exists(path):
             try:
-                with sqlite3.connect(path) as conn:
+                with sqlite3.connect(path, timeout=3.0) as conn:
                     conn.row_factory = sqlite3.Row
+                    conn.execute("PRAGMA busy_timeout = 3000")
                     cur = conn.execute(
                         "SELECT input_tokens, api_call_count FROM sessions "
                         "ORDER BY started_at DESC LIMIT 1"
@@ -596,8 +614,9 @@ def _scan_providers():
             if not os.path.exists(db):
                 continue
             try:
-                with sqlite3.connect(db) as conn:
+                with sqlite3.connect(db, timeout=3.0) as conn:
                     conn.row_factory = sqlite3.Row
+                    conn.execute("PRAGMA busy_timeout = 3000")
                     cur = conn.execute(
                         "SELECT input_tokens, api_call_count FROM sessions "
                         "ORDER BY started_at DESC LIMIT 1"
@@ -708,7 +727,8 @@ def _scan_providers():
             if not dbs:
                 continue
             try:
-                with sqlite3.connect(dbs[0]) as conn:
+                with sqlite3.connect(dbs[0], timeout=3.0) as conn:
+                    conn.execute("PRAGMA busy_timeout = 3000")
                     cursor = conn.execute(
                         "SELECT count(*) FROM cursor_messages WHERE created_at > datetime('now', '-1 day')"
                     )
@@ -800,7 +820,7 @@ def provider_context_line() -> str:
 
 
 def warning_message() -> str:
-    """如果上下文接近压缩阈值，返回警告文字。"""
+    """如果上下文接近压缩阈值，返回警告文字。最多每60秒提醒一次。"""
     name, data = get_context()
     if not name or not data:
         return ""
@@ -808,15 +828,37 @@ def warning_message() -> str:
     warn_at = cfg.get("warn_threshold", DEFAULT_WARN)
     warn_pct = int(warn_at * 100)
     lang = cfg.get("warn_language", "en")
+
+    # Rate limit: at most one warning per 60 seconds
+    log = _load_compress_log()
+    last_warn_ts = log.get("last_warn_ts")
+    now = datetime.now()
+    if last_warn_ts:
+        try:
+            last_time = datetime.fromisoformat(last_warn_ts)
+            if (now - last_time).total_seconds() < 60:
+                return ""
+        except Exception:
+            pass
+
+    msg = ""
     if data["likely_compressed"]:
         if lang == "zh":
-            return f"{name}上下文用到 {data['pct']}% 了，对话已深，可以考虑 /new"
-        return f"{name} context at {data['pct']}%, conversation deeply compressed — /new recommended"
-    if data["pct"] >= warn_pct:
+            msg = f"{name}上下文用到 {data['pct']}% 了，对话已深，可以考虑 /new"
+        else:
+            msg = f"{name} context at {data['pct']}%, conversation deeply compressed — /new recommended"
+    elif data["pct"] >= warn_pct:
         if lang == "zh":
-            return f"{name}上下文用到 {data['pct']}% 了，快到 {warn_pct}% 预警线（注意你的 Agent 有自己的压缩阈值，低于它才有效：moyu compress set warn_threshold 0.4）"
-        return f"{name} context at {data['pct']}%, approaching {warn_pct}% warning — your Agent may have its own compression threshold, set MOYU warn below it: moyu compress set warn_threshold 0.4"
-    return ""
+            msg = f"{name}上下文用到 {data['pct']}% 了，快到 {warn_pct}% 预警线（注意你的 Agent 有自己的压缩阈值，低于它才有效：moyu compress set warn_threshold 0.4）"
+        else:
+            msg = f"{name} context at {data['pct']}%, approaching {warn_pct}% warning — your Agent may have its own compression threshold, set MOYU warn below it: moyu compress set warn_threshold 0.4"
+    else:
+        return ""
+
+    # Record last warning time
+    log["last_warn_ts"] = now.isoformat()
+    _save_compress_log(log)
+    return msg
 
 
 def diagnose():
@@ -900,8 +942,13 @@ def build_injection(
     cfg = _load_compression_config()
 
     if not cfg["enabled"]:
-        parts = [p for p in [working_memory, behavioral_rules, memory_search, knowledge_graph, user_profile, bridge_context, task_map] if p.strip()]
-        return "\n\n".join(parts), {"compressed": False, "reason": "disabled in config"}
+        # Even when disabled, cap total length to prevent context overflow
+        max_safe = cfg.get("budget_chars", DEFAULT_BUDGET)
+        parts = [p[:max_safe] if len(p) > max_safe else p
+                 for p in [working_memory, behavioral_rules, memory_search,
+                           knowledge_graph, user_profile, bridge_context, task_map]
+                 if p.strip()]
+        return "\n\n".join(parts), {"compressed": False, "reason": "disabled in config (hard truncated)"}
 
     # Auto-append context warning to behavioral_rules
     if not quiet:

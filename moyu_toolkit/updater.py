@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "2.4.5"
+VERSION = "2.4.6"
 
 # Known SHA256 checksums for release zips, keyed by version tag.
 # Verified before extracting updates.
@@ -30,8 +30,9 @@ VERSION = "2.4.5"
 # their own checksum empty; it gets filled in the NEXT release.
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
+    "2.4.6": "",  # To be filled in next release
     "2.4.5": "",  # To be filled in next release
-    "2.4.4": "",  # To be filled in next release
+    "2.4.4": "190934a09513a1cefd70711ad6a690fa27b64eb3afab0bc123e7216859b56d9c",  # Downloaded from GitHub
     "2.4.3": "71354dd7b291b36aa2b461b7f4706168cfcfef34e2c2e8f81c2ccb4bba33fe0f",
     "2.4.2": "6a06b1065bd050b272307aae5247598334f4ade5f2b99c6ffaab6709c9bc0a1d",
     "2.4.0": "",
@@ -50,8 +51,9 @@ def _current_version() -> str:
 
 
 def _parse_version(v: str) -> tuple:
-    """Parse 'v1.3.1' or '1.3.1' into (1, 3, 1)"""
+    """Parse 'v1.3.1' or '1.3.1' into (1, 3, 1). Strips pre-release / build suffixes."""
     v = v.lstrip("v").strip()
+    v = re.split(r"[-+]", v)[0]  # Strip -alpha, +build.123 etc.
     parts = v.split(".")
     return tuple(int(p) for p in parts)
 
@@ -249,6 +251,12 @@ def update(dry_run: bool = False) -> dict:
                     shutil.copytree(item, dest)
                 else:
                     shutil.copy2(item, dest)
+        # Mark failed update state even after rollback (prevents silent mixed versions)
+        _fail_marker = TOOLKIT_DIR / ".UPDATE_FAILED"
+        try:
+            _fail_marker.write_text(f"Update to v{info['latest']} failed and was rolled back at {datetime.now().isoformat()}")
+        except Exception:
+            pass
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return {"status": "error", "message": f"Update failed, rolled back: {e}"}
 

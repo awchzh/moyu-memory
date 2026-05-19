@@ -17,8 +17,24 @@ import json
 import os
 import re
 from datetime import datetime
+from pathlib import Path
 
 STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "memory_data"))
+
+# Path traversal guard — same pattern as integrity_checker
+_DEFAULT_STORAGE = str(Path(__file__).parent / "memory_data")
+_custom = os.environ.get("MOYU_STORAGE")
+if _custom:
+    _resolved = Path(_custom).resolve()
+    _default_p = Path(_DEFAULT_STORAGE).resolve()
+    try:
+        _resolved.relative_to(_default_p)
+        STORAGE_PATH = str(_resolved)
+    except ValueError:
+        print(f"⚠️ MOYU_STORAGE 路径不在允许范围内，使用默认路径 {_DEFAULT_STORAGE}", file=__import__("sys").stderr)
+        STORAGE_PATH = _DEFAULT_STORAGE
+else:
+    STORAGE_PATH = _DEFAULT_STORAGE
 
 # Seed trigger words — built-in, covering most common correction patterns
 DEFAULT_SIGNALS = [
@@ -66,8 +82,7 @@ def _load_learned_signals() -> list:
 
 
 def _save_learned_signals(signals: list):
-    with open(_learned_signals_path(), 'w') as f:
-        json.dump(signals, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(_learned_signals_path(), signals)
 
 
 def _all_signals() -> list:
@@ -257,6 +272,19 @@ def _path(kind: str) -> str:
     return os.path.join(STORAGE_PATH, kind)
 
 
+def _atomic_write_json(path, data):
+    """Atomic JSON write: temp file → os.replace. No partial file on crash."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
 def _load_lessons() -> dict:
     p = _path("lessons.json")
     if os.path.exists(p):
@@ -269,8 +297,7 @@ def _load_lessons() -> dict:
 
 
 def _save_lessons(d):
-    with open(_path("lessons.json"), 'w') as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(_path("lessons.json"), d)
 
 
 def _load_corrections() -> list:
@@ -283,8 +310,17 @@ def _load_corrections() -> list:
 
 def _save_corrections(entries):
     lines = ["# Correction Log", "---"] + [e + "\n---" for e in entries[-50:]]
-    with open(_path("corrections.md"), 'w') as f:
-        f.write("\n".join(lines))
+    content = "\n".join(lines)
+    path = _path("corrections.md")
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
 
 
 def format_behavior_rules() -> str:
@@ -343,8 +379,7 @@ def _load_profile() -> dict:
 
 
 def _save_profile(profile: dict):
-    with open(_profile_path(), 'w', encoding='utf-8') as f:
-        json.dump(profile, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(_profile_path(), profile)
 
 
 def extract_profile(text: str) -> dict:

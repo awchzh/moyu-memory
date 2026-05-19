@@ -1,5 +1,25 @@
 # MOYU — Development Log
 
+## v2.4.6 — Released (2026-05-19)
+
+### Logic Hardening (from third-party audit)
+- **Budget clamp** — `prepare_injection()` now caps budget to config value. Callers can no longer bypass compression by passing a large budget.
+- **Priority clamp** — `InjectionPayload.add()` now clamps priority to 1–10. Prevents bypassing compression by setting all priorities to 0.
+- **Hard truncate when disabled** — `build_injection()` when `enabled=False` still truncates each part to `budget_chars`. Prevents context overflow even with compression off.
+- **Config load failure → conservative defaults** — `_load_compression_config()` and `_load_config()` now return tighter defaults on parse failure. Config corruption no longer silently loosens security.
+- **Warning rate limit** — `warning_message()` now fires at most once per 60 seconds. Persistent across sessions via compression log.
+- **SQLite busy timeout** — All `sqlite3.connect()` calls now set `timeout=3.0` and `PRAGMA busy_timeout=3000`. Reduces silent failures under concurrent writes.
+- **Embedding API degradation alert** — `get_embedding()` now prints a warning when API embedding fails and falls back to n-gram. Users are no longer silently served non-semantic search.
+- **Timestamp parse safety** — `_days_since()` returns `float('inf')` on parse failure instead of 0. Prevents erroneous memory demotion from bad timestamps.
+- **Version string sanitization** — `_parse_version()` strips `-alpha`, `+build` etc. suffixes. Prevents version comparison bypass via pre-release tags.
+
+### Reliability
+- **`STORAGE_PATH` path traversal guard** — `learner.py` now validates `MOYU_STORAGE` env var against allowed directory (same pattern as integrity_checker).
+- **Atomic writes in learner** — All 4 save functions (`_save_learned_signals`, `_save_lessons`, `_save_corrections`, `_save_profile`) now use temp file + `os.replace()`.
+- **Update failure marker** — `updater.py` writes `.UPDATE_FAILED` on failed rollback. `moyu_wake.py` detects the marker on startup and refuses to run, preventing silent mixed-version states.
+
+---
+
 ## v2.4.5 — Released (2026-05-19)
 
 ### Security Fixes

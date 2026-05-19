@@ -209,12 +209,13 @@ def _now() -> str:
 
 
 def _days_since(ts_str: str) -> float:
-    """Calculate days between now and a timestamp string."""
+    """Calculate days between now and a timestamp string.
+    Returns infinity on parse failure — safe default that won't bypass Stage 1."""
     try:
         dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         return (datetime.now() - dt).total_seconds() / 86400
     except Exception:
-        return 0
+        return float('inf')
 
 
 def _days_between(ts_a: str, ts_b: str) -> float:
