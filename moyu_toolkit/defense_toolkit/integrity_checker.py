@@ -14,8 +14,20 @@ Usage:
 
 import json, os, hashlib, sys, shutil, re, base64
 from datetime import datetime
+from pathlib import Path
 
-BASE = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "..", "memory_data"))
+_DEFAULT_BASE = Path(__file__).parent.parent / "memory_data"
+_custom_base = os.environ.get("MOYU_STORAGE")
+if _custom_base:
+    _resolved = Path(_custom_base).resolve()
+    try:
+        _resolved.relative_to(_DEFAULT_BASE.resolve())
+        BASE = str(_resolved)
+    except ValueError:
+        print(f"⚠️ MOYU_STORAGE 路径不在允许范围内，使用默认路径 {_DEFAULT_BASE}")
+        BASE = str(_DEFAULT_BASE)
+else:
+    BASE = str(_DEFAULT_BASE)
 MANIFEST_PATH = os.path.join(BASE, "manifest.json")
 BACKUP_DIR = os.path.join(BASE, "backups")
 LOG_PATH = os.path.join(BASE, "integrity_log.json")
@@ -42,6 +54,19 @@ def log(msg, level="INFO"):
     print(f"[{ts}] [{level}] {msg}")
 
 
+def _atomic_write_json(path, data):
+    """Atomic JSON write: temp file → os.replace. No partial file on crash."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
 def init_manifest():
     """Scan memory_data files and generate manifest"""
     manifest = {"version": "1.0", "created": datetime.now().isoformat(), "files": []}
@@ -53,8 +78,7 @@ def init_manifest():
                 "sha256": sha256_file(fpath),
                 "description": fname
             })
-    with open(MANIFEST_PATH, 'w') as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(MANIFEST_PATH, manifest)
     log(f"Manifest initialized ({len(manifest['files'])} files)", "PASS")
 
 
@@ -202,6 +226,9 @@ ALERT_LOG_PATH = os.path.join(BASE, "alert_log.json")
 
 # ── Alert dispatch (configurable channel) ──
 
+_LAST_ALERT_TIMES = {}  # alert_type → timestamp, for dedup (5min)
+
+
 def _load_alert_config() -> dict:
     """Load alert config from config.yaml. Returns {channel, webhook, target} or empty."""
     try:
@@ -216,13 +243,40 @@ def _load_alert_config() -> dict:
     return {}
 
 
+def _post_with_retry(url, payload, max_retries=3):
+    """POST with exponential backoff: 0.5s, 1s, 2s. Returns True on success."""
+    import urllib.request as _req
+    import time as _time
+    for attempt in range(max_retries):
+        try:
+            req = _req.Request(url, data=payload, headers={"Content-Type": "application/json"})
+            _req.urlopen(req, timeout=10)
+            return True
+        except Exception:
+            if attempt == max_retries - 1:
+                log(f"发送告警失败（已重试{max_retries}次）: {url}", "ERROR")
+                return False
+            _time.sleep(0.5 * (2 ** attempt))
+    return False
+
+
 def _send_alert(title: str, body: str):
-    """Dispatch an alert via the configured channel. Logs to alert_log.json."""
+    """Dispatch an alert via the configured channel. Dedup within 5min. Retry on failure."""
+    global _LAST_ALERT_TIMES
+    now = datetime.now().timestamp()
+    alert_type = title.split(":")[0] if ":" in title else title
+    last = _LAST_ALERT_TIMES.get(alert_type, 0)
+    is_duplicate = (now - last) < 300  # 5 minutes
+
+    if not is_duplicate:
+        _LAST_ALERT_TIMES[alert_type] = now
+
     # Always log locally
     entry = {
         "timestamp": datetime.now().isoformat(),
         "title": title,
         "body": body,
+        "dedup_skipped": is_duplicate,
     }
     entries = []
     if os.path.exists(ALERT_LOG_PATH):
@@ -236,14 +290,15 @@ def _send_alert(title: str, body: str):
     with open(ALERT_LOG_PATH, 'w') as f:
         json.dump(entries, f, ensure_ascii=False, indent=2)
 
+    # Skip webhook if duplicate
+    if is_duplicate:
+        return
+
     # Dispatch via configured channel
     alert_cfg = _load_alert_config()
     channel = alert_cfg.get("channel", "none")
     if channel == "none":
         return
-
-    import urllib.request as _req
-    import urllib.error as _urlerr
 
     payload = json.dumps({
         "msg_type": "post",
@@ -256,21 +311,11 @@ def _send_alert(title: str, body: str):
     }, ensure_ascii=False).encode("utf-8")
 
     if channel == "feishu" and alert_cfg.get("feishu_webhook"):
-        url = alert_cfg["feishu_webhook"]
-        try:
-            req = _req.Request(url, data=payload, headers={"Content-Type": "application/json"})
-            _req.urlopen(req, timeout=10)
-        except _urlerr.HTTPError:
-            pass
+        _post_with_retry(alert_cfg["feishu_webhook"], payload)
         return
 
     if channel == "webhook" and alert_cfg.get("webhook_url"):
-        url = alert_cfg["webhook_url"]
-        try:
-            req = _req.Request(url, data=payload, headers={"Content-Type": "application/json"})
-            _req.urlopen(req, timeout=10)
-        except _urlerr.HTTPError:
-            pass
+        _post_with_retry(alert_cfg["webhook_url"], payload)
         return
 
     if channel == "email" and alert_cfg.get("email_to"):
@@ -387,8 +432,7 @@ def verify():
     # Add hash_change_log to manifest for audit display
     manifest["_data_changes_since_init"] = data_changes
     manifest["_checked_at"] = datetime.now().isoformat()
-    with open(MANIFEST_PATH, 'w') as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(MANIFEST_PATH, manifest)
 
     # Send alert on critical issues
     if critical_changes > 0:
@@ -404,11 +448,16 @@ def verify():
 
 
 def _auto_recover(fpath, manifest):
-    """Restore static file from the most recent daily backup."""
+    """Restore static file from the most recent daily backup. Safe from path traversal."""
     if not os.path.isdir(BACKUP_DIR):
         log(f"  No backup directory", "WARN")
         return
-    name_stub = fpath.replace(".json", "")
+    # Path traversal guard: only use basename
+    safe_fname = os.path.basename(fpath)
+    if safe_fname != fpath:
+        log(f"  ⚠️ 检测到路径遍历尝试 ({fpath})，已拒绝", "WARN")
+        return
+    name_stub = safe_fname.replace(".json", "")
     candidates = []
     for fname in os.listdir(BACKUP_DIR):
         if fname.startswith("daily_") and name_stub in fname and fname.endswith(".json"):
@@ -416,15 +465,14 @@ def _auto_recover(fpath, manifest):
     candidates.sort(reverse=True)
     for bak_name in candidates:
         bak_path = os.path.join(BACKUP_DIR, bak_name)
-        target = os.path.join(BASE, fpath)
+        target = os.path.join(BASE, safe_fname)
         try:
             shutil.copy2(bak_path, target)
             new_hash = sha256_file(target)
             for e in manifest.get("files", []):
                 if e["path"] == fpath:
                     e["sha256"] = new_hash
-            with open(MANIFEST_PATH, 'w') as f:
-                json.dump(manifest, f, ensure_ascii=False, indent=2)
+            _atomic_write_json(MANIFEST_PATH, manifest)
             log(f"  ✅ Restored from {bak_name}", "PASS")
             return
         except Exception:

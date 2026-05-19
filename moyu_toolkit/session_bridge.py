@@ -69,8 +69,16 @@ def _load() -> dict:
 
 def _save(data: dict):
     STORAGE.mkdir(parents=True, exist_ok=True)
-    with open(BRIDGE_PATH, 'w') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    # 原子写入：先写临时文件，再替换
+    tmp_path = BRIDGE_PATH.with_suffix('.json.tmp')
+    try:
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, BRIDGE_PATH)
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise
 
 
 # ==================== Core API (backward compat) ====================
@@ -212,18 +220,28 @@ def _sync_to_prefill(data: dict):
     prefill_path = _prefill_path()
     prefill_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Scan all user messages for injection patterns before writing
+    # Scan all user and assistant messages for injection patterns before writing
     try:
         from defense_toolkit.integrity_checker import content_scan
         clean_rounds = []
         for r in rounds:
             user_text = r.get("user", "")
+            assistant_text = r.get("assistant", "")
+            blocked = False
             if user_text:
                 hits = content_scan(user_text)
                 if hits:
-                    print(f"🔴 Prefill Security Gate: blocked injection in round — detected: {', '.join(hits)}", file=__import__("sys").stderr)
-                    continue  # skip this round entirely
-            clean_rounds.append(r)
+                    print(f"🔴 Prefill Security Gate: blocked injection in user message — detected: {', '.join(hits)}", file=sys.stderr)
+                    blocked = True
+            if assistant_text and not blocked:
+                hits = content_scan(assistant_text)
+                if hits:
+                    print(f"🔴 Prefill Security Gate: blocked injection in assistant summary — detected: {', '.join(hits)}", file=sys.stderr)
+                    blocked = True
+            if not blocked:
+                clean_rounds.append(r)
+            else:
+                print(f"⚠️ Skipping round due to injection pattern", file=sys.stderr)
         # Rebuild prefill with clean rounds only
         prefill = [prefill[0]]  # keep system message
         for r in clean_rounds:
@@ -268,14 +286,32 @@ def _sync_to_context_md(data: dict):
 def _prefill_path() -> Path:
     env = os.environ.get("MOYU_PREFILL_PATH")
     if env:
-        return Path(env)
+        try:
+            path = Path(env).resolve()
+            home = Path.home().resolve()
+            project = Path(__file__).parent.parent.resolve()
+            if path.is_relative_to(home) or path.is_relative_to(project):
+                return path
+            else:
+                print(f"⚠️ MOYU_PREFILL_PATH 路径不在允许范围内，使用默认路径 {DEFAULT_PREFILL}", file=sys.stderr)
+        except Exception:
+            print(f"⚠️ MOYU_PREFILL_PATH 解析失败，使用默认路径 {DEFAULT_PREFILL}", file=sys.stderr)
     return DEFAULT_PREFILL
 
 
 def _context_md_path() -> Path:
     env = os.environ.get("MOYU_CONTEXT_MD_PATH")
     if env:
-        return Path(env)
+        try:
+            path = Path(env).resolve()
+            home = Path.home().resolve()
+            project = Path(__file__).parent.parent.resolve()
+            if path.is_relative_to(home) or path.is_relative_to(project):
+                return path
+            else:
+                print(f"⚠️ MOYU_CONTEXT_MD_PATH 路径不在允许范围内，使用默认路径 {DEFAULT_CONTEXT_MD}", file=sys.stderr)
+        except Exception:
+            print(f"⚠️ MOYU_CONTEXT_MD_PATH 解析失败，使用默认路径 {DEFAULT_CONTEXT_MD}", file=sys.stderr)
     return DEFAULT_CONTEXT_MD
 
 

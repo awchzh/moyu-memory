@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "2.4.4"
+VERSION = "2.4.5"
 
 # Known SHA256 checksums for release zips, keyed by version tag.
 # Verified before extracting updates.
@@ -30,6 +30,7 @@ VERSION = "2.4.4"
 # their own checksum empty; it gets filled in the NEXT release.
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
+    "2.4.5": "",  # To be filled in next release
     "2.4.4": "",  # To be filled in next release
     "2.4.3": "71354dd7b291b36aa2b461b7f4706168cfcfef34e2c2e8f81c2ccb4bba33fe0f",
     "2.4.2": "6a06b1065bd050b272307aae5247598334f4ade5f2b99c6ffaab6709c9bc0a1d",
@@ -131,11 +132,23 @@ def update(dry_run: bool = False) -> dict:
         if sha.hexdigest() != expected:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             return {"status": "error", "message": f"Checksum mismatch for v{info['latest']}. Update aborted."}
+    else:
+        # No checksum available — refuse to update for safety
+        url = info.get("release_url", "")
+        if not url:
+            url = f"https://github.com/{REPO}/releases/tag/v{info['latest']}"
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return {"status": "error", "message": f"No checksum for v{info['latest']}. Download and verify manually from {url}."}
 
-    # Extract
+    # Extract — with zip slip protection
     extract_dir = tmp_dir / "extracted"
     extract_dir.mkdir()
     with zipfile.ZipFile(zip_path, 'r') as zf:
+        for member in zf.namelist():
+            dest = (extract_dir / member).resolve()
+            if not str(dest).startswith(str(extract_dir.resolve())):
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                return {"status": "error", "message": f"Zip slip detected in update package: {member}"}
         zf.extractall(extract_dir)
 
     # The zip has a top-level dir named like "moyu-1.3.1/"
@@ -166,53 +179,78 @@ def update(dry_run: bool = False) -> dict:
             "version": info['latest'],
         }
 
-    # ── Apply update ──
-    # Backup memory_data before replacing
+    # ── Apply update — with rollback capability ──
+    # Backup entire toolkit before replacing
+    toolkit_backup = tmp_dir / "toolkit_backup"
+    shutil.copytree(TOOLKIT_DIR, toolkit_backup, ignore=shutil.ignore_patterns("memory_data", "__pycache__"))
+
+    # Backup memory_data separately
     mem_data = TOOLKIT_DIR / "memory_data"
     mem_backup = None
     if mem_data.exists():
         mem_backup = tmp_dir / "memory_data_backup"
         shutil.copytree(mem_data, mem_backup)
 
-    # Replace all files in moyu_toolkit/ (recursively)
-    for item in new_toolkit.iterdir():
-        name = item.name
-        # Skip excluded dirs
-        if name in EXCLUDE_DIRS:
-            continue
-        dest = TOOLKIT_DIR / name
-        if dest.exists():
-            if dest.is_dir():
-                shutil.rmtree(dest, ignore_errors=True)
+    try:
+        # Replace all files in moyu_toolkit/ (recursively)
+        for item in new_toolkit.iterdir():
+            name = item.name
+            # Skip excluded dirs
+            if name in EXCLUDE_DIRS:
+                continue
+            dest = TOOLKIT_DIR / name
+            if dest.exists():
+                if dest.is_dir():
+                    shutil.rmtree(dest, ignore_errors=True)
+                else:
+                    dest.unlink()
+            if item.is_dir():
+                shutil.copytree(item, dest)
             else:
-                dest.unlink()
-        if item.is_dir():
-            shutil.copytree(item, dest)
-        else:
-            shutil.copy2(item, dest)
+                shutil.copy2(item, dest)
 
-    # Restore memory_data from backup (shouldn't have been touched, but safety)
-    if mem_backup and mem_backup.exists():
-        if mem_data.exists():
-            shutil.rmtree(mem_data, ignore_errors=True)
-        shutil.copytree(mem_backup, mem_data)
+        # Restore memory_data from backup (shouldn't have been touched, but safety)
+        if mem_backup and mem_backup.exists():
+            if mem_data.exists():
+                shutil.rmtree(mem_data, ignore_errors=True)
+            shutil.copytree(mem_backup, mem_data)
 
-    # ── Save checksum for next update (TOFU: first update has no checksum, subsequent ones do) ──
-    if not _CHECKSUMS.get(info["latest"]) and zip_path.exists():
-        sha = hashlib.sha256()
-        with open(zip_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(65536), b''):
-                sha.update(chunk)
-        local_cs = {}
-        if _LOCAL_CHECKSUMS_PATH.exists():
-            try:
-                with open(_LOCAL_CHECKSUMS_PATH) as f:
-                    local_cs = json.load(f)
-            except Exception:
-                pass
-        local_cs[info["latest"]] = sha.hexdigest()
-        with open(_LOCAL_CHECKSUMS_PATH, 'w') as f:
-            json.dump(local_cs, f)
+        # ── Save checksum for next update (TOFU) ──
+        if not _CHECKSUMS.get(info["latest"]) and zip_path.exists():
+            sha = hashlib.sha256()
+            with open(zip_path, 'rb') as f:
+                for chunk in iter(lambda: f.read(65536), b''):
+                    sha.update(chunk)
+            local_cs = {}
+            if _LOCAL_CHECKSUMS_PATH.exists():
+                try:
+                    with open(_LOCAL_CHECKSUMS_PATH) as f:
+                        local_cs = json.load(f)
+                except Exception:
+                    pass
+            local_cs[info["latest"]] = sha.hexdigest()
+            with open(_LOCAL_CHECKSUMS_PATH, 'w') as f:
+                json.dump(local_cs, f)
+    except Exception as e:
+        # Rollback: restore from backup
+        if toolkit_backup.exists():
+            # Remove everything except memory_data
+            for item in TOOLKIT_DIR.iterdir():
+                if item.name in EXCLUDE_DIRS:
+                    continue
+                if item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    item.unlink(missing_ok=True)
+            # Restore from backup
+            for item in toolkit_backup.iterdir():
+                dest = TOOLKIT_DIR / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest)
+                else:
+                    shutil.copy2(item, dest)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return {"status": "error", "message": f"Update failed, rolled back: {e}"}
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
 

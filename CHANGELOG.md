@@ -1,5 +1,33 @@
 # MOYU — Development Log
 
+## v2.4.5 — Released (2026-05-19)
+
+### Security Fixes
+- **Zip slip protection** — `updater.py` now validates every member path in the zip before extracting. Malicious archives containing `../../etc/passwd` paths are rejected. Prevents arbitrary file writes via update packages.
+- **Checksum enforcement** — `update()` now refuses to install any version without a known SHA256 checksum. Previously, new versions with empty checksums would skip verification entirely (TOFU weakness). Users must now download and verify manually if no checksum is available.
+- **Path traversal guard** — `integrity_checker.py` `BASE` path from `MOYU_STORAGE` env var is now validated against the allowed directory. Malicious `../` sequences are rejected.
+- **Path traversal guard** — `_auto_recover()` in `integrity_checker.py` now uses `os.path.basename()` to filter restore paths, preventing manifest-based directory traversal.
+- **Path traversal guard** — `session_bridge.py` `MOYU_PREFILL_PATH` and `MOYU_CONTEXT_MD_PATH` env vars now validate against home directory and project directory. Out-of-bounds paths fall back to defaults.
+- **Injection scan for assistant content** — `session_bridge.py` now scans both user and assistant content before writing to `prefill.json`. Previously only user messages were scanned.
+- **Hide password on input** — `security.py` `setup()` and `verify_operation()` now use `getpass.getpass()` instead of `input()`. Passwords are no longer visible on screen.
+- **Timing-safe hash comparison** — `security.py` now uses `hmac.compare_digest()` instead of `==` for password hash comparison.
+- **Auto-clear failure count on unlock** — `_check_lock()` now calls `_clear_failures()` when a lock expires, preventing immediate re-lock due to stale failure records.
+
+### Reliability
+- **Update rollback** — `updater.py` now backs up the entire toolkit before applying updates. If the update fails mid-way (crash, disk full, etc.), it restores from backup automatically.
+- **Atomic config writes** — `security.py` `_write_config_section()` now uses temp file + `os.replace()`. Prevents config corruption on power loss.
+- **Atomic log writes** — `security.py` `_save_logs()` uses temp file + `os.replace()`. Prevents log corruption.
+- **Atomic bridge writes** — `session_bridge.py` `_save()` uses temp file + `os.replace()`. Prevents session bridge corruption.
+- **Atomic manifest writes** — `integrity_checker.py` all 3 manifest write paths now use `_atomic_write_json()` (temp file + `os.replace()`).
+- **Success audit logging** — `security.py` now logs successful verifications (`ALLOWED`) in addition to failures. Previously only failures were recorded.
+- **Setup no longer leaks hash** — `security.py` `setup()` no longer prints the SHA256 password hash to terminal when PyYAML is unavailable.
+
+### Monitoring
+- **Alert dedup** — `integrity_checker.py` suppresses duplicate webhook alerts of the same type within 5 minutes. Local logging continues normally.
+- **Alert retry** — `_post_with_retry()` implements exponential backoff (0.5s, 1s, 2s) for webhook delivery failures. 3 retries before giving up.
+
+---
+
 ## v2.4.4 — Released (2026-05-18)
 
 ### Security Fixes

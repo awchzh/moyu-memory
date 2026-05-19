@@ -57,10 +57,5 @@ memory:
     recency: 0.2
     semantic: 0.5
 security:
-  encryption:
-    enabled: false
-  isolation:
-    default_user: default
-    enabled: false
-  lockout_minutes: 30
+  safe_word_hash: abc123
   lockout_threshold: 3

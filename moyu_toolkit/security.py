@@ -22,7 +22,7 @@ Usage (in code):
         # Verification failed, do not execute
 """
 
-import json, os, sys, hashlib, time
+import json, os, sys, hashlib, hmac, time, getpass
 from datetime import datetime
 from pathlib import Path
 
@@ -47,6 +47,11 @@ def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def _hash_equal(a: str, b: str) -> bool:
+    """Timing-safe hash comparison."""
+    return hmac.compare_digest(a, b)
+
+
 def _read_config() -> dict:
     """Read config.yaml and return the security section"""
     if not CONFIG_PATH.exists():
@@ -63,46 +68,79 @@ def _read_config() -> dict:
 
 
 def _write_config_section(section: dict):
-    """Update the security section in config.yaml"""
+    """Update the security section in config.yaml (atomic write)"""
+    import yaml
+    # Read full config
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH) as f:
+            cfg = yaml.safe_load(f) or {}
+    else:
+        cfg = {}
+    # Write security section
+    cfg["security"] = section
+    # Atomic write
+    tmp = str(CONFIG_PATH) + ".tmp"
     try:
-        import yaml
-        # Read full config
-        if CONFIG_PATH.exists():
-            with open(CONFIG_PATH) as f:
-                cfg = yaml.safe_load(f) or {}
-        else:
-            cfg = {}
-        # Write security section
-        cfg["security"] = section
-        with open(CONFIG_PATH, 'w') as f:
+        with open(tmp, 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        os.replace(tmp, CONFIG_PATH)
         return True
-    except ImportError:
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
         return False
 
 
 def _log_failure(op_type: str, context: str):
-    """Log a verification failure for forensic evidence"""
+    """Log a verification failure for forensic evidence (atomic write)"""
     entry = {
         "timestamp": _timestamp(),
         "operation": op_type,
         "context": context,
         "status": "DENIED",
     }
-    logs = []
+    logs = _load_logs()
+    logs.append(entry)
+    logs = logs[-100:]
+    _save_logs(logs)
+    _alert(op_type, context)
+
+
+def _log_success(op_type: str, context: str):
+    """Log a successful verification (atomic write)"""
+    entry = {
+        "timestamp": _timestamp(),
+        "operation": op_type,
+        "context": context,
+        "status": "ALLOWED",
+    }
+    logs = _load_logs()
+    logs.append(entry)
+    logs = logs[-100:]
+    _save_logs(logs)
+
+
+def _load_logs() -> list:
     if SECURITY_LOG.exists():
         try:
             with open(SECURITY_LOG) as f:
-                logs = json.load(f)
+                return json.load(f)
         except (json.JSONDecodeError, Exception):
-            logs = []
-    logs.append(entry)
-    # Keep last 100 entries
-    logs = logs[-100:]
+            return []
+    return []
+
+
+def _save_logs(logs: list):
+    """Atomic write: temp file → replace."""
     SECURITY_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with open(SECURITY_LOG, 'w') as f:
-        json.dump(logs, f, ensure_ascii=False, indent=2)
-    _alert(op_type, context)
+    tmp = str(SECURITY_LOG) + ".tmp"
+    try:
+        with open(tmp, 'w') as f:
+            json.dump(logs, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, str(SECURITY_LOG))
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def _alert(op_type: str, context: str):
@@ -138,6 +176,7 @@ def _check_lock() -> dict:
         else:
             # Lock expired, auto-release
             LOCK_FILE.unlink(missing_ok=True)
+            _clear_failures()  # Also clear failure count to avoid immediate re-lock
             return {}
     except Exception:
         return {}
@@ -213,12 +252,12 @@ def setup():
     print("Password is stored locally as a SHA256 hash only. It is NOT uploaded anywhere.")
     print()
 
-    pw1 = input("Enter a security password (leave empty to skip verification): ").strip()
+    pw1 = getpass.getpass("Enter a security password (leave empty to skip verification): ").strip()
     if not pw1:
         print("⚠️  No password set. Verification will be skipped. (Re-run setup to set one later.)")
         return
 
-    pw2 = input("Enter the same password again to confirm: ").strip()
+    pw2 = getpass.getpass("Enter the same password again to confirm: ").strip()
     if pw1 != pw2:
         print("❌ Passwords do not match. Setup failed.")
         return
@@ -232,19 +271,20 @@ def setup():
         "lockout_threshold": DEFAULT_LOCKOUT_THRESHOLD,
         "lockout_minutes": DEFAULT_LOCKOUT_MINUTES,
     }
-    ok = _write_config_section(sec_config)
+    try:
+        ok = _write_config_section(sec_config)
+    except ImportError:
+        ok = False
+        print("⚠️  Could not write to config.yaml (missing PyYAML library).")
+        print("   Please manually add a 'security' section to config.yaml with these fields:")
+        print("     safe_word_hash, lockout_threshold, lockout_minutes")
     if ok:
         SECURITY_LOG.parent.mkdir(parents=True, exist_ok=True)
         print("✅ Security password set successfully!")
         print(f"   {DEFAULT_LOCKOUT_THRESHOLD} consecutive wrong attempts will lock for {DEFAULT_LOCKOUT_MINUTES} minutes.")
         print(f"   Forensic logs saved at: {SECURITY_LOG}")
     else:
-        print("⚠️  Setup completed, but could not write to config.yaml (missing PyYAML library).")
-        print("   Please manually add the following to config.yaml:")
-        print(f"  security:")
-        print(f"    safe_word_hash: {_sha256(pw1)}")
-        print(f"    lockout_threshold: {DEFAULT_LOCKOUT_THRESHOLD}")
-        print(f"    lockout_minutes: {DEFAULT_LOCKOUT_MINUTES}")
+        print("⚠️  Failed to write config.yaml. See above for manual setup instructions.")
 
 
 def verify_operation(op_type: str, context: str = "") -> bool:
@@ -278,7 +318,8 @@ def verify_operation(op_type: str, context: str = "") -> bool:
 
     if env_pw:
         # Environment variable mode (agent internal call)
-        if _sha256(env_pw) == safe_word_hash:
+        if _hash_equal(_sha256(env_pw), safe_word_hash):
+            _log_success(op_type, context or "Verified via env var")
             return True
         else:
             pass  # Failed, fall through to terminal mode
@@ -290,9 +331,8 @@ def verify_operation(op_type: str, context: str = "") -> bool:
     if context:
         print(f"   Context:   {context}")
     print(f"   Note: This operation may cause memory data loss or corruption")
-    print(f"   Enter password to confirm identity (or type 'q' to cancel):")
     try:
-        pw = input("> ").strip()
+        pw = getpass.getpass("Enter password to confirm (or type 'q' to cancel): ").strip()
     except (EOFError, KeyboardInterrupt):
         pw = ""
         print()
@@ -302,8 +342,9 @@ def verify_operation(op_type: str, context: str = "") -> bool:
         print("⏹  Operation cancelled.")
         return False
 
-    if _sha256(pw) == safe_word_hash:
+    if _hash_equal(_sha256(pw), safe_word_hash):
         _clear_failures()
+        _log_success(op_type, context or "")
         return True
     else:
         _log_failure(op_type, context or "Wrong password")
