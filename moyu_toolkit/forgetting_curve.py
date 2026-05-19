@@ -36,6 +36,29 @@ except Exception:
     _KG_AVAILABLE = False
 
 STORAGE = Path(os.environ.get("MOYU_STORAGE", str(Path(__file__).parent / "memory_data")))
+AUDIT_LOG_PATH = STORAGE / "audit_log.json"
+
+
+def _audit_log(event_type: str, details: dict):
+    """Append an audit event to audit_log.json. Thread-safe via atomic append."""
+    entry = {"ts": datetime.now().isoformat(), "event": event_type, **details}
+    entries = []
+    if AUDIT_LOG_PATH.exists():
+        try:
+            with open(AUDIT_LOG_PATH) as f:
+                entries = json.load(f)
+        except Exception:
+            entries = []
+    entries.append(entry)
+    entries = entries[-500:]  # Keep last 500
+    tmp = str(AUDIT_LOG_PATH) + ".tmp"
+    try:
+        with open(tmp, 'w') as f:
+            json.dump(entries, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, AUDIT_LOG_PATH)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 # ── Dynamic scene extraction (from memory summaries) ──
 # Scenes are extracted from high-frequency keywords that appear across
@@ -475,7 +498,10 @@ def run(context_pressure: bool = False) -> dict:
             continue
 
         # ── Stage 1: within safety window → skip ──
-        if days < demote_days:
+        # Safety window depends on source: agent/system sources are less trusted
+        src = m.get("source", "user")
+        src_window = demote_days // 2 if src in ("agent", "system") else demote_days
+        if days < src_window:
             continue
 
         # ── Stage 3: scene protection check (before density) ──
@@ -502,6 +528,8 @@ def run(context_pressure: bool = False) -> dict:
         if _KG_AVAILABLE:
             new_len = len(kg._load().get("relations", []))
             distilled_count += max(0, new_len - old_len)
+            if new_len > old_len:
+                _audit_log("distill", {"memory_id": m_id, "summary": (m.get("summary", "")[:80]), "relations_added": new_len - old_len})
 
         # Passed all gates → demote
         m["demoted"] = True
@@ -515,7 +543,8 @@ def run(context_pressure: bool = False) -> dict:
             m["demoted_reason"] += f" | insufficient density data ({trend['detail']})"
 
         demoted.append(m_id)
-
+        _audit_log("demote", {"memory_id": m_id, "reason": m["demoted_reason"], "days_since_access": round(days, 1), "scene": scene})
+        continue
     if demoted or archived or kept_by_density or kept_by_scene or changed_scenes:
         _save_memories(memories)
 

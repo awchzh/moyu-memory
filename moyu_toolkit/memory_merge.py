@@ -162,6 +162,36 @@ def run(dry_run: bool = False) -> dict:
         merged_count += 1
 
     if merged_count > 0:
+        from datetime import datetime as _dt
+        _ts = _dt.now().isoformat()
+        # Load existing audit log
+        _audit_path = STORAGE / "audit_log.json"
+        _audit_entries = []
+        if _audit_path.exists():
+            try:
+                with open(_audit_path) as f:
+                    _audit_entries = json.load(f)
+            except Exception:
+                _audit_entries = []
+        for group in groups:
+            items = [candidates[i] for i in group[:MAX_MERGE_GROUP]]
+            if len(items) >= 2:
+                _audit_entries.append({
+                    "ts": _ts, "event": "merge",
+                    "merged_ids": [m["id"] for m in items],
+                    "count": len(items),
+                    "topics": list(_tokenize(" ".join(m.get("summary", "") for m in items)))[:3],
+                })
+        _audit_entries = _audit_entries[-500:]
+        _tmp = str(_audit_path) + ".tmp"
+        try:
+            with open(_tmp, 'w') as f:
+                json.dump(_audit_entries, f, ensure_ascii=False, indent=2)
+            import os as _os
+            _os.replace(_tmp, _audit_path)
+        except Exception:
+            if _os.path.exists(_tmp):
+                _os.remove(_tmp)
         _save_memories(memories)
 
     return {
