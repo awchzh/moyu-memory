@@ -19,7 +19,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "memory_data"))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+STORAGE_PATH = get_default_storage()
 
 # Path traversal guard — same pattern as integrity_checker
 _DEFAULT_STORAGE = str(Path(__file__).parent / "memory_data")

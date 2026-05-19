@@ -26,8 +26,9 @@ import json, os, sys, hashlib, hmac, time, getpass
 from datetime import datetime
 from pathlib import Path
 
-BASE = Path(os.environ.get("MOYU_STORAGE", str(Path(__file__).parent / "memory_data")))
-CONFIG_PATH = Path(os.environ.get("MOYU_CONFIG", str(Path(__file__).parent / "config.yaml")))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+BASE = Path(get_default_storage())
+CONFIG_PATH = Path(get_config_path())
 SECURITY_LOG = BASE / "security_log.json"
 LOCK_FILE = BASE / "security_lock.json"
 

@@ -31,7 +31,8 @@ Usage:
 import sys
 import os
 
-TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
+from moyu_toolkit._moyu_paths import get_package_dir
+TOOLKIT_DIR = str(get_package_dir())
 sys.path.insert(0, TOOLKIT_DIR)
 
 
@@ -103,8 +104,7 @@ def cmd_audit():
     # Layer 2: Integrity Check (on-wake detection)
     ic = _import("defense_toolkit.integrity_checker")
     import os as _os
-    storage_base = _os.environ.get("MOYU_STORAGE",
-                                    _os.path.join(TOOLKIT_DIR, "memory_data"))
+    storage_base = _os.environ.get("MOYU_STORAGE", get_default_storage() if 'get_default_storage' in dir() else _os.path.join(TOOLKIT_DIR, "memory_data"))
     manifest_path = _os.path.join(storage_base, "manifest.json")
     backup_dir = _os.path.join(storage_base, "backups")
     has_manifest = _os.path.exists(manifest_path)
@@ -749,8 +749,7 @@ def main():
             sec_info = sec.status()
             ic_module = _import("defense_toolkit.integrity_checker")
             import os as _os3
-            sto = _os3.environ.get("MOYU_STORAGE",
-                                    _os3.path.join(TOOLKIT_DIR, "memory_data"))
+            sto = _os3.environ.get("MOYU_STORAGE", _os3.path.join(TOOLKIT_DIR, "memory_data"))
             man = _os3.path.join(sto, "manifest.json")
             if not sec_info.get("password_set", False) or not _os3.path.exists(man):
                 print()
@@ -771,6 +770,11 @@ def main():
         print()
         show_help()
         sys.exit(1)
+
+
+def main_cli():
+    """Entry point for pip-installed `moyu` command (console_scripts)."""
+    main()
 
 
 if __name__ == "__main__":

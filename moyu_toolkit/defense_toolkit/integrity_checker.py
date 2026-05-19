@@ -16,7 +16,8 @@ import json, os, hashlib, sys, shutil, re, base64
 from datetime import datetime
 from pathlib import Path
 
-_DEFAULT_BASE = Path(__file__).parent.parent / "memory_data"
+from moyu_toolkit._moyu_paths import get_default_storage
+_DEFAULT_BASE = Path(get_default_storage())
 _custom_base = os.environ.get("MOYU_STORAGE")
 if _custom_base:
     _resolved = Path(_custom_base).resolve()
@@ -96,7 +97,8 @@ def _load_patterns() -> list:
     global _PATTERNS_CACHE
     if _PATTERNS_CACHE is not None:
         return _PATTERNS_CACHE
-    toolkit = os.path.dirname(__file__)
+    from moyu_toolkit._moyu_paths import get_package_dir
+    toolkit = str(get_package_dir())
     
     # Try Base64-encoded version first (packaged for SkillHub)
     b64_path = os.path.join(toolkit, "forensic_patterns_base64.json")

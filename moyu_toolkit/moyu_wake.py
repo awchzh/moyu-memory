@@ -16,7 +16,8 @@ import sys
 import os
 import json
 
-TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
+from moyu_toolkit._moyu_paths import get_package_dir
+TOOLKIT_DIR = str(get_package_dir())
 sys.path.insert(0, TOOLKIT_DIR)
 
 

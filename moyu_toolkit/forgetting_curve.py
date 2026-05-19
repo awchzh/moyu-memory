@@ -30,12 +30,13 @@ from pathlib import Path
 # and writes them to the knowledge graph, so structural knowledge survives
 # the raw memory's removal. Non-intrusive import — no-op if module fails.
 try:
-    import knowledge_graph as kg
+    from moyu_toolkit import knowledge_graph as kg
     _KG_AVAILABLE = True
 except Exception:
     _KG_AVAILABLE = False
 
-STORAGE = Path(os.environ.get("MOYU_STORAGE", str(Path(__file__).parent / "memory_data")))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+STORAGE = Path(get_default_storage())
 AUDIT_LOG_PATH = STORAGE / "audit_log.json"
 
 
@@ -217,7 +218,7 @@ def _save_memories(memories: list):
 def _load_config() -> dict:
     try:
         import yaml
-        cfg_path = Path(__file__).parent / "config.yaml"
+        cfg_path = Path(get_config_path())
         if cfg_path.exists():
             with open(cfg_path) as f:
                 cfg = yaml.safe_load(f) or {}

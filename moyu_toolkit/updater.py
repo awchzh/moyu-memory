@@ -38,7 +38,8 @@ _CHECKSUMS = {
     "2.4.0": "",
 }
 
-TOOLKIT_DIR = Path(__file__).parent.resolve()
+from moyu_toolkit._moyu_paths import get_package_dir
+TOOLKIT_DIR = Path(get_package_dir())
 REPO = "awchzh/moyu-memory"
 GITHUB_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 EXCLUDE_DIRS = {"memory_data", "__pycache__"}

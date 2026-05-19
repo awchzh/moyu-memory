@@ -1,0 +1,9 @@
+numpy>=1.24.0
+requests>=2.31.0
+pyyaml>=6.0
+
+[encryption]
+cryptography>=44.0.1
+
+[semantic]
+fastembed>=0.5.4

@@ -16,7 +16,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-STORAGE = Path(os.environ.get("MOYU_STORAGE", str(Path(__file__).parent / "memory_data")))
+from moyu_toolkit._moyu_paths import get_default_storage
+STORAGE = Path(get_default_storage())
 
 # ── Config ──
 SIMILARITY_THRESHOLD = 0.25   # Keyword overlap ratio to consider "related"

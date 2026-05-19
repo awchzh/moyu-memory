@@ -60,7 +60,7 @@ def _get_encryption_password() -> str:
     return os.environ.get("MOYU_ENCRYPTION_PASSWORD", "")
 
 # ==================== SQLite FTS5 ====================
-from agent_memory_sqlite import _fts_search
+from moyu_toolkit.agent_memory_sqlite import _fts_search
 
 # ==================== Optional Dependencies ====================
 
@@ -95,8 +95,9 @@ def _check_spacy():
 
 # ==================== Configuration ====================
 
-STORE = os.path.dirname(os.path.abspath(__file__))
-STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(STORE, "memory_data"))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+
+STORAGE_PATH = get_default_storage()
 
 # Write frequency guard (burst protection)
 WRITE_FREQ_FILE = os.path.join(STORAGE_PATH, "write_freq.json")
@@ -153,7 +154,7 @@ def _storage_path(*parts: str) -> str:
 
 def _load_config() -> dict:
     """Load config.yaml (if exists). On parse failure, returns conservative defaults."""
-    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    config_path = get_config_path()
     if os.path.exists(config_path):
         try:
             import yaml

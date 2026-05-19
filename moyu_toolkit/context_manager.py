@@ -31,7 +31,8 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 
-STORAGE = Path(os.environ.get("MOYU_STORAGE", str(Path(__file__).parent / "memory_data")))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+STORAGE = Path(get_default_storage())
 REFS_DIR = STORAGE / "refs"           # Truncated original content, for drill-down
 COMPRESS_LOG = STORAGE / "compression_log.json"
 

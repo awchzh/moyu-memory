@@ -27,7 +27,8 @@ from typing import List, Dict, Optional
 from pathlib import Path
 
 # ── Paths ──
-TOOLKIT_DIR = Path(__file__).parent.resolve()
+from moyu_toolkit._moyu_paths import get_package_dir
+TOOLKIT_DIR = Path(get_package_dir())
 DEFAULT_KNOWLEDGE_DIR = TOOLKIT_DIR.parent / "workflow-recipes"
 INDEX_FILE = Path(os.environ.get("MOYU_STORAGE", str(TOOLKIT_DIR / "memory_data"))) / "kb_index.json"
 

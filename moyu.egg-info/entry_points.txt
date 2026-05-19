@@ -1,0 +1,2 @@
+[console_scripts]
+moyu = moyu_toolkit.moyu:main_cli

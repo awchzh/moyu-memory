@@ -19,7 +19,8 @@ import re
 from datetime import datetime
 from typing import List, Dict
 
-STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "memory_data"))
+from moyu_toolkit._moyu_paths import get_default_storage
+STORAGE_PATH = get_default_storage()
 MEMORY_FILE = os.path.join(STORAGE_PATH, "conversation_memory.json")
 
 # Positive signal words (excluding those negated by 不/没)

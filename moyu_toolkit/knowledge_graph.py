@@ -24,7 +24,8 @@ import re
 from datetime import datetime
 from typing import List, Dict, Optional
 
-STORAGE_PATH = os.environ.get("MOYU_STORAGE", os.path.join(os.path.dirname(__file__), "memory_data"))
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+STORAGE_PATH = get_default_storage()
 
 RELATION_TYPES = {
     "works_at": "works at", "uses": "uses", "lives_in": "lives in",
@@ -95,7 +96,7 @@ def _backfill_temporal(kg: dict) -> bool:
 def _call_llm(prompt: str) -> str:
     """Call the configured LLM API"""
     import yaml, requests as rq
-    cfg_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    cfg_path = get_config_path()
     if not os.path.exists(cfg_path):
         return ""
     with open(cfg_path) as f:

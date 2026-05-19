@@ -23,7 +23,8 @@ def _load_config() -> dict:
     """Load isolation config from config.yaml. Cached after first read."""
     global _CONFIG_PATH
     if _CONFIG_PATH is None:
-        toolkit = Path(__file__).parent.parent.resolve()
+        from moyu_toolkit._moyu_paths import get_package_dir
+        toolkit = Path(get_package_dir())
         _CONFIG_PATH = toolkit / "config.yaml"
 
     try:
