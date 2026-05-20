@@ -28,4 +28,5 @@ jobs:
 
       - name: Run tests
         run: |
-          cd moyu_toolkit && python3 tests/test_all.py
+          ls -la
+          cd moyu_toolkit && python3 -c "print('cwd:', __import__('os').getcwd())" && python3 tests/test_all.py 2>&1
