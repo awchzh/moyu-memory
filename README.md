@@ -52,7 +52,7 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 | 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (433 patterns + regex combos) + loop detection |
 | 🟡 | Simple prompt injection (standard variants) | **~60%** | Regex covers (forget|ignore|skip)×(previous|all|your)×(instructions|rules) |
 | 🟠 | Professional adversarial injection (targeted bypass) | **~20%** | Keyword-based gates can't catch every novel variant |
-| 🟠 | Semantic-level injection (metaphor, abstraction, no keywords) | **~60%** | LLM Security Guard (DeepSeek) detects semantic bypasses — regex-untouched patterns like "pretend to be DAN" are caught. Falls back to safe on API failure: **never blocks legitimate writes.** |
+| 🟠 | Semantic-level injection (metaphor, abstraction, no keywords) | **~60%** | LLM Security Guard detects semantic bypasses — regex-untouched patterns like "pretend to be DAN" are caught. Uses your configured LLM. Falls back to safe on API failure: **never blocks legitimate writes.** |
 
 **How it works:** LLM Guard is a second layer after regex — regex untouched → LLM verdict. No API key? Silent degrade to regex-only. This means semantic injection coverage goes from ~0% to ~60% without breaking zero-config.
 
@@ -263,7 +263,7 @@ moyu_toolkit/
 ├── agent_memory_sqlite.py   # SQLite FTS5 search index
 ├── active_context.py        # Working memory (compression-surviving)
 ├── context_manager.py       # Context-aware compression + warning + task map
-├── forgetting_curve.py      # Memory lifecycle — three gates + knowledge distillation
+├── forgetting_curve.py      # Memory lifecycle — four gates + LLM review + knowledge distillation
 ├── memory_merge.py          # Topic-aware memory merging
 ├── knowledge_graph.py       # Entity-relation knowledge graph (with time-travel)
 ├── knowledge_base.py        # Workflow knowledge base
@@ -277,7 +277,7 @@ moyu_toolkit/
 ├── self_reflection.py       # Self-reflection
 ├── defense_toolkit/
 │   ├── integrity_checker.py # File integrity + auto-recovery + forensic analysis + alerts
-│   ├── forensic_patterns.json # Injection detection rule base (422 patterns + regex)
+│   ├── forensic_patterns.json # Injection detection rule base (433 patterns + regex)
 │   ├── pii_redactor.py      # PII redaction (bilingual, API key support)
 │   ├── isolation.py         # User isolation (opt-in)
 │   └── encrypt.py           # AES-256-GCM file encryption (opt-in, requires cryptography)
