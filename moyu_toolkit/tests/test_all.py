@@ -160,8 +160,11 @@ def test_burst_reject():
     _clean_storage()
     import agent_memory as am
     mem_path = os.path.join(STORAGE, "conversation_memory.json")
-    with open(mem_path) as f:
-        original = json.load(f)
+    try:
+        with open(mem_path) as f:
+            original = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        original = []
 
     # 模拟爆发：伪造 31 条写入记录
     now = time.time()
