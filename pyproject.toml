@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "moyu"
+name = "moyu-memory"
 version = "2.4.7"
 description = "Zero-trust memory toolkit for AI Agents. Pure Python, zero infrastructure, self-defending."
 readme = "README.md"
@@ -46,7 +46,7 @@ Repository = "https://github.com/awchzh/moyu-memory"
 moyu = "moyu_toolkit.moyu:main_cli"
 
 [tool.setuptools.packages.find]
-include = ["moyu_toolkit*"]
+include = ["moyu_toolkit*", "moyu*"]
 
 [tool.setuptools.package-data]
 "moyu_toolkit" = ["*.yaml", "*.json", "*.md", "*.txt"]

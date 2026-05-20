@@ -618,18 +618,27 @@ def _scan_providers():
                 with sqlite3.connect(db, timeout=3.0) as conn:
                     conn.row_factory = sqlite3.Row
                     conn.execute("PRAGMA busy_timeout = 3000")
+                    # 最近 24 小时 messages content 总长度估算上下文占用
+                    # 精确值在 gateway 内存中，不落盘，这里用 content 长度/1.5 估算中文字符的 token 数
                     cur = conn.execute(
-                        "SELECT input_tokens, api_call_count FROM sessions "
-                        "ORDER BY started_at DESC LIMIT 1"
+                        "SELECT COALESCE(ROUND(SUM(LENGTH(content))/1.5), 0) as est_tokens, "
+                        "COUNT(*) as api_calls FROM messages "
+                        "WHERE timestamp > (strftime('%s','now') - 86400)"
                     )
                     row = cur.fetchone()
-                if not row:
-                    continue
-                total = row["input_tokens"] or 0
-                calls = row["api_call_count"] or 0
+                    if not row or row["est_tokens"] == 0:
+                        continue
+                    total = int(row["est_tokens"])
+                    calls = row["api_calls"] or 0
                 pct = min(100, round((total / 128000) * 100))
-                return dict(pct=pct, total_tokens=total, context_length=128000,
-                            api_calls=calls, likely_compressed=calls > 50 or total > 128000)
+                # 如果超过 128K 窗口，用 1M（gateway 实际窗口）重新算百分比
+                if total > 128000:
+                    pct = min(100, round((total / 1000000) * 100))
+                    context_len = 1000000
+                else:
+                    context_len = 128000
+                return dict(pct=pct, total_tokens=total, context_length=context_len,
+                            api_calls=calls, likely_compressed=pct >= 85)
             except Exception:
                 continue
         return None
@@ -649,7 +658,7 @@ def _scan_providers():
             try:
                 with open(files[0], "r") as f:
                     lines = f.readlines()
-                tail = [l for l in lines[-20:] if l.strip()]
+                tail = [l for l in lines[-200:] if l.strip()]
                 if not tail:
                     continue
                 total_in = 0
@@ -667,7 +676,7 @@ def _scan_providers():
                     continue
                 pct = min(100, round((total_in / 200000) * 100))
                 return dict(pct=pct, total_tokens=total_in, context_length=200000,
-                            api_calls=calls, likely_compressed=calls > 30 or total_in > 200000)
+                            api_calls=calls, likely_compressed=pct >= 85)
             except Exception:
                 continue
         return None
@@ -687,7 +696,7 @@ def _scan_providers():
             try:
                 with open(files[0], "r") as f:
                     lines = f.readlines()
-                tail = [l for l in lines[-20:] if l.strip()]
+                tail = [l for l in lines[-200:] if l.strip()]
                 if not tail:
                     continue
                 total_in = 0
@@ -705,7 +714,7 @@ def _scan_providers():
                     continue
                 pct = min(100, round((total_in / 128000) * 100))
                 return dict(pct=pct, total_tokens=total_in, context_length=128000,
-                            api_calls=calls, likely_compressed=calls > 30 or total_in > 128000)
+                            api_calls=calls, likely_compressed=pct >= 85)
             except Exception:
                 continue
         return None
@@ -738,7 +747,7 @@ def _scan_providers():
                     pct = min(100, round((count * 1500 / 128000) * 100))
                     return dict(pct=pct, total_tokens=count * 1500,
                                 context_length=128000, api_calls=count,
-                                likely_compressed=count > 40 or (count * 1500) > 128000)
+                                likely_compressed=pct >= 85)
             except Exception:
                 continue
         return None
@@ -765,7 +774,7 @@ def _scan_providers():
                 total_in = calls * 1000
                 pct = min(100, round((total_in / 128000) * 100))
                 return dict(pct=pct, total_tokens=total_in, context_length=128000,
-                            api_calls=calls, likely_compressed=calls > 40 or total_in > 128000)
+                            api_calls=calls, likely_compressed=pct >= 85)
             except Exception:
                 continue
         return None

@@ -101,7 +101,7 @@ def _load_patterns() -> list:
     toolkit = str(get_package_dir())
     
     # Try Base64-encoded version first (packaged for SkillHub)
-    b64_path = os.path.join(toolkit, "forensic_patterns_base64.json")
+    b64_path = os.path.join(toolkit, "defense_toolkit", "forensic_patterns_base64.json")
     if os.path.exists(b64_path):
         try:
             with open(b64_path) as f:
@@ -122,7 +122,7 @@ def _load_patterns() -> list:
             pass
     
     # Fallback to plaintext version (local dev / GitHub)
-    patterns_path = os.path.join(toolkit, "forensic_patterns.json")
+    patterns_path = os.path.join(toolkit, "defense_toolkit", "forensic_patterns.json")
     try:
         with open(patterns_path) as f:
             raw = json.load(f)

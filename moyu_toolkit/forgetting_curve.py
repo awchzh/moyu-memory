@@ -487,9 +487,14 @@ def run(context_pressure: bool = False) -> dict:
     for m in memories:
         m_id = m.get("id", "?")
         is_demoted = m.get("demoted", False)
+        # ── 保护检查：被标记为不可遗忘的记忆跳过降级 ──
         access_ts = m.get("last_accessed") or m.get("timestamp", now)
         days = _days_since(access_ts)
         scene = m.get("scene", "general")
+
+        if m.get("protected"):
+            kept_by_density.append(m_id)  # reuse field for reporting
+            continue
 
         if is_demoted:
             if days >= archive_days:
@@ -586,6 +591,45 @@ def summary() -> str:
     active = r.get("total_memories", 0) - len(r.get("demoted", []))
     parts.append(f"活跃记忆 {active} 条")
     return "，".join(parts)
+
+
+def protect(memory_id: str) -> bool:
+    """Mark a memory as protected — it will never be demoted by forgetting curve."""
+    memories = _load_memories()
+    for m in memories:
+        if m.get("id") == memory_id:
+            if m.get("protected"):
+                print(f"🔒 记忆 {memory_id} 已处于保护状态")
+                return True
+            m["protected"] = True
+            _save_memories(memories)
+            print(f"🔒 记忆 {memory_id} 已标记为不可遗忘")
+            _audit_log("protect", {"memory_id": memory_id})
+            return True
+    print(f"❌ 未找到记忆: {memory_id}")
+    return False
+
+
+def unprotect(memory_id: str) -> bool:
+    """Remove protection from a memory."""
+    memories = _load_memories()
+    for m in memories:
+        if m.get("id") == memory_id:
+            if not m.get("protected"):
+                print(f"🔓 记忆 {memory_id} 未处于保护状态")
+                return True
+            m.pop("protected", None)
+            _save_memories(memories)
+            print(f"🔓 记忆 {memory_id} 已取消保护")
+            _audit_log("unprotect", {"memory_id": memory_id})
+            return True
+    print(f"❌ 未找到记忆: {memory_id}")
+    return False
+
+
+def protected_ids() -> list:
+    """Return list of all protected memory IDs."""
+    return [m.get("id") for m in _load_memories() if m.get("protected")]
 
 
 def stats():

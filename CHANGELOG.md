@@ -1,5 +1,38 @@
 # MOYU — Development Log
 
+## v2.4.8 — Released (2026-05-20)
+
+### Fixes
+- **Security gate path bug (critical)** — `_load_patterns()` in `integrity_checker.py` was looking for `forensic_patterns.json` in the wrong directory when installed via pip. Result: **0 patterns loaded, content security gate was always bypassed.** Fixed by correcting the path to include `defense_toolkit/` subdirectory.
+- **Hermes context monitoring fix** — Previously only read the latest single session's token count (~2%), now reads all messages from the last 24 hours with dynamic window sizing (128K for small sessions, 1M for long sessions). Result: 49% vs WebUI 62%, close enough to be useful for warning.
+- **Agent `likely_compressed` normalization** — All 5 Agent parsers (Claude Code, OpenClaw, Cursor, Continue) now use `pct >= 85` instead of arbitrary `calls > 30` thresholds that caused false positives.
+
+### New Features
+- **Protected memory whitelist** — `moyu protect {list|add <id>|remove <id>}`. Memoried marked as `protected` are never demoted by the forgetting curve. Supports audit logging for protect/unprotect events.
+- **Enhanced `moyu status`** — Now shows disk usage (MB used / GB free), audit log event counts (demote/distill/merge/protect), SQLite FTS5 index health, and protected memory count.
+- **Clean `from moyu import xxx` path** — New `moyu/` package directory allows `from moyu import context_manager`, `from moyu.security import verify_operation`, etc. alongside the existing `moyu_toolkit` namespace.
+
+### Documentation
+- **Security gate test results** — 80% interception rate on known injection patterns (tested with 40+ samples, 0 false positives). README already honestly states ~60% for simple injection and ~0% for semantic-level.
+
+---
+
+## v2.4.7 — Released (2026-05-19)
+
+### New Features
+- **Audit log** — forget/distill/merge operations now recorded to `audit_log.json` with timestamps, memory IDs, and reasons. Persistent, atomic writes, last 500 entries kept.
+- **Memory source differentiation** — `forgetting_curve` now treats `agent`/`system`-sourced memories differently: safety window reduced by half (demote_days // 2), making less-trusted content eligible for cleanup sooner.
+- **Contributing guide** — `CONTRIBUTING.md` with instructions for adding injection patterns, Provider detectors, and PR checklist.
+- **Roadmap** — `ROADMAP.md` with short/medium/long-term priorities.
+
+### Standard Python Packaging
+- **`pyproject.toml`** — MOYU is now a standard Python package. Install via `pip install moyu-memory`.
+- **`moyu_toolkit/_moyu_paths.py`** — Centralized path resolution that works both in development mode and pip-installed mode.
+- **16 modules updated** — Cross-module imports now use full package paths. CLI entry `moyu` registered via console_scripts.
+- **Pip-aware updater** — When installed via pip, `moyu update` shows `pip install --upgrade moyu-memory`.
+
+---
+
 ## v2.4.6 — Released (2026-05-19)
 
 ### Logic Hardening (from third-party audit)

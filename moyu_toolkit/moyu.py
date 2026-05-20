@@ -161,6 +161,7 @@ def cmd_audit():
 
 def cmd_status():
     import yaml
+    import shutil
     print()
     print("=" * 50)
     print("  MOYU — System Status")
@@ -176,19 +177,73 @@ def cmd_status():
     if os.path.isdir(storage):
         files = [f for f in os.listdir(storage) if f.endswith(".json")]
         print(f"  Storage:  ✅ {len(files)} data files")
+        # Disk usage
+        total_size = 0
+        for dirpath, _, filenames in os.walk(storage):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                try:
+                    total_size += os.path.getsize(fp)
+                except Exception:
+                    pass
+        usage = shutil.disk_usage(storage) if os.path.exists(storage) else None
+        if usage:
+            pct = usage.used / usage.total * 100
+            size_mb = total_size / 1024 / 1024
+            free_gb = usage.free / 1024 / 1024 / 1024
+            print(f"  Disk:     💾 {size_mb:.1f} MB used | {free_gb:.1f} GB free ({pct:.0f}% full)")
     else:
         print("  Storage:  ⚠️ Not initialized")
     print(f"  Security: {'✅ ready' if os.path.exists(os.path.join(TOOLKIT_DIR, 'security.py')) else '⚠️ Not available'}")
+    
+    # Audit log stats
+    audit_path = os.path.join(storage, "audit_log.json")
+    if os.path.exists(audit_path):
+        try:
+            import json as _j
+            with open(audit_path) as _f:
+                entries = _j.load(_f)
+            demotes = sum(1 for e in entries if e.get("event") == "demote")
+            distills = sum(1 for e in entries if e.get("event") == "distill")
+            merges = sum(1 for e in entries if e.get("event") == "merge")
+            protects = sum(1 for e in entries if e.get("event") in ("protect", "unprotect"))
+            print(f"  Audit:    📋 {len(entries)} events ({demotes} demote, {distills} distill, {merges} merge, {protects} protect)")
+        except Exception:
+            pass
+    
+    # SQLite FTS5 index health
+    sqlite_path = os.path.join(storage, "memory_search.db")
+    if os.path.exists(sqlite_path):
+        try:
+            import sqlite3
+            conn = sqlite3.connect(sqlite_path)
+            cur = conn.execute("SELECT count(*) FROM search_index")
+            idx_count = cur.fetchone()[0]
+            conn.close()
+            print(f"  FTS5:     🔍 {idx_count} entries indexed")
+        except Exception:
+            print(f"  FTS5:     ⚠️  Index exists but unreadable")
+    else:
+        print(f"  FTS5:     ⚠️  Not created yet (run moyu search to initialize)")
+    
+    # Protected memories count
+    try:
+        from moyu_toolkit.forgetting_curve import protected_ids
+        prot_ids = protected_ids()
+        if prot_ids:
+            print(f"  Protected:🔒 {len(prot_ids)} memories")
+    except Exception:
+        pass
+    
     print()
     # Defense chain visualization
     print(f"  {'─' * 48}")
     print(f"  🛡️  Defense Chain")
     print(f"  {'─' * 48}")
-    # Layer 1 — Pre-op (read config directly, avoid sec.status() which prints)
     import json as _json2
     import os as _os2
     _sec_cfg = {}
-    _scp = _os2.path.join(TOOLKIT_DIR, "memory_data", "security_config.json")
+    _scp = _os2.path.join(storage, "security_config.json")
     if _os2.path.exists(_scp):
         try:
             with open(_scp) as _f:
@@ -197,15 +252,13 @@ def cmd_status():
             pass
     _pw_set = bool(_sec_cfg.get("safe_word_hash", ""))
     print(f"  ⚡ Pre-op:   {'✅ Password Set' if _pw_set else '⚠️ No Password'}  (moyu setup)")
-    # Layer 2 — On-wake
-    _sto = _os2.environ.get("MOYU_STORAGE", _os2.path.join(TOOLKIT_DIR, "memory_data"))
-    _has_man = _os2.path.exists(_os2.path.join(_sto, "manifest.json"))
+    _has_man = _os2.path.exists(_os2.path.join(storage, "manifest.json"))
     print(f"  🔍 On-wake:  {'✅ Manifest Ready' if _has_man else '⚠️ Not Initialized'}  (moyu init)")
-    # Layer 3 — Post-tamper
-    _bak = _os2.path.join(_sto, "backups")
+    _bak = _os2.path.join(storage, "backups")
     _has_bak = _os2.path.isdir(_bak) and any(f.startswith("daily_") for f in _os2.listdir(_bak)) if _os2.path.isdir(_bak) else False
     print(f"  🔄 Post:     {'✅ Recovery Ready' if _has_bak else '⚠️ No Backups Yet'}")
     print(f"  {'─' * 48}")
+    print()
     print()
 
 
@@ -246,6 +299,7 @@ CMD_TABLE = {
     "audit":      lambda args: cmd_audit(),
     "kb":         lambda args: _kb_handler(args),
     "kg":         lambda args: _kg_handler(args),
+    "protect":    lambda args: _protect_handler(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -273,6 +327,7 @@ HELP_DESCRIPTIONS = {
     "bridge": "Show session bridge status",
  "lifecycle":  "Alias for forget (memory lifecycle)",
     "context":    "Show context usage percentage in one line",
+    "protect":    "Manage protected memories: {list|add|remove}",
     "help": "Show this help message",
 }
 
@@ -603,6 +658,27 @@ def _update(args):
             print(result["message"])
     else:
         up.stats()
+
+
+def _protect_handler(args):
+    """Handle protect command: list/add/remove protected memories."""
+    fc = _import("forgetting_curve")
+    if not args or args[0] in ("list", "--list"):
+        ids = fc.protected_ids()
+        if ids:
+            print(f"🔒 受保护记忆 ({len(ids)} 条):")
+            for mid in ids:
+                print(f"  • {mid}")
+        else:
+            print("🔒 当前没有受保护记忆")
+        return
+    if args[0] in ("add", "--add") and len(args) >= 2:
+        fc.protect(args[1])
+        return
+    if args[0] in ("remove", "rm", "--remove") and len(args) >= 2:
+        fc.unprotect(args[1])
+        return
+    print("Usage: moyu protect <list|add <id>|remove <id>>")
 
 
 def _kb_handler(args):
