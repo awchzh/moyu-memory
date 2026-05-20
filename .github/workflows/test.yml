@@ -23,10 +23,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install numpy requests pyyaml
+          python -m pip install --upgrade pip
+          python -m pip install numpy requests pyyaml
 
       - name: Run tests
         run: |
-          ls -la
-          cd moyu_toolkit && python3 -c "print('cwd:', __import__('os').getcwd())" && python3 tests/test_all.py 2>&1
+          cd moyu_toolkit && python tests/test_all.py
