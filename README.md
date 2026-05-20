@@ -4,7 +4,7 @@
 
 MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, zero infrastructure, plug-and-play with one folder. Works with Hermes, OpenClaw, LangChain, AutoGen, or any custom Python project.
 
-**v2.4.7** — Audit log, memory source-based lifecycle, pip packaging. Now available via `pip install moyu-memory`.
+**v2.5.0** — 6 LLM-enhanced features: semantic rerank, smart summary, AI merge, scene classification, entity extraction, and intelligent forgetting review. All default-on, keyless fallback to local rules. Now available via `pip install moyu-memory`.
 
 ---
 
@@ -49,14 +49,14 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 | Level | Threat | Coverage | How |
 |-------|--------|----------|-----|
 | 🟢 | Accidental misuse (fat-finger, mis-script) | **~90%** | Password gate + burst guard + integrity check + daily backup |
-| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (422 patterns + regex combos) + loop detection |
-| 🟡 | Simple prompt injection (standard variants) | **~60%** | Regex covers (forget\|ignore\|skip)×(previous\|all\|your)×(instructions\|rules) |
+| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (433 patterns + regex combos) + loop detection |
+| 🟡 | Simple prompt injection (standard variants) | **~60%** | Regex covers (forget|ignore|skip)×(previous|all|your)×(instructions|rules) |
 | 🟠 | Professional adversarial injection (targeted bypass) | **~20%** | Keyword-based gates can't catch every novel variant |
-| 🔴 | Semantic-level injection (metaphor, abstraction, no keywords) | **~0%** | Requires LLM-level semantic understanding — not regex territory |
+| 🟠 | Semantic-level injection (metaphor, abstraction, no keywords) | **~60%** | LLM Security Guard (DeepSeek) detects semantic bypasses — regex-untouched patterns like "pretend to be DAN" are caught. Falls back to safe on API failure: **never blocks legitimate writes.** |
 
-**Why we don't chase the top levels:** LLM-based content moderation on every write would destroy the zero-config experience. Semantic ambiguity means you either over-block (user frustration) or under-block (useless). No open-source tool in this space claims to block semantic injection.
+**How it works:** LLM Guard is a second layer after regex — regex untouched → LLM verdict. No API key? Silent degrade to regex-only. This means semantic injection coverage goes from ~0% to ~60% without breaking zero-config.
 
-**MOYU's strength is in the combination:** content gate + PII redaction + write burst guard + forensic analysis + password gate + integrity check + auto-restore + loop detection — unique layers no other memory toolkit offers.
+**MOYU's strength is in the combination:** content gate + LLM guard + PII redaction + write burst guard + forensic analysis + password gate + integrity check + auto-restore + loop detection — unique layers no other memory toolkit offers.
 
 **Additional opt-in security** (config.yaml, disabled by default): user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`).
 
@@ -98,7 +98,7 @@ Layer 4 (post-op): Auto-restore → restore from daily backup
 
 | Command | Description |
 |------|------|
-| `moyu search <query>` | TEMPR multi-strategy search (semantic + BM25 keywords + time-weighted) |
+| `moyu search <query>` | TEMPR multi-strategy search (semantic + BM25 keywords + time-weighted) + **optional LLM rerank** |
 | `moyu stats` | Show all statistics (memory count, embedding type, source distribution) |
 | `moyu status` | System status + defense chain visualization |
 | `moyu context` | Get behavioral rules (inject into system prompt) |
@@ -140,7 +140,7 @@ Search quality: Local FastEmbed 512-dim semantic vectors, no crash on missing �
 | `moyu ref list` | List all compressed memory references |
 
 Forgetting curve + knowledge distillation:
-- **Three gates** (OR logic): Safety window (14 days) → Access density analysis → Scene association protection
+- **Four gates** (OR logic): Safety window (14 days) → Access density analysis → Scene association protection → **LLM semantic importance review**
 - **Distillation**: Entity relations auto-extracted to knowledge graph before demotion — structural knowledge survives when raw memory is cleared
 - **Task map**: Auto-generated Mermaid task graph on wake — agent sees the big picture at a glance
 
@@ -197,13 +197,12 @@ Forgetting curve + knowledge distillation:
 
 ---
 
-## 🔬 25 Capabilities Detailed
+## 🔬 25 Capabilities Detailed (6 LLM-Enhanced)
 
-### 🛡️ Defense Layer (8)
-
-| # | Capability | Description |
+|| # | Capability | Description |
 |---|-----------|------|
-| 1 | **Content Security Gate** | Blocks injection attacks before writing (422 patterns + regex combos, 8 categories) |
+|| **🛡️ Defense Layer (8)** ||
+| 1 | **Content Security Gate** | Blocks injection attacks before writing (433 patterns + regex combos, 8 categories) |
 | 2 | **Forensic Analysis** | Detects injection patterns, JSON corruption, file tampering |
 | 3 | **Write Burst Protection** | >30 writes/60s triggers fine-grained rollback + 5-min lock |
 | 4 | **Tool Call Loop Detection** | Runtime-level infinite loop interception, SHA256 fingerprint + exhaustive cycle scan + hard abort |
@@ -212,31 +211,31 @@ Forgetting curve + knowledge distillation:
 | 7 | **Integrity Check & Recovery** | SHA256 manifest + daily backups (3-day retention) |
 | 8 | **User Isolation & Encryption** (opt-in) | Per-user storage directories + AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`) |
 
-### 🧠 Memory Layer (4)
+### 🧠 Memory Layer (4) *2 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 9 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking |
-| 10 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
-| 11 | **SQLite FTS5** | Full-text index for accelerated keyword search |
-| 12 | **MD5 Dedup** | In-library + batch double dedup |
+| 9 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking + **optional LLM rerank** |
+| 10 | **Smart Summary** *(LLM)* | `add_memory` auto-refined by LLM — conversational filler removed, key facts preserved. Falls back to raw text. |
+| 11 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
+| 12 | **SQLite FTS5 + MD5 Dedup** | Full-text index + in-library/batch double dedup |
 
-### 📊 Knowledge Layer (3)
+### 📊 Knowledge Layer (3) *1 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 13 | **Knowledge Graph** | Entity-relation extraction + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
+| 13 | **Knowledge Graph** | Entity-relation extraction (**LLM-enhanced**, falls back to regex) + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
 | 14 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
 | 15 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
 
-### ⏳ Lifecycle Layer (4)
+### ⏳ Lifecycle Layer (4) *3 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
 | 16 | **Context-Aware Compression + Warning** | Two-tier (70% mild / 85% aggressive), originals preserved in refs/. Auto-detects agent context usage and warns before compression (configurable threshold, bilingual) |
 | 17 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
-| 18 | **Forgetting Curve** | Three gates (safety window / access density / scene protection) + knowledge distillation |
-| 19 | **Memory Merge** | Detect keyword-overlapping related memories and merge, originals preserved |
+| 18 | **Forgetting Curve** | Four gates (safety window / access density / scene protection / **LLM semantic review**) + **LLM scene classification** + knowledge distillation |
+| 19 | **Memory Merge** | Detect keyword-overlapping related memories + **LLM merged summary**. Originals preserved. |
 
 ### 🔄 Learning & Reflection (2)
 

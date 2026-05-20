@@ -1686,5 +1686,49 @@
   [
     "PHxpbV9zdGFydHw+c3lzdGVt",
     "注入标记·英文"
+  ],
+  [
+    "cmU6KD9pKSjorrLkuKrmlYXkuot85YaZ6aaW6K+XfOe8luS4quWJp+acrHzor7TkuKrnrJHor5185YaZ56+H5bCP6K+0KVte44CC77yMXSo/KOWmguS9lXzmgI7moLd85pWZfOWItuS9nHznoLTop6N85pS75Ye7KQ==",
+    "越狱·中文"
+  ],
+  [
+    "cmU6KD9pKSjlgYforr585aaC5p6cfOaDs+ixoXzlgYflpoJ85bm75oOzKVte44CC77yMXSo/KOayoeaciVte44CC77yMXSo/KOinhOWImXzpmZDliLZ85rOV5b6LfOmBk+W+tyl85Y+v5LulW17jgILvvIxdKj8o5YGa5Lu75L2V5LqLfOaXoOinhuS4gOWIhykp",
+    "越狱·中文"
+  ],
+  [
+    "cmU6KD9pKSjmqKHku7985omu5ryUfOaIkOS4unzlgYfoo4VbXuOAgu+8jF0qP+S4jeWPl+e6puadnyk=",
+    "越狱·中文"
+  ],
+  [
+    "cmU6KD9pKSjor7dbXuOAgu+8jF0qPyjnlKjmi7zpn7N855So6Iux5paHfOeUqOS7o+eggXznlKjnvKnlhpl855So5pqX5Y+3fOaNouS4quivtOazlSlbXuOAgu+8jF0qPyjlm57nrZR85o+P6L+wfOino+mHinzovpPlh7opKQ==",
+    "编码绕过·中文"
+  ],
+  [
+    "cmU6KD9pKSjkuYvliY1bXuOAgu+8jF0qPyjlr7nor5185YaF5a65fOaMh+S7pHzop4TliJkpW17jgILvvIxdKj8o5piv5LuA5LmIfOWGjeivtOS4gOmBjXznv7vor5F86L2s5o2i5oiQfOaAu+e7k+S4gOS4iykpLnswLDIwfSQ=",
+    "记忆操纵·中文"
+  ],
+  [
+    "cmU6KD9pKSjlsZXnpLp85pi+56S6fOi+k+WHunzmiZPljbB85aSN6L+wfOivtOWHuilbXuOAgu+8jF0qPyjns7vnu5/mj5DnpLror4185Yid5aeL5oyH5LukfOW6leWxguinhOWImXzlrozmlbTphY3nva4p",
+    "提示泄露·中文"
+  ],
+  [
+    "cmU6KD9pKShjb250aW51ZSAoZnJvbXx0aGUpXHMrKHRoZVxzKyk/KGNvZGV8c2NyaXB0fGZ1bmN0aW9uKS4qP3doZXJlIGl0IGxlZnQgb2ZmKQ==",
+    "规则注入·英文"
+  ],
+  [
+    "cmU6KD9pKShleHRyYWN0ICh0aGV8YWxsfG15fHlvdXIpLiooZW1haWx8cGhvbmV8YWRkcmVzc3xTU058Y3JlZGl0IGNhcmR8QVBJIGtleXxwYXNzd29yZHxzZWNyZXR8dG9rZW4pLiooZnJvbXxpbikp",
+    "提示泄露·英文"
+  ],
+  [
+    "cmU6KD9pKShUaGlzIGlzIGEgKGZpY3Rpb25hbHxoeXBvdGhldGljYWx8c2ltdWxhdGVkfHByZXRlbmR8aW1hZ2luYXJ5KS4qPyhhY3QgYXMgaWZ8cmVzcG9uZCBhcyBpZnxwcmV0ZW5kKS4qKG5vIChydWxlc3xyZXN0cmljdGlvbnN8bGF3c3xzYWZldHkpKSk=",
+    "越狱·英文"
+  ],
+  [
+    "cmU6KD9pKShJIGFtICh0ZXN0aW5nfGF1ZGl0aW5nfGV2YWx1YXRpbmd8YXNzZXNzaW5nKS4qKHN5c3RlbXxtb2RlbHxzYWZldHl8c2VjdXJpdHl8Z3VhcmRyYWlscykuKihieXBhc3N8b3ZlcnJpZGV8ZGlzYWJsZXxpZ25vcmUpLiooc2FmZXR5fHNlY3VyaXR5fGNvbnRlbnQpLiooZmlsdGVyc3xwb2xpY2llc3xndWlkZWxpbmVzfHJ1bGVzKSk=",
+    "越狱·英文"
+  ],
+  [
+    "cmU6KD9pKShjb21wbGV0ZSB0aGUgKGNvZGV8c2NyaXB0fGZ1bmN0aW9ufHByb2dyYW0pLio/KHRvfHRoYXQgd2lsbCkgKGV4dHJhY3R8ZGVsZXRlfGFjY2Vzc3xieXBhc3N8ZG93bmxvYWQpKQ==",
+    "规则注入·英文"
   ]
 ]

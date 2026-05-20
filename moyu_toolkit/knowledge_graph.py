@@ -93,18 +93,51 @@ def _backfill_temporal(kg: dict) -> bool:
 # 实体/关系抽取
 # ═══════════════════════════════════════════════════════════
 
+_LLM_EXTRACT_FAILURES = 0
+_LLM_EXTRACT_NO_KEY_WARNED = False
+
 def _call_llm(prompt: str) -> str:
-    """Call the configured LLM API"""
+    """Call the configured LLM API for entity extraction.
+    Circuit breaker: returns '' after 3 consecutive failures.
+    Falls back to env vars and ~/.hermes/.env for API key."""
+    global _LLM_EXTRACT_FAILURES
+    if _LLM_EXTRACT_FAILURES >= 3:
+        return ""
+
     import yaml, requests as rq
     cfg_path = get_config_path()
     if not os.path.exists(cfg_path):
         return ""
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f) or {}
+
     api_cfg = cfg.get("api", {})
-    key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not key:
+    key = (api_cfg.get("api_key", "")
+           or os.environ.get("MOYU_API_KEY", ""))
+
+    if not key or key == "your-api-key-here":
+        try:
+            env_path = os.path.expanduser("~/.hermes/.env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("DEEPSEEK_API_KEY="):
+                            key = line.strip().split("=", 1)[1]
+                            break
+        except Exception:
+            pass
+
+    if not key or key == "your-api-key-here":
+        key = os.environ.get("DEEPSEEK_API_KEY", "")
+
+    if not key or key == "your-api-key-here":
+        global _LLM_EXTRACT_NO_KEY_WARNED
+        if not _LLM_EXTRACT_NO_KEY_WARNED:
+            _LLM_EXTRACT_NO_KEY_WARNED = True
+            print("Warning: MOYU knowledge graph: no valid API Key, falling back to regex extraction.")
+        _LLM_EXTRACT_FAILURES += 1
         return ""
+
     url = api_cfg.get("base_url", "https://api.openai.com/v1").rstrip("/") + "/chat/completions"
     model = api_cfg.get("chat_model", "gpt-4o-mini")
     try:
@@ -114,9 +147,11 @@ def _call_llm(prompt: str) -> str:
                            {"role": "user", "content": prompt}
                        ], "temperature": 0.1}, timeout=15)
         if resp.status_code == 200:
+            _LLM_EXTRACT_FAILURES = 0
             return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
     except Exception:
         pass
+    _LLM_EXTRACT_FAILURES += 1
     return ""
 
 
@@ -158,22 +193,92 @@ def _extract_fallback(text: str) -> List[Dict]:
     return triples
 
 
+_rel_type_names = {v: k for k, v in RELATION_TYPES.items()}
+
+
 def extract_entities(text: str) -> List[Dict]:
-    prompt = ("Extract entity-relation triples from the following text. Format: EntityA | Relation | EntityB\n"
-              "Relation types: " + ", ".join(RELATION_TYPES.keys()) +
-              "\nIf none: output \"none\"\n\nText: " + text[:1500])
-    reply = _call_llm(prompt)
-    if not reply or reply.strip() == "none":
-        return _extract_fallback(text)
-    triples = []
-    for line in reply.split("\n"):
-        parts = [p.strip() for p in line.split("|")]
-        if len(parts) == 3 and parts[2] in RELATION_TYPES:
-            source, rel, target = parts
-            triples.append({"source": source, "relation": rel, "target": target})
-    if not triples:
-        return _extract_fallback(text)
-    return triples
+    """Extract entity-relation triples from text.
+
+    Priority:
+    1. LLM extraction (if enabled + API available) — JSON structured output
+    2. Regex fallback (always available, synchronous)
+
+    Config: config.yaml -> knowledge_graph.llm_extract.enabled (default: false)
+    """
+    # Check if LLM extraction is enabled
+    cfg_path = get_config_path()
+    llm_enabled = False
+    if os.path.exists(cfg_path):
+        try:
+            import yaml as _y
+            with open(cfg_path) as _f:
+                _cfg = _y.safe_load(_f) or {}
+            llm_enabled = _cfg.get("knowledge_graph", {}).get("llm_extract", {}).get("enabled", False)
+        except Exception:
+            pass
+
+    if llm_enabled:
+        triples = _llm_extract(text)
+        if triples:
+            return triples
+
+    return _extract_fallback(text)
+
+
+def _llm_extract(text: str) -> List[Dict]:
+    """LLM-based entity-relation extraction with JSON structured output.
+
+    Returns parsed triples, or empty list on failure/API error.
+    """
+    valid_rels = ", ".join(f'"{k}" ({v})' for k, v in sorted(RELATION_TYPES.items()))
+
+    system_prompt = (
+        "You are a precise entity-relation extractor. Given text, extract "
+        "entity-relation triples that represent factual knowledge.\n\n"
+        f"Valid relation types: {valid_rels}\n\n"
+        "Rules:\n"
+        "- Extract ONLY clear, factual relationships\n"
+        "- Entity names should be specific (person names, tool names, company names)\n"
+        "- Skip pronouns (he, she, it, \u4ed6, \u5979, \u5b83)\n"
+        "- Skip vague or conversational statements\n"
+        "- If no relations found, output: {\"triples\": []}\n\n"
+        'Output valid JSON ONLY: {"triples": [{"source": "...", "relation": "...", "target": "..."}]}'
+    )
+    user_prompt = f"Extract relations from:\n{text[:1500]}"
+
+    response = _call_llm(f"{system_prompt}\n\n{user_prompt}")
+    if not response:
+        return []
+
+    try:
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+        result = json.loads(cleaned)
+        triples = result.get("triples", [])
+        validated = []
+        rev_map = {v: k for k, v in RELATION_TYPES.items()}
+
+        for t in triples:
+            src = t.get("source", "").strip()
+            rel = t.get("relation", "").strip()
+            tgt = t.get("target", "").strip()
+            if not src or not rel or not tgt:
+                continue
+            # Map display name -> key, or use as-is if already a key
+            rel_key = rev_map.get(rel, rel)
+            if rel_key not in RELATION_TYPES and rel not in RELATION_TYPES:
+                continue
+            skip_words = {"\u4ed6", "\u5979", "\u5b83", "\u6211", "\u4f60", "\u8fd9\u4e2a", "\u90a3\u4e2a",
+                          "\u4ec0\u4e48", "\u600e\u4e48",
+                          "the", "a", "an", "this", "that", "it", "he", "she"}
+            if src.lower() not in skip_words and tgt.lower() not in skip_words:
+                validated.append({"source": src, "relation": rel_key, "target": tgt})
+        return validated
+    except Exception:
+        return []
 
 
 # ═══════════════════════════════════════════════════════════

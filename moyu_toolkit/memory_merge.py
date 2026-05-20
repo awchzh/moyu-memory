@@ -16,13 +16,136 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from moyu_toolkit._moyu_paths import get_default_storage
+from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
 STORAGE = Path(get_default_storage())
 
 # ── Config ──
 SIMILARITY_THRESHOLD = 0.25   # Keyword overlap ratio to consider "related"
 MAX_MERGE_GROUP = 5           # Max memories to merge into one
 MIN_KEYWORDS = 3              # Min keywords to consider for matching
+
+# ── LLM Merge Summarization (Optional) ──
+
+_LLM_MERGE_FAILURES = 0
+_LLM_MERGE_NO_KEY_WARNED = False
+
+
+def _call_llm_merge(system_prompt: str, user_prompt: str) -> str:
+    """Call LLM for merge summarization. Returns empty string on failure."""
+    global _LLM_MERGE_FAILURES
+    if _LLM_MERGE_FAILURES >= 3:
+        return ""
+
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return ""
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return ""
+
+    api_cfg = cfg.get("api", {})
+    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
+    if not api_key or api_key == "your-api-key-here":
+        try:
+            env_path = os.path.expanduser("~/.hermes/.env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("DEEPSEEK_API_KEY="):
+                            api_key = line.strip().split("=", 1)[1]
+                            break
+        except Exception:
+            pass
+
+    if not api_key or api_key == "your-api-key-here":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+
+    if not api_key or api_key == "your-api-key-here":
+        global _LLM_MERGE_NO_KEY_WARNED
+        if not _LLM_MERGE_NO_KEY_WARNED:
+            _LLM_MERGE_NO_KEY_WARNED = True
+            print("⚠️  MOYU 记忆合并：未检测到有效 API Key，已降级为关键词拼接摘要。")
+        _LLM_MERGE_FAILURES += 1
+        return ""
+
+    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
+    model = api_cfg.get("chat_model", "gpt-4o-mini")
+
+    try:
+        import requests
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 300,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            _LLM_MERGE_FAILURES = 0
+            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            _LLM_MERGE_FAILURES += 1
+            return ""
+    except Exception:
+        _LLM_MERGE_FAILURES += 1
+        return ""
+
+
+def _llm_merge_summaries(items: list) -> str:
+    """Generate a coherent summary from related memories using LLM.
+
+    Items are sorted by recency. The LLM synthesizes them into one
+    narrative that retains all key facts. Falls back to text concatenation.
+    """
+    summaries = []
+    for m in sorted(items, key=lambda x: x.get("timestamp", ""), reverse=True):
+        ts = m.get("timestamp", "")[:10]
+        src = m.get("source", "user")
+        summ = m.get("summary", "")[:200]
+        summaries.append(f"[{ts}] ({src}) {summ}")
+
+    system_prompt = (
+        "You are a memory merging assistant. Given several related memory entries "
+        "with timestamps and sources, synthesize them into ONE coherent summary "
+        "that captures all key facts, decisions, and relationships.\n\n"
+        "Rules:\n"
+        "- Preserve ALL facts, names, numbers, decisions, and preferences\n"
+        "- Remove repetition and redundant details across entries\n"
+        "- Create a logical narrative flow (chronological by timestamp)\n"
+        "- Output in the SAME language as the input entries\n"
+        "- Max 300 characters\n"
+        "- Output ONLY the summary text, no explanations, no labels"
+    )
+    user_prompt = f"Synthesize these related memories into one summary:\n\n{chr(10).join(summaries)}"
+
+    response = _call_llm_merge(system_prompt, user_prompt)
+    if response and len(response.strip()) > 10:
+        return f"[合并] {response.strip()[:300]}"
+    return ""
+
+
+def _should_llm_merge() -> bool:
+    """Check if LLM merge summarization is enabled in config."""
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return False
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        return cfg.get("memory", {}).get("llm_merge", {}).get("enabled", False)
+    except Exception:
+        return False
 
 
 def _load_memories() -> list:
@@ -128,10 +251,20 @@ def run(dry_run: bool = False) -> dict:
         sorted_items = sorted(items, key=lambda m: m.get("timestamp", ""), reverse=True)
         latest = sorted_items[0]
 
-        # Generate composite title
-        keywords = list(_tokenize(" ".join(summaries)))[:3]
-        title_part = "、".join(keywords) if keywords else "相关记录"
-        merged_summary = f"[合并] {title_part} — {len(items)}条相关记录"
+        # Generate composite title — LLM merge or keyword fallback
+        if _should_llm_merge():
+            llm_summary = _llm_merge_summaries(items)
+            if llm_summary:
+                merged_summary = llm_summary
+            else:
+                # LLM fallback → keyword concatenation
+                keywords = list(_tokenize(" ".join(summaries)))[:3]
+                title_part = "、".join(keywords) if keywords else "相关记录"
+                merged_summary = f"[合并] {title_part} — {len(items)}条相关记录"
+        else:
+            keywords = list(_tokenize(" ".join(summaries)))[:3]
+            title_part = "、".join(keywords) if keywords else "相关记录"
+            merged_summary = f"[合并] {title_part} — {len(items)}条相关记录"
 
         # Build expandable details
         details = []

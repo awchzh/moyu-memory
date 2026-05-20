@@ -171,6 +171,21 @@ def _ensure_scene(memories: list):
     last_ts = cp.get("last_processed", "")
     processed = 0
 
+    # ── LLM Scene Classification (Optional): batch classify unassigned memories ──
+    llm_scene_results = {}
+    if _should_llm_scene():
+        llm_scene_results = _llm_classify_scenes(memories, user_labels)
+        for m in memories:
+            if m.get("scene_source") == "manual":
+                continue
+            m_id = m.get("id", "")
+            if m_id in llm_scene_results and "scene" not in m:
+                m["scene"] = llm_scene_results[m_id]
+                m["scene_source"] = "llm"
+                changed = True
+                processed += 1
+
+    # Keyword-based fallback for remaining unassigned memories
     for m in memories:
         # Pre-assigned scenes (from memory_bridge) are never overwritten
         if m.get("scene_source") == "manual":
@@ -272,6 +287,277 @@ def _save_checkpoint(cp: dict):
     CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CHECKPOINT_PATH, "w") as f:
         json.dump(cp, f, ensure_ascii=False, indent=2)
+
+
+# ── LLM Utilities (shared pattern with learner/integrity_checker) ──
+
+_LLM_FAILURES = 0
+_LLM_NO_KEY_WARNED = False
+
+
+def _call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.1, max_tokens: int = 500) -> str:
+    """Call the configured LLM API. Returns empty string on failure.
+    Reads config.yaml → api section, with fallback to env vars and ~/.hermes/.env."""
+    global _LLM_FAILURES
+    if _LLM_FAILURES >= 3:
+        return ""
+
+    try:
+        import yaml
+        cfg_path = Path(get_config_path())
+        if not cfg_path.exists():
+            return ""
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return ""
+
+    api_cfg = cfg.get("api", {})
+    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
+    if not api_key or api_key == "your-api-key-here":
+        try:
+            env_path = os.path.expanduser("~/.hermes/.env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("DEEPSEEK_API_KEY="):
+                            api_key = line.strip().split("=", 1)[1]
+                            break
+        except Exception:
+            pass
+
+    if not api_key or api_key == "your-api-key-here":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+
+    if not api_key or api_key == "your-api-key-here":
+        global _LLM_NO_KEY_WARNED
+        if not _LLM_NO_KEY_WARNED:
+            _LLM_NO_KEY_WARNED = True
+            print("⚠️  MOYU 智能遗忘：未检测到有效 API Key，已降级为纯规则决策。")
+        _LLM_FAILURES += 1
+        return ""
+
+    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
+    model = api_cfg.get("chat_model", "gpt-4o-mini")
+
+    # Auto-correct model name for known providers
+    if "deepseek.com" in base_url and model.startswith("gpt-"):
+        model = "deepseek-chat"
+
+    try:
+        import requests
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            _LLM_FAILURES = 0
+            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            _LLM_FAILURES += 1
+            return ""
+    except Exception:
+        _LLM_FAILURES += 1
+        return ""
+
+
+# ── Stage 4: LLM Review ──
+
+def _llm_review_demotion(candidates: list, all_memories: list, context_pressure: bool) -> dict:
+    """Stage 4: Use LLM to review demotion candidates before final decision.
+
+    The LLM evaluates semantic importance that rule-based heuristics miss:
+    - User preferences (name, habits, identity) — access count irrelevant
+    - Critical decisions or milestones
+    - Knowledge that would be hard to re-discover
+
+    Args:
+        candidates: list of memory dicts that the rule system decided to demote
+        all_memories: all memories (for context about what's already kept)
+        context_pressure: whether there's actual context pressure driving demotion
+
+    Returns:
+        {memory_id: {'decision': 'keep'|'demote', 'reason': '...'}, ...}
+    """
+    cfg = _load_config()
+    llm_cfg = cfg.get("llm_review", {})
+    if not llm_cfg.get("enabled", True):
+        return {}
+
+    max_candidates = llm_cfg.get("max_candidates_per_batch", 10)
+    if len(candidates) > max_candidates:
+        candidates = candidates[:max_candidates]
+
+    if not candidates:
+        return {}
+
+    # Build compact candidate list for the prompt
+    candidate_lines = []
+    for i, m in enumerate(candidates):
+        m_id = m.get("id", f"mem_{i}")
+        summary = m.get("summary", "")[:120]
+        ts = m.get("last_accessed") or m.get("timestamp", "")
+        days = _days_since(ts)
+        scene = m.get("scene", "general")
+        access_count = m.get("access_count", 0)
+        candidate_lines.append(
+            f'  {{"id": "{m_id}", "summary": {json.dumps(summary, ensure_ascii=False)}, '
+            f'"days_since_access": {days:.0f}, "access_count": {access_count}, "scene": "{scene}"}}'
+        )
+
+    # Count active memories for context
+    active_count = sum(1 for m in all_memories if not m.get("demoted", False))
+    pressure_note = (
+        "Memory budget is tight — prefer demoting transient details."
+        if context_pressure
+        else "Memory budget is ample — only demote clearly low-value memories."
+    )
+
+    system_prompt = (
+        "You are a memory importance evaluator for a personal AI assistant. "
+        "Your task: review memories that an automated system flagged for demotion, "
+        "and decide whether each should be KEPT (overriding the demotion) or DEMOTED (agreeing).\n\n"
+        "A memory should be KEPT if it contains:\n"
+        "- User preferences, identity info, habits, or personal facts\n"
+        "- Critical decisions, milestones, or significant conclusions\n"
+        "- Knowledge that would be impossible or very hard to re-discover\n"
+        "- Relationships between people, projects, or tools\n\n"
+        "A memory should be DEMOTED if:\n"
+        "- It's a transient conversation detail or small talk\n"
+        "- The information is clearly duplicated in other memories\n"
+        "- It's a one-time task log with no lasting value\n\n"
+        f"{pressure_note}\n\n"
+        "Output valid JSON ONLY: {\"decisions\": [{\"id\": \"...\", \"decision\": \"keep\"|\"demote\", \"reason\": \"...\"}]}"
+    )
+
+    user_prompt = "Review these demotion candidates:\n[\n" + ",\n".join(candidate_lines) + "\n]"
+
+    response_text = _call_llm(system_prompt, user_prompt, temperature=0.1, max_tokens=500)
+
+    if not response_text:
+        return {}
+
+    # Parse LLM response
+    try:
+        import json as _j
+        # Strip possible markdown code fences
+        cleaned = response_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+        result = _j.loads(cleaned)
+        decisions = result.get("decisions", [])
+        return {
+            d["id"]: {"decision": d.get("decision", "demote"), "reason": d.get("reason", "")}
+            for d in decisions
+        }
+    except Exception:
+            return {}
+
+
+# ── Scene Classification: LLM (Optional) ──
+
+def _llm_classify_scenes(memories: list, user_labels: dict = None) -> dict:
+    """Use LLM to assign semantic scene labels to memories without one.
+
+    Takes all memories without a scene assigned, batch-classifies them via LLM.
+    Scenes are inferred from content semantics (not keyword matching),
+    using user-defined scene labels as a taxonomy hint.
+
+    Args:
+        memories: list of all memory dicts
+        user_labels: optional dict of {scene_name: [keyword_hints]}
+
+    Returns:
+        {memory_id: scene_label, ...} — only for successfully classified memories
+    """
+    # Collect unassigned memories (no scene, not manual)
+    unassigned = [
+        m for m in memories
+        if not m.get("scene") and m.get("scene_source") != "manual"
+    ]
+    if not unassigned:
+        return {}
+
+    # Build existing scene set for reference
+    existing_scenes = set()
+    for m in memories:
+        s = m.get("scene")
+        if s and s != "general":
+            existing_scenes.add(s)
+
+    # Batch: max 20 per call
+    max_per_batch = 20
+    results = {}
+
+    for batch_start in range(0, len(unassigned), max_per_batch):
+        batch = unassigned[batch_start:batch_start + max_per_batch]
+
+        lines = []
+        for m in batch:
+            m_id = m.get("id", "?")
+            summary = m.get("summary", "")[:150].replace('"', "'")
+            ts = m.get("timestamp", "")[:10]
+            lines.append(f'  {{"id": "{m_id}", "summary": "{summary}", "date": "{ts}"}}')
+
+        scene_hint = ""
+        if user_labels:
+            scene_hint = f"Existing scene categories: {', '.join(user_labels.keys())}.\n"
+        if existing_scenes:
+            scene_hint += f"Previously used scene labels: {', '.join(sorted(existing_scenes)[:10])}.\n"
+
+        system_prompt = (
+            "You are a memory scene classifier. Given memory entries, assign each "
+            "to a meaningful scene/category label that groups related memories together.\n\n"
+            f"{scene_hint}"
+            "Rules:\n"
+            "- Use an existing label when it fits\n"
+            "- Create a new concise label ONLY if none of the existing labels fit\n"
+            "- Labels should be 1-3 words, in the language of the memory content\n"
+            "- 'general' for small talk, greetings, or trivial content\n"
+            "- Output valid JSON ONLY:\n"
+            '  {"scenes": {"mem_xxx": "project", "mem_yyy": "personal", ...}}\n'
+            "- Do NOT include any memory that you cannot confidently classify"
+        )
+        user_prompt = "Classify these memories:\n[\n" + ",\n".join(lines) + "\n]"
+
+        response_text = _call_llm(system_prompt, user_prompt, temperature=0.1, max_tokens=500)
+        if not response_text:
+            continue
+
+        try:
+            import json as _j
+            cleaned = response_text.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\\n", 1)[1] if "\\n" in cleaned else cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+            parsed = _j.loads(cleaned)
+            scenes = parsed.get("scenes", {})
+            for mid, label in scenes.items():
+                if isinstance(label, str) and len(label) <= 30:
+                    results[mid] = label.strip().lower()[:20]
+        except Exception:
+            continue
+
+    return results
+
+
+def _should_llm_scene() -> bool:
+    """Check if LLM scene classification is enabled in config."""
+    cfg = _load_config()
+    return cfg.get("llm_scene_classify", {}).get("enabled", False)
 
 
 def _build_scene_index(memories: list) -> dict:
@@ -420,13 +706,16 @@ def track_access(memory_ids: list):
 
 def run(context_pressure: bool = False) -> dict:
     """
-    Run the forgetting curve check on all memories (three-stage gating).
+    Run the forgetting curve check on all memories (four-stage gating).
 
     Stage 1 — Safety window: memories within demote_days are never demoted.
     Stage 2 — Density trend: memories past the window with stable access
               patterns are kept active; widening intervals are demoted.
     Stage 3 — Scene protection: if the memory's scene is "hot" (any memory
               in the same scene was recently accessed), protect this one too.
+    Stage 4 — LLM review (optional): before final demotion, the LLM reviews
+              semantic importance (preferences, identity, milestones) that
+              rule-based heuristics miss. LLM override can rescue memories.
 
     Args:
         context_pressure: If True, activate demotion. If False, only
@@ -465,6 +754,8 @@ def run(context_pressure: bool = False) -> dict:
             "kept_by_density_ids": [],
             "kept_by_scene": kept_by_scene,
             "kept_by_scene_ids": [],
+            "kept_by_llm": 0,
+            "kept_by_llm_ids": [],
             "archivable": [],
             "demote_threshold_days": demote_days,
             "archive_threshold_days": archive_days,
@@ -480,9 +771,13 @@ def run(context_pressure: bool = False) -> dict:
     demoted = []
     kept_by_density = []
     kept_by_scene = []
+    kept_by_llm = []
     archived = []
     re_demoted = []
     distilled_count = 0
+
+    # ── Pass 1: evaluate all memories, collect demotion candidates ──
+    demotion_candidates = []  # Memories that passed all rule gates → candidate for demotion
 
     for m in memories:
         m_id = m.get("id", "?")
@@ -528,30 +823,70 @@ def run(context_pressure: bool = False) -> dict:
             kept_by_density.append(m_id)
             continue
 
-        # ── 蒸馏：降级前将结构化知识写入知识图谱 ──
-        old_len = len(kg._load().get("relations", [])) if _KG_AVAILABLE else 0
-        _distill_to_kg(m)
-        if _KG_AVAILABLE:
-            new_len = len(kg._load().get("relations", []))
-            distilled_count += max(0, new_len - old_len)
-            if new_len > old_len:
-                _audit_log("distill", {"memory_id": m_id, "summary": (m.get("summary", "")[:80]), "relations_added": new_len - old_len})
+        # Passed all rule gates → collect as demotion candidate (defer demotion until Stage 4)
+        demotion_candidates.append(m)
 
-        # Passed all gates → demote
-        m["demoted"] = True
-        m["demoted_reason"] = f"not accessed in {days:.0f} days"
-        m["demoted_at"] = now
+    # ── Stage 4: LLM review ──
+    if demotion_candidates:
+        llm_decisions = _llm_review_demotion(demotion_candidates, memories, context_pressure)
 
-        if trend["trend"] == "widening":
-            m["demoted_by_density"] = True
-            m["demoted_reason"] += f" | access density widening: {trend['detail']}"
-        else:
-            m["demoted_reason"] += f" | insufficient density data ({trend['detail']})"
+        for m in demotion_candidates:
+            m_id = m.get("id", "?")
+            decision = llm_decisions.get(m_id, {})
 
-        demoted.append(m_id)
-        _audit_log("demote", {"memory_id": m_id, "reason": m["demoted_reason"], "days_since_access": round(days, 1), "scene": scene})
-        continue
-    if demoted or archived or kept_by_density or kept_by_scene or changed_scenes:
+            if decision.get("decision") == "keep":
+                # LLM overrides demotion — semantic importance detected
+                m["kept_by_llm"] = True
+                m["llm_keep_reason"] = decision.get("reason", "")
+                m["last_checked"] = now
+                kept_by_llm.append(m_id)
+                _audit_log("llm_keep", {
+                    "memory_id": m_id,
+                    "reason": decision.get("reason", ""),
+                    "summary": (m.get("summary", "")[:80]),
+                })
+            else:
+                # LLM agrees with demotion (or unavailable → fall through)
+                # ── 蒸馏：降级前将结构化知识写入知识图谱 ──
+                old_len = len(kg._load().get("relations", [])) if _KG_AVAILABLE else 0
+                _distill_to_kg(m)
+                if _KG_AVAILABLE:
+                    new_len = len(kg._load().get("relations", []))
+                    distilled_count += max(0, new_len - old_len)
+                    if new_len > old_len:
+                        _audit_log("distill", {
+                            "memory_id": m_id,
+                            "summary": (m.get("summary", "")[:80]),
+                            "relations_added": new_len - old_len,
+                        })
+
+                # Execute demotion
+                access_ts = m.get("last_accessed") or m.get("timestamp", now)
+                days = _days_since(access_ts)
+                trend = _access_density_trend(m.get("access_timestamps", []))
+
+                m["demoted"] = True
+                m["demoted_reason"] = f"not accessed in {days:.0f} days"
+                m["demoted_at"] = now
+
+                if trend["trend"] == "widening":
+                    m["demoted_by_density"] = True
+                    m["demoted_reason"] += f" | access density widening: {trend['detail']}"
+                else:
+                    m["demoted_reason"] += f" | insufficient density data ({trend['detail']})"
+
+                if decision.get("decision") == "demote":
+                    m["demoted_reason"] += f" | LLM confirmed: {decision.get('reason', '')[:80]}"
+
+                demoted.append(m_id)
+                _audit_log("demote", {
+                    "memory_id": m_id,
+                    "reason": m["demoted_reason"],
+                    "days_since_access": round(days, 1),
+                    "scene": m.get("scene", "general"),
+                })
+
+    if demoted or archived or kept_by_density or kept_by_scene or kept_by_llm or changed_scenes:
         _save_memories(memories)
 
     return {
@@ -563,6 +898,8 @@ def run(context_pressure: bool = False) -> dict:
         "kept_by_density_ids": kept_by_density,
         "kept_by_scene": len(kept_by_scene),
         "kept_by_scene_ids": kept_by_scene,
+        "kept_by_llm": len(kept_by_llm),
+        "kept_by_llm_ids": kept_by_llm,
         "archivable": archived,
         "demote_threshold_days": demote_days,
         "archive_threshold_days": archive_days,
@@ -583,6 +920,9 @@ def summary() -> str:
     ks = r.get("kept_by_scene", 0)
     if ks:
         parts.append(f"场景保护保留 {ks} 条")
+    kl = r.get("kept_by_llm", 0)
+    if kl:
+        parts.append(f"LLM 审查保留 {kl} 条")
     if r.get("archivable"):
         parts.append(f"可归档 {len(r['archivable'])} 条")
     dk = r.get("distilled_to_kg", 0)
@@ -635,12 +975,13 @@ def protected_ids() -> list:
 def stats():
     """Terminal stats output."""
     r = run()
-    print(f"\n🧠 MOYU Memory Lifecycle (three-stage gating)")
+    print(f"\n🧠 MOYU Memory Lifecycle (four-stage gating)")
     print("=" * 55)
     print(f"  Total memories:         {r.get('total_memories', 0)}")
     print(f"  Stage 1 window:         {r.get('demote_threshold_days', '?')}d")
     print(f"  Stage 2 kept by density:{r.get('kept_by_density', 0)}")
     print(f"  Stage 3 kept by scene:  {r.get('kept_by_scene', 0)}")
+    print(f"  Stage 4 kept by LLM:    {r.get('kept_by_llm', 0)}")
     print(f"  Archive threshold:      {r.get('archive_threshold_days', '?')}d")
     print(f"  Freshly demoted:        {len(r.get('demoted', []))}")
     print(f"  Already demoted:        {r.get('already_demoted', 0)}")
@@ -651,27 +992,32 @@ def stats():
         print(f"  Density-kept IDs:       {', '.join(r['kept_by_density_ids'][:5])}")
     if r.get("kept_by_scene_ids"):
         print(f"  Scene-kept IDs:         {', '.join(r['kept_by_scene_ids'][:5])}")
+    if r.get("kept_by_llm_ids"):
+        print(f"  LLM-kept IDs:           {', '.join(r['kept_by_llm_ids'][:5])}")
     print()
 
 
 def demo() -> dict:
     return {
         "capability": 13,
-        "title": "Forgetting Curve (V2.1 — Three-Stage Gating + Scene Protection)",
+        "title": "Forgetting Curve (V2.2 — Four-Stage Gating + LLM Review)",
         "output": """\
-🧠 V2.1 FEATURE — Forgetting Curve with Scene Protection
+🧠 V2.2 FEATURE — Forgetting Curve with LLM Review
 ──────────────────────────────────────────────────────
-  3 stages:
+  4 stages:
     1. 14d safety window — no memory demoted before this
     2. Access density — stable intervals → keep, widening → demote
     3. Scene protection — hot scene → all scene memories protected
+    4. LLM review — semantic importance overrides rule decisions
 
-  Scenes auto-assigned by keyword: project, memory, security, self, work
+  Config: forgetting_curve.llm_review.enabled (default: true)
+  Fallback: LLM unavailable → demote as rule decided
 
   [demo_01] Smart frame kickoff   → ✅ 2d  → active (scene: project)
   [demo_06] 张艺 hates WeChat     → ✅ 4d  → active (scene: general)
   [demo_10] 用户偏好记录          → ⏳ 18d → kept by density (stable intervals)
-  [demo_05] 李总 deadline         → ⏳ 32d → demoted (widening intervals)
+  [demo_03] 用户的名字是xxx    → ⏳ 30d → kept by LLM (identity info)
+  [demo_05] 李总 deadline         → ⏳ 32d → demoted (widening intervals, LLM confirmed)
   [demo_02] 方案讨论               → ⏳ 45d → archivable (demoted + 60d)
 
   Scene index: project(4), memory(2), security(1), general(2)

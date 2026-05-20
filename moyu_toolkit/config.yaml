@@ -20,8 +20,13 @@ forgetting_curve:
   demote_days: 14
   density_window: 20
   enabled: true
+  llm_review:
+    enabled: true
+    max_candidates_per_batch: 10
   min_keyword_length: 3
   scene_protection_days: 7
+  llm_scene_classify:
+    enabled: true
 learner:
   correction_signals:
   - 不是
@@ -56,6 +61,20 @@ memory:
     keyword: 0.3
     recency: 0.2
     semantic: 0.5
+  llm_summary:
+    enabled: true
+  llm_merge:
+    enabled: true
+search:
+  llm_rerank:
+    enabled: true
+    top_k_multiplier: 2
 security:
   safe_word_hash: abc123
   lockout_threshold: 3
+  llm_guard:
+    enabled: true
+    model: deepseek-chat
+knowledge_graph:
+  llm_extract:
+    enabled: true

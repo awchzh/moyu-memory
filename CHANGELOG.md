@@ -1,5 +1,30 @@
 # MOYU — Development Log
 
+## v2.5.0 — Released (2026-05-20)
+
+### New Features: 6 LLM-Enhanced Capabilities (All Default-On)
+
+| Feature | What it does | Fallback |
+|---------|-------------|----------|
+| **Smart Summary** | `add_memory` auto-refined by LLM — strips filler, keeps all facts and decisions | Raw text truncation |
+| **Search Rerank** | LLM re-ranks top candidates by semantic relevance beyond keyword matching | `score_and_rank` original order |
+| **Memory Merge** | LLM generates coherent merged summaries instead of keyword concatenation | Keyword concatenation |
+| **Scene Classification** | LLM assigns semantic scene labels (project/personal/general) to new memories | Keyword frequency matching |
+| **KG Entity Extraction** | LLM extracts entity-relation triples with JSON structured output | Regex fallback |
+| **Forgetting Review** | LLM reviews demotion candidates for semantic importance (preferences, identity, milestones) | Rule-only demotion |
+
+All six features reuse your existing API key — no new keys, no new dependencies. No API key? Each silently degrades to its local fallback with a one-time notice. Circuit breaker halts after 3 consecutive failures.
+
+### Fixes
+
+- **API key priority corrected** — `.env` file now checked before `DEEPSEEK_API_KEY` environment variable. Previously, an env var with wrong key could override a valid `.env` key. Fixed across 6 call sites in 5 files: `agent_memory.py`, `forgetting_curve.py`, `memory_merge.py`, `knowledge_graph.py`, `integrity_checker.py`.
+
+### Zero-Dependency Commitment
+
+No new pip packages. No new runtime requirements. `pip install moyu-memory` still works with zero config. LLM features are additive enhancements, not gatekeeping — everything works without them.
+
+---
+
 ## v2.4.8 — Released (2026-05-20)
 
 ### Fixes

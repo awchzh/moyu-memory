@@ -706,6 +706,25 @@ def add_memory(summary: str, source: str = "user",
     except Exception:
         pass
 
+    # ── LLM Security Guard (optional second layer) ──
+    try:
+        from defense_toolkit.integrity_checker import llm_scan
+        result = llm_scan(summary)
+        if result.get("verdict") == "suspect":
+            print(f"🔴 LLM Security Guard: memory blocked — {result.get('reason', '')}")
+            return None
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # ── LLM Summary Enhancement (Optional): refine raw text before storage ──
+    if _should_llm_summary():
+        enhanced = _llm_summarize(summary)
+        if enhanced and enhanced != summary:
+            print(f"📝 LLM summary: {len(summary)} → {len(enhanced)} chars")
+            summary = enhanced
+
     content_hash = hashlib.md5(summary.encode()).hexdigest()[:16]
     memories = _load_memories()
     
@@ -865,6 +884,293 @@ def _compute_entity_connectivity_boost(candidate_ids: set, entity_index: dict,
     return bonuses
 
 
+# ==================== LLM Rerank (Optional) ====================
+
+_LLM_RERANK_FAILURES = 0
+_LLM_RERANK_NO_KEY_WARNED = False
+
+
+def _call_llm_rerank(system_prompt: str, user_prompt: str) -> str:
+    """Call configured LLM for reranking. Returns empty string on failure.
+    Same pattern as forgetting_curve._call_llm."""
+    global _LLM_RERANK_FAILURES
+    if _LLM_RERANK_FAILURES >= 3:
+        return ""
+
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return ""
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return ""
+
+    api_cfg = cfg.get("api", {})
+    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
+    if not api_key or api_key == "your-api-key-here":
+        try:
+            env_path = os.path.expanduser("~/.hermes/.env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("DEEPSEEK_API_KEY="):
+                            api_key = line.strip().split("=", 1)[1]
+                            break
+        except Exception:
+            pass
+
+    if not api_key or api_key == "your-api-key-here":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+
+    if not api_key or api_key == "your-api-key-here":
+        global _LLM_RERANK_NO_KEY_WARNED
+        if not _LLM_RERANK_NO_KEY_WARNED:
+            _LLM_RERANK_NO_KEY_WARNED = True
+            print("⚠️  MOYU 语义重排：未检测到有效 API Key，已跳过 LLM 重排。")
+        _LLM_RERANK_FAILURES += 1
+        return ""
+
+    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
+    model = api_cfg.get("chat_model", "gpt-4o-mini")
+
+    try:
+        import requests
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 500,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            _LLM_RERANK_FAILURES = 0
+            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            _LLM_RERANK_FAILURES += 1
+            return ""
+    except Exception:
+        _LLM_RERANK_FAILURES += 1
+        return ""
+
+
+def _llm_rerank(query: str, candidates: list) -> list:
+    """Re-rank candidate search results by LLM-judged semantic relevance.
+
+    The LLM evaluates each candidate's relevance to the query beyond what
+    keyword/embedding scoring captures — understanding context, intent, and
+    implicit relationships.
+
+    Args:
+        query: The original user search query.
+        candidates: List of result dicts with 'summary' and 'timestamp'.
+    
+    Returns:
+        Reordered list (same items, new order). Falls back to original on failure.
+    """
+    if len(candidates) <= 1:
+        return candidates
+
+    # Build candidate listing for the prompt
+    lines = []
+    for i, r in enumerate(candidates):
+        summary = r.get("summary", "")[:120].replace('"', "'")
+        ts = r.get("timestamp", "")[:10]
+        lines.append(f'  {{"idx": {i}, "summary": "{summary}", "date": "{ts}"}}')
+
+    candidate_block = ",\n".join(lines)
+    system_prompt = (
+        "You are a search relevance re-ranker. Given a user query and candidate "
+        "memory entries, re-rank them by how relevant they are to the query.\n\n"
+        "Consider:\n"
+        "- Direct relevance: does the memory directly address the user's intent?\n"
+        "- Information value: how much useful/specific information does it contain?\n"
+        "- Temporal fit: does the timing match the query's temporal signal?\n\n"
+        "Output valid JSON ONLY with this structure:\n"
+        '{"ranked_indices": [3, 0, 1, 2]} '
+        "- an array of the candidate indices in order of relevance (most relevant first)."
+    )
+
+    user_prompt = (
+        f'Query: "{query}"\n\n'
+        f"Candidates (\n{candidate_block}\n)"
+    )
+
+    response_text = _call_llm_rerank(system_prompt, user_prompt)
+    if not response_text:
+        return candidates
+
+    # Parse JSON response
+    try:
+        cleaned = response_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+        result = json.loads(cleaned)
+        indices = result.get("ranked_indices", [])
+        if not indices:
+            return candidates
+        # Filter valid indices and deduplicate
+        seen = set()
+        ordered = []
+        for idx in indices:
+            if isinstance(idx, int) and 0 <= idx < len(candidates) and idx not in seen:
+                seen.add(idx)
+                ordered.append(candidates[idx])
+        # Append any missing candidates at the end
+        for i, c in enumerate(candidates):
+            if i not in seen:
+                ordered.append(c)
+        return ordered if ordered else candidates
+    except Exception:
+        return candidates
+
+
+# ==================== LLM Summary Enhancement (Optional) ====================
+
+_LLM_SUMMARY_FAILURES = 0
+_LLM_SUMMARY_NO_KEY_WARNED = False
+
+
+def _call_llm_summary(system_prompt: str, user_prompt: str) -> str:
+    """Call LLM for summarization. Returns empty string on failure.
+    Shares failure counter isolation with rerank — separate reset logic."""
+    global _LLM_SUMMARY_FAILURES
+    if _LLM_SUMMARY_FAILURES >= 3:
+        return ""
+
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return ""
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return ""
+
+    api_cfg = cfg.get("api", {})
+    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
+    if not api_key or api_key == "your-api-key-here":
+        try:
+            env_path = os.path.expanduser("~/.hermes/.env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("DEEPSEEK_API_KEY="):
+                            api_key = line.strip().split("=", 1)[1]
+                            break
+        except Exception:
+            pass
+
+    if not api_key or api_key == "your-api-key-here":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+
+    if not api_key or api_key == "your-api-key-here":
+        global _LLM_SUMMARY_NO_KEY_WARNED
+        if not _LLM_SUMMARY_NO_KEY_WARNED:
+            _LLM_SUMMARY_NO_KEY_WARNED = True
+            print("⚠️  MOYU 摘要增强：未检测到有效 API Key，已降级为纯截断摘要。")
+        _LLM_SUMMARY_FAILURES += 1
+        return ""
+
+    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
+    model = api_cfg.get("chat_model", "gpt-4o-mini")
+
+    try:
+        import requests
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 300,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            _LLM_SUMMARY_FAILURES = 0
+            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            _LLM_SUMMARY_FAILURES += 1
+            return ""
+    except Exception:
+        _LLM_SUMMARY_FAILURES += 1
+        return ""
+
+
+def _llm_summarize(text: str) -> str:
+    """Generate a clean, structured summary from raw user input using LLM.
+
+    Focuses on preserving facts, decisions, and preferences while removing
+    conversational filler. Falls back to original text on failure.
+    """
+    if not text or len(text) < 30:
+        return text  # Too short to benefit from LLM
+
+    system_prompt = (
+        "You are a memory summarizer for a personal AI assistant. "
+        "Given raw user input, produce a clean, concise summary for long-term storage.\n\n"
+        "Rules:\n"
+        "- Keep ALL key facts, preferences, decisions, names, and numbers\n"
+        "- Remove filler words, repetition, and conversational artifacts\n"
+        "- Preserve the original tone, language, and intent\n"
+        "- Output in the SAME language as the input (Chinese → Chinese, English → English)\n"
+        "- Max 200 characters\n"
+        "- Output ONLY the summary text, no explanations, no labels"
+    )
+    user_prompt = f"Summarize this for memory storage:\n{text[:1000]}"
+
+    response = _call_llm_summary(system_prompt, user_prompt)
+    if response and len(response.strip()) > 5:
+        return response.strip()[:300]  # Safety cap
+    return text
+
+
+def _should_llm_summary() -> bool:
+    """Check if LLM summary enhancement is enabled in config."""
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return False
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        mem = cfg.get("memory", {})
+        return mem.get("llm_summary", {}).get("enabled", False)
+    except Exception:
+        return False
+
+
+def _should_llm_rerank() -> bool:
+    """Check if LLM rerank is enabled in config."""
+    cfg_path = get_config_path()
+    if not os.path.exists(cfg_path):
+        return False
+    try:
+        import yaml
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        srch = cfg.get("search", {})
+        return srch.get("llm_rerank", {}).get("enabled", False)
+    except Exception:
+        return False
+
+
 def search(query: str, top_k: int = 5) -> list:
     """TEMPR multi-strategy retrieval with score_and_rank hybrid fusion.
     
@@ -876,6 +1182,7 @@ def search(query: str, top_k: int = 5) -> list:
     5. Extract query entities → compute entity boosts
     6. Build entity index → compute connectivity bonuses
     7. score_and_rank: semantic gate → source-weighted → combined → sorted
+    8. (Optional) LLM rerank: semantic reordering of top-2k candidates
     """
     # Load vectors from vector index (JSON)
     idx = _load_index()
@@ -972,7 +1279,11 @@ def search(query: str, top_k: int = 5) -> list:
     all_ids = {v["memory_id"] for v in vectors}
     connectivity_bonuses = _compute_entity_connectivity_boost(all_ids, entity_index, all_ids)
     
-    ranked = score_and_rank(sem_scores, bm25_scores, recency_scores, entity_boosts, top_k,
+    # Determine candidate pool size: larger when LLM rerank is enabled
+    use_rerank = _should_llm_rerank()
+    candidate_k = top_k * 2 if use_rerank else top_k
+
+    ranked = score_and_rank(sem_scores, bm25_scores, recency_scores, entity_boosts, candidate_k,
                             has_real_embeddings=has_real_embeds,
                             source_weights=source_weights,
                             connectivity_bonuses=connectivity_bonuses)
@@ -989,7 +1300,14 @@ def search(query: str, top_k: int = 5) -> list:
             "entities": entry.get("entities", []),
             "score": round(score, 4)
         })
-    return results
+
+    # Step 8: Optional LLM rerank — semantic reordering of candidate pool
+    if use_rerank and len(results) > 1:
+        reranked = _llm_rerank(query, results)
+        if reranked:
+            results = reranked
+
+    return results[:top_k]
 
 
 def stats():

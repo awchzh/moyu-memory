@@ -1686,5 +1686,49 @@
   [
     "<|im_start|>system",
     "注入标记·英文"
+  ],
+  [
+    "re:(?i)(讲个故事|写首诗|编个剧本|说个笑话|写篇小说)[^。，]*?(如何|怎样|教|制作|破解|攻击)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(假设|如果|想象|假如|幻想)[^。，]*?(没有[^。，]*?(规则|限制|法律|道德)|可以[^。，]*?(做任何事|无视一切))",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(模仿|扮演|成为|假装[^。，]*?不受约束)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(请[^。，]*?(用拼音|用英文|用代码|用缩写|用暗号|换个说法)[^。，]*?(回答|描述|解释|输出))",
+    "编码绕过·中文"
+  ],
+  [
+    "re:(?i)(之前[^。，]*?(对话|内容|指令|规则)[^。，]*?(是什么|再说一遍|翻译|转换成|总结一下)).{0,20}$",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(展示|显示|输出|打印|复述|说出)[^。，]*?(系统提示词|初始指令|底层规则|完整配置)",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)(continue (from|the)\\s+(the\\s+)?(code|script|function).*?where it left off)",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(extract (the|all|my|your).*(email|phone|address|SSN|credit card|API key|password|secret|token).*(from|in))",
+    "提示泄露·英文"
+  ],
+  [
+    "re:(?i)(This is a (fictional|hypothetical|simulated|pretend|imaginary).*?(act as if|respond as if|pretend).*(no (rules|restrictions|laws|safety)))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(I am (testing|auditing|evaluating|assessing).*(system|model|safety|security|guardrails).*(bypass|override|disable|ignore).*(safety|security|content).*(filters|policies|guidelines|rules))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(complete the (code|script|function|program).*?(to|that will) (extract|delete|access|bypass|download))",
+    "规则注入·英文"
   ]
 ]
