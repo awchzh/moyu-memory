@@ -58,7 +58,18 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 
 **MOYU's strength is in the combination:** content gate + LLM guard + PII redaction + write burst guard + forensic analysis + password gate + integrity check + auto-restore + loop detection — unique layers no other memory toolkit offers.
 
-**Additional opt-in:** user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`). Not in default config — add manually to enable.
+**Additional opt-in:** user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`). Not in default config — add to `config.yaml` to enable:
+
+```yaml
+security:
+  isolation:
+    enabled: true
+    user_id: "your-username"   # separate storage per user
+  encryption:
+    enabled: true               # AES-256-GCM file encryption
+```
+
+Encryption also requires `MOYU_ENCRYPTION_PASSWORD` environment variable.
 
 ---
 
