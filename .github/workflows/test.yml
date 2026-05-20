@@ -23,9 +23,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install numpy requests pyyaml
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .
 
       - name: Run tests
         run: |
-          cd moyu_toolkit && python tests/test_all.py
+          # Run tests from repo root so imports resolve correctly
+          python moyu_toolkit/tests/test_all.py
