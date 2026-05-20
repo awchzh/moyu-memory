@@ -31,7 +31,7 @@ VERSION = "2.4.8"
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
     "2.4.8": "",  # To be filled in next release
-    "2.4.7": "",  # To be filled in next release
+    "2.4.7": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",  # Downloaded from GitHub
     "2.4.6": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",  # Downloaded from GitHub
     "2.4.4": "190934a09513a1cefd70711ad6a690fa27b64eb3afab0bc123e7216859b56d9c",  # Downloaded from GitHub
     "2.4.3": "71354dd7b291b36aa2b461b7f4706168cfcfef34e2c2e8f81c2ccb4bba33fe0f",
