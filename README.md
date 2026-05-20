@@ -197,11 +197,11 @@ Forgetting curve + knowledge distillation:
 
 ---
 
-## 🔬 25 Capabilities Detailed (6 LLM-Enhanced)
+## 🔬 26 Capabilities Detailed (7 LLM-Enhanced)
 
-|| # | Capability | Description |
+| # | Capability | Description |
 |---|-----------|------|
-|| **🛡️ Defense Layer (8)** ||
+| **🛡️ Defense Layer (9)** |||
 | 1 | **Content Security Gate** | Blocks injection attacks before writing (433 patterns + regex combos, 8 categories) |
 | 2 | **Forensic Analysis** | Detects injection patterns, JSON corruption, file tampering |
 | 3 | **Write Burst Protection** | >30 writes/60s triggers fine-grained rollback + 5-min lock |
@@ -210,48 +210,49 @@ Forgetting curve + knowledge distillation:
 | 6 | **Password Verification** | Pre-op confirmation + auto-lock after 3 failures (30 min) |
 | 7 | **Integrity Check & Recovery** | SHA256 manifest + daily backups (3-day retention) |
 | 8 | **User Isolation & Encryption** (opt-in) | Per-user storage directories + AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`) |
+| 9 | **LLM Security Guard** *(LLM)* | Second layer after regex: regex-untouched inputs get LLM verdict for semantic injection. Uses your configured LLM. No API key? Degrades to regex-only — **never blocks legitimate writes.** |
 
 ### 🧠 Memory Layer (4) *2 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 9 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking + **optional LLM rerank** |
-| 10 | **Smart Summary** *(LLM)* | `add_memory` auto-refined by LLM — conversational filler removed, key facts preserved. Falls back to raw text. |
-| 11 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
-| 12 | **SQLite FTS5 + MD5 Dedup** | Full-text index + in-library/batch double dedup |
+| 10 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking + **optional LLM rerank** |
+| 11 | **Smart Summary** *(LLM)* | `add_memory` auto-refined by LLM — conversational filler removed, key facts preserved. Falls back to raw text. |
+| 12 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
+| 13 | **SQLite FTS5 + MD5 Dedup** | Full-text index + in-library/batch double dedup |
 
 ### 📊 Knowledge Layer (3) *1 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 13 | **Knowledge Graph** | Entity-relation extraction (**LLM-enhanced**, falls back to regex) + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
-| 14 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
-| 15 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
+| 14 | **Knowledge Graph** | Entity-relation extraction (**LLM-enhanced**, falls back to regex) + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
+| 15 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
+| 16 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
 
 ### ⏳ Lifecycle Layer (4) *3 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 16 | **Context-Aware Compression + Warning** | Two-tier (70% mild / 85% aggressive), originals preserved in refs/. Auto-detects agent context usage and warns before compression (configurable threshold, bilingual) |
-| 17 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
-| 18 | **Forgetting Curve** | Four gates (safety window / access density / scene protection / **LLM semantic review**) + **LLM scene classification** + knowledge distillation |
-| 19 | **Memory Merge** | Detect keyword-overlapping related memories + **LLM merged summary**. Originals preserved. |
+| 17 | **Context-Aware Compression + Warning** | Two-tier (70% mild / 85% aggressive), originals preserved in refs/. Auto-detects agent context usage and warns before compression (configurable threshold, bilingual) |
+| 18 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
+| 19 | **Forgetting Curve** | Four gates (safety window / access density / scene protection / **LLM semantic review**) + **LLM scene classification** + knowledge distillation |
+| 20 | **Memory Merge** | Detect keyword-overlapping related memories + **LLM merged summary**. Originals preserved. |
 
 ### 🔄 Learning & Reflection (2)
 
 | # | Capability | Description |
 |---|-----------|------|
-| 20 | **Learn from Corrections** | Auto-detect correction signals, 3 identical corrections → permanent behavioral rule |
-| 21 | **Self-Reflection** | Analyze memory base on startup, discover cross-time associations, contradictions, topic shifts |
+| 21 | **Learn from Corrections** | Auto-detect correction signals, 3 identical corrections → permanent behavioral rule |
+| 22 | **Self-Reflection** | Analyze memory base on startup, discover cross-time associations, contradictions, topic shifts |
 
 ### 🔗 Integration Layer (4)
 
 | # | Capability | Description |
 |---|-----------|------|
-| 22 | **Working Memory** | Independent file, survives context compression |
-| 23 | **Cross-Session Bridge** | Conversation summaries auto-synced to prefill + current_context, continuity across sessions |
-| 24 | **Auto-Update** | Check GitHub for new versions, in-place update (TOFU checksum), preserves user data and config |
-| 25 | **Wake Orchestration** | `moyu_wake`: full module pipeline — check→backup→forget→merge→reflect→context→bridge |
+| 23 | **Working Memory** | Independent file, survives context compression |
+| 24 | **Cross-Session Bridge** | Conversation summaries auto-synced to prefill + current_context, continuity across sessions |
+| 25 | **Auto-Update** | Check GitHub for new versions, in-place update (TOFU checksum), preserves user data and config |
+| 26 | **Wake Orchestration** | `moyu_wake`: full module pipeline — check→backup→forget→merge→reflect→context→bridge |
 
 ---
 
