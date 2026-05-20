@@ -58,7 +58,7 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 
 **MOYU's strength is in the combination:** content gate + LLM guard + PII redaction + write burst guard + forensic analysis + password gate + integrity check + auto-restore + loop detection — unique layers no other memory toolkit offers.
 
-**Additional opt-in security** (config.yaml, disabled by default): user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`, see `requirements.txt`).
+**Additional opt-in:** user isolation (per-directory storage) & AES-256-GCM file encryption (requires `cryptography`). Not in default config — add manually to enable.
 
 ---
 
@@ -133,7 +133,7 @@ Search quality: Local FastEmbed 512-dim semantic vectors, no crash on missing �
 | `moyu compress diagnose` | Show detailed scan results for all supported agents |
 | `moyu context` | One-line context usage percentage |
 | `moyu context raw` | Get behavioral rules (inject into system prompt) |
-| `moyu forget` | View forgetting curve status (3-gate + density analysis + distillation stats) |
+| `moyu forget` | View forgetting curve status (4-gate + LLM review + distillation stats) |
 | `moyu forget config` | View forgetting curve parameters |
 | `moyu forget set <key> <value>` | Adjust forgetting parameters (demote_days, archive_days, etc.) |
 | `moyu ref <name>` | Read original content of a compressed memory |
@@ -144,39 +144,20 @@ Forgetting curve + knowledge distillation:
 - **Distillation**: Entity relations auto-extracted to knowledge graph before demotion — structural knowledge survives when raw memory is cleared
 - **Task map**: Auto-generated Mermaid task graph on wake — agent sees the big picture at a glance
 
-> **🧠 Context warning (v2.4.3):** Your agent compresses silently — now it tells you first. MOYU auto-detects your running agent (Hermes, Claude Code, OpenClaw, Cursor, or Continue), reads its real-time context usage, and injects a warning into the agent's behavior rules before compression kicks in.
+> **🧠 Context warning:** MOYU auto-detects your running agent (Hermes, Claude Code, OpenClaw, Cursor, Continue), reads its real-time context usage, and injects a warning into behavior rules before compression kicks in.
 >
 > ```bash
-> # Quick check — how full is your context window?
+> # Quick check
 > python3 moyu.py context
 > # → Hermes窗口: 85% (累计120,456/128,000, 45次调用) ⚠️ 已深度压缩
-> # → 预警线: 70%
 >
-> # Set your preferred warning threshold and language
+> # Configure
 > moyu compress set warn_threshold 0.6    # warn at 60% (default: 0.7)
-> moyu compress set warn_language zh       # Chinese warning (default: en)
+> moyu compress set warn_language zh       # Chinese warning
 > moyu compress config                     # view all parameters
 > ```
 >
-> When the threshold is crossed, the warning auto-appends to your agent's behavioral rules:
-> - *"Hermes context at 85%, conversation deeply compressed — /new recommended"*
-> - *"Hermes context at 72%, approaching 70% warning — set MOYU warn below it"*
->
-> **Supported agents:** Hermes ✅ (macOS, verified), Claude Code, OpenClaw, Cursor, Continue — all with cross-platform paths (macOS / Windows / Linux). Works out of the box for default installations.
->
-> **Custom paths?** Bypass auto-detection with environment variables:
-> ```bash
-> export MOYU_FORCE_PROVIDER=Hermes
-> export MOYU_PROVIDER_PATH="/custom/path/to/state.db"
-> ```
->
-> **Can't detect your agent?** Run the diagnostic command — it shows exactly where each agent's data is (or isn't):
-> ```bash
-> moyu compress diagnose
-> # → [Hermes]    ✅ /Users/you/.hermes/state.db
-> # → [Claude]    ❌ ~/.claude/projects (not found)
-> # → [OpenClaw]  ✅ ~/.openclaw/agents
-> ```
+> **Can't detect your agent?** Run `moyu compress diagnose` for a per-agent path scan, or set `MOYU_FORCE_PROVIDER` / `MOYU_PROVIDER_PATH` to bypass auto-detection.
 
 ### 🔄 Learning & Self-Reflection
 
