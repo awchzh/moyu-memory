@@ -22,7 +22,12 @@ TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 TOOLKIT_DIR = os.path.dirname(TEST_DIR)  # moyu_toolkit/
 sys.path.insert(0, TOOLKIT_DIR)
 
-STORAGE = os.path.join(TOOLKIT_DIR, "memory_data")
+# 用 agent_memory 自己的路径，确保与运行时一致
+try:
+    from _moyu_paths import get_default_storage
+    STORAGE = get_default_storage()
+except Exception:
+    STORAGE = os.path.join(TOOLKIT_DIR, "memory_data")
 BACKUP = os.path.join(STORAGE, "backups")
 
 _results = {"pass": 0, "fail": 0, "skip": 0}
@@ -169,7 +174,9 @@ def test_burst_reject():
     # 模拟爆发：伪造 31 条写入记录
     now = time.time()
     fake_records = [now - x for x in range(1, 62, 2)]  # ~31 条，都在 60s 内
-    with open(os.path.join(STORAGE, "write_freq.json"), 'w') as f:
+    os.makedirs(STORAGE, exist_ok=True)
+    write_freq = os.path.join(STORAGE, "write_freq.json")
+    with open(write_freq, 'w') as f:
         json.dump(fake_records, f)
 
     # 触发爆发
