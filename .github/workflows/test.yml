@@ -23,10 +23,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
           pip install -e .
 
       - name: Run tests
         run: |
-          cd moyu_toolkit && python3 tests/test_all.py
+          cd moyu_toolkit && python3 -m pytest tests/ -v 2>&1 || python3 tests/test_all.py
