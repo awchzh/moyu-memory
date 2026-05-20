@@ -19,7 +19,7 @@ MOYU is built around a simple philosophy: **make every feature reliable before a
 
 | Priority | Item | Why |
 |----------|------|-----|
-| 🟠 | **Hot-reloadable pattern library** — Load injection patterns from external files without code changes | Reduces maintenance burden for the 422-pattern forensic rule set. |
+| 🟠 | **Hot-reloadable pattern library** — Load injection patterns from external files without code changes | Reduces maintenance burden for the forensic rule set. |
 | 🟡 | **Performance benchmarks** — Provide benchmark data for different memory scales | Help users understand MOYU's performance profile before deploying. |
 | 🟡 | **Enhanced diagnostics** — More status checks (disk space, index health, FTS5 rebuild suggestions) | Improve `moyu status` and `moyu audit` output. |
 

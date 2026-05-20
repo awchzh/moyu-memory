@@ -49,7 +49,7 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 | Level | Threat | Coverage | How |
 |-------|--------|----------|-----|
 | 🟢 | Accidental misuse (fat-finger, mis-script) | **~90%** | Password gate + burst guard + integrity check + daily backup |
-| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (433 patterns + regex combos) + loop detection |
+| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (injection patterns + regex combos) + loop detection |
 | 🟡 | Simple prompt injection (standard variants) | **~60%** | Regex covers (forget|ignore|skip)×(previous|all|your)×(instructions|rules) |
 | 🟠 | Professional adversarial injection (targeted bypass) | **~20%** | Keyword-based gates can't catch every novel variant |
 | 🟠 | Semantic-level injection (metaphor, abstraction, no keywords) | **~60%** | LLM Security Guard detects semantic bypasses — regex-untouched patterns like "pretend to be DAN" are caught. Uses your configured LLM. Falls back to safe on API failure: **never blocks legitimate writes.** |
@@ -194,7 +194,7 @@ Forgetting curve + knowledge distillation:
 | # | Capability | Description |
 |---|-----------|------|
 | **🛡️ Defense Layer (9)** |||
-| 1 | **Content Security Gate** | Blocks injection attacks before writing (433 patterns + regex combos, 8 categories) |
+| 1 | **Content Security Gate** | Blocks injection attacks before writing (injection patterns + regex combos, 8 categories) |
 | 2 | **Forensic Analysis** | Detects injection patterns, JSON corruption, file tampering |
 | 3 | **Write Burst Protection** | >30 writes/60s triggers fine-grained rollback + 5-min lock |
 | 4 | **Tool Call Loop Detection** | Runtime-level infinite loop interception, SHA256 fingerprint + exhaustive cycle scan + hard abort |
@@ -270,7 +270,7 @@ moyu_toolkit/
 ├── self_reflection.py       # Self-reflection
 ├── defense_toolkit/
 │   ├── integrity_checker.py # File integrity + auto-recovery + forensic analysis + alerts
-│   ├── forensic_patterns.json # Injection detection rule base (433 patterns + regex)
+│   ├── forensic_patterns.json # Injection detection rule base (patterns + regex)
 │   ├── pii_redactor.py      # PII redaction (bilingual, API key support)
 │   ├── isolation.py         # User isolation (opt-in)
 │   └── encrypt.py           # AES-256-GCM file encryption (opt-in, requires cryptography)
