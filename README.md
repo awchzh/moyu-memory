@@ -6,6 +6,8 @@ MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-mana
 
 **v2.5.0** — 6 LLM-enhanced features: semantic rerank, smart summary, AI merge, scene classification, entity extraction, and intelligent forgetting review. All default-on, keyless fallback to local rules. Now available via `pip install moyu-memory`.
 
+[![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
+
 ---
 
 ## 🚀 Quick Start
