@@ -271,23 +271,21 @@ moyu_toolkit/
 
 ---
 
-## 🏆 Comparison
+## 🏆 Comparison (Honest)
 
-| Dimension | Built-in (Hermes/OpenClaw) | Mem0 | **MOYU** |
-|------|------------------------|------|----------|
-| Storage | Plain text files | Vector DB | **JSON + SQLite FTS5** |
-| Search | Full dump | Semantic (API/LLM) | **TEMPR triple strategy** |
-| Security | ❌ None | ❌ None | **✅ 4-layer defense chain** |
-| PII Redaction | ❌ None | ❌ None | **✅ Bilingual (regex, zero deps)** |
-| Tool Call Protection | ❌ None | ❌ None | **✅ Loop detection + hard abort** |
-| Lifecycle | ❌ None | ❌ None | **✅ Forgetting curve + compression + task map** |
-| Knowledge Graph | ❌ None | ❌ None | **✅ Time-travel + snapshots + distillation** |
-| Working Memory | ❌ None | ❌ None | **✅ Independent file, compression-surviving** |
-| Cross-Session | Manual | ❌ None | **✅ Auto-sync prefill + current_context** |
-| Platform Lock-in | Locked | SDK locked | **✅ Zero lock-in** |
-| API Lock-in | Fixed | OpenAI | **✅ Hot-swappable** |
-| Deployment | Out of box | 5 min + API Key | **pip install, 30 sec** |
-| Offline | Partial | Requires API Key | **✅ Full local degradation** |
+| Dimension | MOYU | Mem0 | Letta | Zep | Cognee |
+|------|------|------|-------|-----|--------|
+| Setup | **Minimal: pip, zero config** | Low: pip + API Key | Medium: needs runtime setup | Medium: cloud simple, self-host complex | Low: uv pip install |
+| External deps | **Zero: no DB/API/Docker** | LLM API + vector DB | LLM API + storage | Cloud dep strong; self-host needs graph DB | LLM API |
+| Security | **Best: injection defense/PII redaction/integrity check/zero-trust** | Medium: API Key + compliance | Basic: framework isolation | Medium: cloud SOC2/HIPAA | Basic: tenant isolation |
+| Retrieval | Semantic+BM25+time+**LLM rerank** | Semantic+BM25+entity (3-way fusion) | Agent tool-call pagination | **Temporal graph retrieval** + validity window | Graph+vector hybrid |
+| Lifecycle | **Most complete: compression/forgetting review/merge/scene class, fully auto** | ADD-only, no active forgetting | 3-tier memory, auto pagination | Temporal graph auto version tracking | Feedback learning, needs config |
+| Knowledge Graph | Entity extraction+time-travel+distillation | Pro only ($249/mo) | Indirect (external tools) | **Temporal graph, all tiers** | **Core feature, full OSS** |
+| Cross-session | Auto prefill sync | **3-tier isolation (user/session/agent)** | Native (stateful runtime) | Temporal graph natural continuity | Cross-agent sharing |
+| Offline | **Fully offline, zero network** | Partial (self-host + local embed) | Self-hostable | Self-host only | Fully local |
+| Platform lock-in | **Minimal: pure Python, any framework** | Low: OSS, multi-language SDK | Medium: requires Letta framework | Medium: cloud has lock-in | Low: Python only |
+
+**Bottom line:** MOYU excels at security, offline capability, and lifecycle management — areas where alternatives offer little to none. Mem0 brings the richest ecosystem, Zep leads in temporal graph reasoning, and Cognee offers the most complete open-source knowledge graph. Choose by your scenario, not by feature count.
 
 ---
 
