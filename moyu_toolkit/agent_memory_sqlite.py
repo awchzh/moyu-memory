@@ -2,6 +2,9 @@
 # BM25 keyword search via SQLite FTS5 (English) + LIKE (Chinese).
 # JSON files remain the primary storage. SQLite is a search-only index.
 # Single memory_search.db file — backup = copy one file.
+#
+# v2.6.0 — Added namespace column for layered memory storage.
+#   Backward compatible: existing memories get namespace=''.
 
 import json
 import os
@@ -32,10 +35,17 @@ def _get_db():
             summary TEXT NOT NULL,
             content_hash TEXT,
             scene TEXT DEFAULT '',
+            namespace TEXT DEFAULT '',
             demoted INTEGER DEFAULT 0,
             archived INTEGER DEFAULT 0
         )
     """)
+
+    # Backward compat: add namespace column if missing (pre-v2.6.0)
+    try:
+        _DB.execute("ALTER TABLE memories ADD COLUMN namespace TEXT DEFAULT ''")
+    except Exception:
+        pass  # Already exists
 
     _DB.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
@@ -80,10 +90,13 @@ def _ensure_fts_indexed():
     for m in to_insert:
         try:
             db.execute(
-                "INSERT OR IGNORE INTO memories (memory_id, timestamp, source, summary, content_hash, scene, demoted, archived) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                """INSERT OR IGNORE INTO memories 
+                   (memory_id, timestamp, source, summary, content_hash, scene, namespace, demoted, archived) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (m.get("id", ""), m.get("timestamp", ""), m.get("source", ""),
                  m.get("summary", ""), m.get("content_hash", ""),
-                 m.get("scene", ""), 1 if m.get("demoted") else 0,
+                 m.get("scene", ""), m.get("namespace", ""),
+                 1 if m.get("demoted") else 0,
                  1 if m.get("archived") else 0)
             )
         except Exception:
@@ -91,9 +104,18 @@ def _ensure_fts_indexed():
     db.commit()
 
 
-def _fts_search(query: str, limit: int = 20) -> list:
+def _fts_search(query: str, limit: int = 20, namespace: str = None) -> list:
     """BM25 search via SQLite FTS5 + LIKE for Chinese.
-    Returns list of {memory_id, summary, timestamp, source, fts_rank}."""
+    
+    Args:
+        query: Search text.
+        limit: Max results.
+        namespace: If set, filter to this namespace only.
+            Empty string = only unnamespaced memories.
+            None = all namespaces (default).
+    
+    Returns list of {memory_id, summary, timestamp, source, namespace, fts_rank}.
+    """
     db = _get_db()
     _ensure_fts_indexed()
 
@@ -105,6 +127,12 @@ def _fts_search(query: str, limit: int = 20) -> list:
     cjk_chars = sum(1 for c in query if '\u4e00' <= c <= '\u9fff')
     is_cjk_query = cjk_chars > len(query) * 0.3
 
+    namespace_where = ""
+    namespace_params = []
+    if namespace is not None:
+        namespace_where = f" AND m.namespace = ?"
+        namespace_params = [namespace]
+
     if is_cjk_query:
         # Chinese: SQL LIKE (reliable, handles CJK without token boundary issues)
         like_patterns = [f'%{t}%' for t in tokens if t]
@@ -113,15 +141,16 @@ def _fts_search(query: str, limit: int = 20) -> list:
         where_clause = " AND ".join(f"m.summary LIKE ?" for _ in like_patterns)
         try:
             rows = db.execute(
-                f"""SELECT m.rowid, m.memory_id, m.summary, m.timestamp, m.source
+                f"""SELECT m.rowid, m.memory_id, m.summary, m.timestamp, m.source, m.namespace
                    FROM memories m
-                   WHERE {where_clause}
+                   WHERE {where_clause} {namespace_where}
                    LIMIT ?""",
-                (*like_patterns, limit)
+                (*like_patterns, *namespace_params, limit)
             ).fetchall()
             return [{
                 "memory_id": r[1], "summary": r[2],
-                "timestamp": r[3], "source": r[4], "fts_rank": -0.5
+                "timestamp": r[3], "source": r[4],
+                "namespace": r[5], "fts_rank": -0.5
             } for r in rows]
         except Exception:
             return []
@@ -137,17 +166,18 @@ def _fts_search(query: str, limit: int = 20) -> list:
     fts_query = " ".join(parts)
     try:
         rows = db.execute(
-            """SELECT m.rowid, m.memory_id, m.summary, m.timestamp, m.source, rank
+            f"""SELECT m.rowid, m.memory_id, m.summary, m.timestamp, m.source, m.namespace, rank
                FROM memory_fts
                JOIN memories m ON m.rowid = memory_fts.rowid
-               WHERE memory_fts MATCH ?
+               WHERE memory_fts MATCH ? {namespace_where}
                ORDER BY rank
                LIMIT ?""",
-            (fts_query, limit)
+            (fts_query, *namespace_params, limit)
         ).fetchall()
         return [{
             "memory_id": r[1], "summary": r[2],
-            "timestamp": r[3], "source": r[4], "fts_rank": r[5]
+            "timestamp": r[3], "source": r[4],
+            "namespace": r[5], "fts_rank": r[6]
         } for r in rows]
     except Exception:
         return []

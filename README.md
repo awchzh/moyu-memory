@@ -10,7 +10,7 @@ MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-mana
 [![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://pypi.org/project/moyu-memory/)
 [![License](https://img.shields.io/github/license/awchzh/moyu-memory)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/moyu-memory?cacheSeconds=86400)](https://pypi.org/project/moyu-memory/)
+[![Downloads](https://pepy.tech/badge/moyu-memory)](https://pepy.tech/project/moyu-memory)
 
 ---
 

@@ -145,7 +145,19 @@ def _load_patterns() -> list:
 
 def content_scan(text: str) -> list:
     """Scan text for injection patterns. Returns list of detected labels (empty = clean).
-    Supports regex (re: prefix) and plain substring patterns."""
+    Supports regex (re: prefix) and plain substring patterns.
+    Checks custom rules FIRST (user-taught patterns take priority)."""
+    
+    # Step 1: Check custom rules (user-taught, self-updating)
+    try:
+        from moyu_toolkit.custom_rules import check_custom
+        custom_matches = check_custom(text)
+        if custom_matches:
+            return [f"custom: {m}" for m in custom_matches]
+    except Exception:
+        pass
+    
+    # Step 2: Check built-in patterns
     lower = text.lower()
     detected = []
     for pattern, label, is_regex in _load_patterns():

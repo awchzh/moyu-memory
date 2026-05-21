@@ -4,7 +4,10 @@ moyu — MOYU unified CLI entry point
 
 Usage:
     moyu search <query>     Search memories
-    moyu learn <text>       Learn from correction
+    moyu search <query> --ns <namespace>  Search within namespace
+    moyu learn <text>       Learn from correction (auto-detects security rules)
+    moyu learn <text> --ns <name>  Learn and store under a namespace
+    moyu rules              List custom security rules
     moyu stats              Show all statistics
     moyu status             Show system status
     moyu setup              Set up security password
@@ -278,7 +281,7 @@ CMD_TABLE = {
     "search":     lambda args: _handle_search(args),
     "stats":      lambda args: cmd_stats(),
     "status":     lambda args: cmd_status(),
-    "learn":      lambda args: _call_func("learner", "learn", [" ".join(args)]),
+    "learn":      lambda args: _handle_learn_with_ns(args),
     "detect":     lambda args: _call_func("learner", "detect_corrections", [" ".join(args)]),
     "context":     lambda args: print(_import("learner").format_behavior_rules()),
     "signals":    lambda args: _call_func("learner", "signals", args),
@@ -300,6 +303,7 @@ CMD_TABLE = {
     "kb":         lambda args: _kb_handler(args),
     "kg":         lambda args: _kg_handler(args),
     "protect":    lambda args: _protect_handler(args),
+    "rules":      lambda args: _handle_rules(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -316,6 +320,7 @@ HELP_DESCRIPTIONS = {
     "check": "Check memory file integrity (SHA256)",
     "init": "Initialize integrity verification manifest",
     "audit": "Full security audit (all 3 defense layers)",
+    "rules": "List and manage custom security rules",
     "reflect": "Run self-reflection (analyze contradictions & connections)",
     "compress": "Show compression status and context usage",
     "forget": "Show forgetting curve status and parameters",
@@ -350,6 +355,86 @@ def _verify_op(args):
     ctx = " ".join(args[1:])
     result = sec.verify_operation(op, ctx)
     print("✅ Allowed" if result else "❌ Denied")
+
+
+def _handle_learn_with_ns(args):
+    """Handle 'moyu learn' with optional --ns namespace flag."""
+    ns = None
+    remaining = list(args)
+    # Look for --ns <namespace>
+    for i, arg in enumerate(args):
+        if arg == "--ns" and i + 1 < len(args):
+            ns = args[i + 1]
+            remaining = [a for j, a in enumerate(args) if j not in (i, i + 1)]
+            break
+    text = " ".join(remaining)
+    if ns:
+        # Store as memory with namespace AND try custom rules
+        try:
+            cr = _import("custom_rules")
+            result = cr.analyze_and_learn(text)
+            if result.get("learned"):
+                print(f"🛡️  [{ns}] {result['message']}")
+            else:
+                print(f"📝 [{ns}] Stored as memory in namespace '{ns}'")
+        except Exception:
+            print(f"📝 [{ns}] Stored as memory in namespace '{ns}'")
+        # Also store as a memory with namespace
+        try:
+            mem = _import("agent_memory")
+            mem.add_memory(text, source="user", metadata={"namespace": ns})
+        except Exception:
+            pass
+    else:
+        _handle_learn(text)
+
+
+def _handle_learn(text):
+    """Handle 'moyu learn' — try custom rules first, then fall back to learner."""
+    if not text:
+        print("Usage: moyu learn <text>")
+        return
+    
+    # Try to extract a security rule first
+    try:
+        cr = _import("custom_rules")
+        result = cr.analyze_and_learn(text)
+        if result.get("learned"):
+            print(f"🛡️  {result['message']}")
+            return
+        if result.get("message"):
+            print(f"ℹ️  {result['message']}")
+    except Exception as e:
+        pass  # Fall through to learner
+    
+    # Fall back to regular learner
+    _call_func("learner", "learn", [text])
+
+
+def _handle_rules(args):
+    """Handle 'moyu rules' — list/delete custom security rules."""
+    cr = _import("custom_rules")
+    
+    if args and args[0] == "delete":
+        cr._ensure_rules_file()
+        rules_path = os.path.join(__import__("moyu_toolkit._moyu_paths", fromlist=["get_default_storage"]).get_default_storage(), "custom_rules.json")
+        if os.path.exists(rules_path):
+            os.remove(rules_path)
+        print("🗑️  All custom rules deleted")
+        return
+    
+    stats = cr.stats()
+    if stats["count"] == 0:
+        print("📭 No custom rules yet. Teach me with: moyu learn \"\\\"some pattern\\\" should be blocked\"")
+        return
+    
+    print(f"\n📋 Custom Security Rules ({stats['count']})")
+    print("=" * 50)
+    for r in stats["rules"]:
+        print(f"  • {r['note'][:70]}")
+    print()
+    print("Teach me a new rule: moyu learn \"\\\"pattern\\\" should be blocked\"")
+    print("Delete all rules:     moyu rules delete")
 
 
 def _handle_search(args):

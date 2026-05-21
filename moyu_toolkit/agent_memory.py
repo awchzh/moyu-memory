@@ -587,9 +587,33 @@ def _handle_write_burst(burst_records: list = None):
         pass
 
 
+# ==================== Lazy Initialization ====================
+
+def _ensure_storage():
+    """Lazy init: create storage directory and data files on first use.
+    
+    No errors if files already exist — safe to call before any read/write.
+    """
+    os.makedirs(STORAGE_PATH, exist_ok=True)
+    # Ensure key data files exist (empty initial state)
+    for filename, default_data in [
+        ("conversation_memory.json", []),
+        ("vector_index.json", {"vectors": []}),
+        ("write_freq.json", {"window_start": 0.0, "count": 0}),
+    ]:
+        path = _storage_path(filename)
+        if not os.path.exists(path):
+            try:
+                with open(path, 'w') as f:
+                    json.dump(default_data, f)
+            except Exception:
+                pass  # Best-effort — next read/write will trigger creation
+
+
 # ==================== Memory Index Management ====================
 
 def _load_index() -> dict:
+    _ensure_storage()
     path = _storage_path("vector_index.json")
     if os.path.exists(path):
         with open(path) as f:
@@ -616,6 +640,7 @@ def _save_index(index: dict):
 
 
 def _load_memories() -> list:
+    _ensure_storage()
     path = _storage_path("conversation_memory.json")
     if os.path.exists(path):
         # Encryption-aware: if encryption is configured, try decryption first
@@ -735,11 +760,13 @@ def add_memory(summary: str, source: str = "user",
     
     # Extract entities
     entities = _extract_entities(summary)
+    namespace = (metadata or {}).get("namespace", "")
     ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
     entry = {
         "id": f"mem_{ts}",
         "timestamp": datetime.now().isoformat(),
         "source": source,
+        "namespace": namespace,
         "summary": summary[:500],
         "content_hash": content_hash,
         "entities": entities,
@@ -747,7 +774,7 @@ def add_memory(summary: str, source: str = "user",
     }
     memories.append(entry)
     _save_memories(memories)
-    _add_to_index(entry["id"], entry["summary"], entry["timestamp"], source, entities)
+    _add_to_index(entry["id"], entry["summary"], entry["timestamp"], source, entities, namespace)
     
     # Cross-scene tunnel maintenance: detect entity overlaps across scenes
     # Runs best-effort — silently skips if scenes are not assigned yet
@@ -771,7 +798,7 @@ def _detect_dimension_mismatch(idx: dict) -> bool:
     return False
 
 
-def _add_to_index(mid: str, summary: str, ts: str, source: str, entities: list = None):
+def _add_to_index(mid: str, summary: str, ts: str, source: str, entities: list = None, namespace: str = ""):
     idx = _load_index()
     for v in idx["vectors"]:
         if v["memory_id"] == mid:
@@ -789,6 +816,7 @@ def _add_to_index(mid: str, summary: str, ts: str, source: str, entities: list =
         "memory_id": mid, "timestamp": ts,
         "source": source, "summary": summary[:80],
         "entities": entities or [],
+        "namespace": namespace,
         "vector": vec
     })
     _save_index(idx)
@@ -1171,8 +1199,15 @@ def _should_llm_rerank() -> bool:
         return False
 
 
-def search(query: str, top_k: int = 5) -> list:
+def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     """TEMPR multi-strategy retrieval with score_and_rank hybrid fusion.
+    
+    Args:
+        query: Search text.
+        top_k: Max results to return.
+        namespace: If set, filter to this namespace only.
+            None = return all namespaces (default).
+            Empty string = only unnamespaced memories.
     
     Pipeline:
     1. Embed query
@@ -1228,6 +1263,17 @@ def search(query: str, top_k: int = 5) -> list:
     entity_boosts = []
     source_weights = []
     
+    # Namespace filter: pre-filter vectors to matching namespace
+    if namespace is not None:
+        filtered_vectors = []
+        for v in vectors:
+            v_ns = v.get("namespace", "")
+            if v_ns == namespace:
+                filtered_vectors.append(v)
+        vectors = filtered_vectors
+        if not vectors:
+            return []
+
     for i, entry in enumerate(vectors):
         # Semantic score
         sem = cosine_similarity(q_vec, entry["vector"]) if q_vec else 0.0

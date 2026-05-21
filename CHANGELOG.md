@@ -263,6 +263,39 @@ No new pip packages. No new runtime requirements. `pip install moyu-memory` stil
 
 ---
 
+## v2.5.2 — 记忆分层 + 自进化规则 (2026-05-21)
+
+> 源自吴恩达 DeepLearning.AI《Long-Term Agentic Memory with LangGraph》课程消化
+
+### 新架构：三层记忆分层
+
+- **Namespace 分层** — `add_memory()` 支持 `metadata={"namespace": "xx"}` 参数，记忆可按项目/安全/学习/个人等维度隔离存储
+- **`--ns` 搜索过滤** — `moyu search <query> --ns project-moyu` 只搜指定抽屉，不干扰其他领域
+- **SQLite FTS5 同步支持** — agent_memory_sqlite 新增 namespace 列，自动回迁旧数据，向后兼容
+- **对话场景自动标记** — 我根据当前上下文自然决定 namespace（MOYU项目→`project-moyu`，安全讨论→`security`），不做不可靠的关键词自动分类
+
+### 新能力：自进化安全规则
+
+- **`custom_rules.py`** — 独立模块，存储用户自定义的检测规则到 `custom_rules.json`
+- **`moyu learn` 自动识别安全规则** — 输入含引号的模式时自动提取为 blocking rule，非安全内容走原有 learner
+- **`moyu rules` 命令** — 查看所有自定义规则 / 清空
+- **`moyu learn <text> --ns <name>`** — 带 namespace 学习
+- **防御链优先检查自定义规则** — `content_scan()` 先跑 custom_rules，再跑内置词库，你教的规则即时生效，不用等发版
+- **非安全学习走回原有 learner** — 不影响已有行为
+
+### 体验优化
+
+- **惰性初始化** — 首次使用 `moyu search`/`learn`/`stats` 时自动创建存储目录和空文件，不再报"请先初始化"
+- **安装即用** — `pip install moyu-memory` 后直接跑 `moyu search "hello"` 不报错
+
+### 文档
+
+- 安全能力评估表数据待更新（多层测试 74.8% + 词库 513 条）
+
+---
+
 ## 待规划
 
-- （等用户指方向）
+- NAS 端 MoBai 部署与身份校验
+- 双端记忆核心自动同步
+- Prompt 即记忆：安检规则改为可自更新 prompt 集合
