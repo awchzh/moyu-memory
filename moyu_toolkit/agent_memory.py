@@ -599,7 +599,7 @@ def _ensure_storage():
     for filename, default_data in [
         ("conversation_memory.json", []),
         ("vector_index.json", {"vectors": []}),
-        ("write_freq.json", {"window_start": 0.0, "count": 0}),
+        ("write_freq.json", []),
     ]:
         path = _storage_path(filename)
         if not os.path.exists(path):
