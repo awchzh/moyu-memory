@@ -30,11 +30,12 @@ VERSION = "2.5.1"
 # their own checksum empty; it gets filled in the NEXT release.
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
-    "2.5.0": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",  # Current release
-    "2.4.8": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",  # TOFU fallback
-    "2.4.7": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",  # Downloaded from GitHub
-    "2.4.6": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",  # Downloaded from GitHub
-    "2.4.4": "190934a09513a1cefd70711ad6a690fa27b64eb3afab0bc123e7216859b56d9c",  # Downloaded from GitHub
+    "2.5.1": "fd52c48f11de9f985789f1f3e353e885975643cda3ee57f7e723eeb6f97879d7",  # Current release
+    "2.5.0": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",  # TOFU fallback
+    "2.4.8": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",
+    "2.4.7": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",
+    "2.4.6": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",
+    "2.4.4": "190934a09513a1cefd70711ad6a690fa27b64eb3afab0bc123e7216859b56d9c",
     "2.4.3": "71354dd7b291b36aa2b461b7f4706168cfcfef34e2c2e8f81c2ccb4bba33fe0f",
     "2.4.2": "6a06b1065bd050b272307aae5247598334f4ade5f2b99c6ffaab6709c9bc0a1d",
     "2.4.0": "",
