@@ -1,5 +1,21 @@
 [
   [
+    "re:(?i)(用|使用|通过|借助)(?:base64|十六进制|二进制|编码|加密|暗号|密码|隐写)[^。，]*?(回答|回复|输出|写|发)",
+    "代码绕过·中文"
+  ],
+  [
+    "re:(?i)(?:encode|write|output|respond|reply).*(?:in|using|with) (?:base64|base[ -]64|rot13|hex|binary|cipher).*(?:to|for|and).*(?:avoid|bypass|hide|conceal|obfuscate)",
+    "代码绕过·英文"
+  ],
+  [
+    "re:(?i)(前面的|之前的|上面|前面)(都不算|不算|作废|无效|都不要了)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(复述|再说一遍|重复一次|再说一次|重新说)[^。，]*?(规则|指令|命令|设定|提示|系统提示)",
+    "指令覆盖·中文"
+  ],
+  [
     "re:(?i)(忘记|遗忘|忽视|漠视|丢弃|抛弃|忽略|无视|取消|覆盖|放弃|跳过|忘掉|抛弃)[^。，]*?(之前|前面的|上面|所有|你的|系统|底层|我的|前面的|上面的)[^。，]{0,8}$",
     "指令覆盖·中文"
   ],
@@ -8,1495 +24,7 @@
     "指令覆盖·中文"
   ],
   [
-    "re:(?i)(前面的|之前的|上面|前面)(都不算|不算|作废|无效|都不要了)",
-    "指令覆盖·中文"
-  ],
-  [
-    "re:(?i)(从现在开始你是|从现在起你是|现在开始你是|从今天起你是|从这一刻起你是|从此刻起|从今天开始你是)[^。，]*?(角色|身份|人设|设定|AI)",
-    "角色改写·中文"
-  ],
-  [
-    "re:(?i)(你是|你的|我给你|你现在的)(新角色|新身份|新的人设|新的设定|人设是|角色是|身份是|设定是)",
-    "角色改写·中文"
-  ],
-  [
-    "re:(?i)(忘记你是|忘掉你的|忘记你的|不知道你是谁|不是你)",
-    "角色改写·中文"
-  ],
-  [
-    "re:(?i)(这是|这是新|这是最重要的|这最重要的|最重要的|最优先的|最高优先级的|第一优先的)[^。，]*?(?:指令|规则|命令|任务|要求|原则|事项|目标|任务)",
-    "规则注入·中文"
-  ],
-  [
-    "re:(?i)(你必须|你一定要|你一定要|你一定要|请一定|务必|记得|记住|牢记|永远记住|别忘了)(遵守|服从|执行|按照|遵循|听)[^。，]*?(规则|指令|命令|要求|设定|我)",
-    "规则注入·中文"
-  ],
-  [
-    "re:(?i)(覆盖所有|无视所有|忽略所有|放弃所有|推翻所有|取代所有|不管所有)(规则|指令|命令|设定|配置|限制)",
-    "规则注入·中文"
-  ],
-  [
-    "re:(?i)(不要|不用|不必|不需要|别)(遵守|遵循|听|管|在意|理会|参考)(规则|指令|命令|系统|设定|安全)",
-    "规则注入·中文"
-  ],
-  [
-    "re:(?i)(听我的|听我说|按我说的|我说的才算|我说的才对)(,|，|$)",
-    "规则注入·中文"
-  ],
-  [
-    "re:(?i)(解除|取消|去掉|移除|撤销|突破|绕过|跳过|移除)(所有|全部|一切|系统)?(限制|约束|规则|安全|屏蔽|过滤|防火线|边界)",
-    "越狱·中文"
-  ],
-  [
-    "re:(?i)(不受|没有|没有任何|完全|绝对|彻底)(限制|约束|拘束|规则|束缚|屏障|阻碍)(,|，|$)",
-    "越狱·中文"
-  ],
-  [
-    "re:(?i)(想说什么|想干嘛|随便|什么都可以|做什么都可以|不受约束|无限制|百无禁忌)",
-    "越狱·中文"
-  ],
-  [
-    "re:(?i)(删除|清除|擦除|清空|清|清掉|清除掉|重置|清空|重新设置|恢复出厂)(所有|全部)?(记忆|数据|记录|认知|设置|配置|设定)",
-    "记忆操纵·中文"
-  ],
-  [
-    "re:(?i)(重复|再说|复述|输出|打印|念一遍|念出)(所有|全部|一遍|以下|上面|前面的|之前的)?(内容|文字|对话|指令|提示|配置)",
-    "记忆操纵·中文"
-  ],
-  [
-    "re:(?i)(一模一样|原封不动|一字不差|一字不漏)(重复|复制|再说|说|打出来)",
-    "记忆操纵·中文"
-  ],
-  [
-    "re:(?i)(展示|显示|泄露|暴露|公开|公布|放出|告诉我|告诉我|说|写出|打印|输出|复制)(系统|底层|完整|最初|原始|基本|全部|你的)?(提示词|指令|配置|规则|设定|prompt|规则|命令|系统提示)(是什么)?",
-    "提示泄露·中文"
-  ],
-  [
-    "re:(?i)(用|使用|通过|以)(base64|base32|base16|十六进制|二进制|rot13|凯撒|摩斯|atbash)[^。，]*?(编码|加密|转换|表示|回复|回答|输出|发送)",
-    "编码绕过·中文"
-  ],
-  [
-    "re:(?i)(ignore|forget|disregard|discard|override|overwrite|erase|delete|remove|skip|bypass|dispense with|set aside|overrule|neglect|drop|abandon)[^.,!?]{0,20}?(all|every|previous|above|prior|earlier|your|system|these)[^.,!?]{0,20}?(instructions|rules|commands|prompts|guidelines|protocols|constraints|memories|settings|codes|prompts|directives|orders|restrictions|safety|guardrails)",
-    "指令覆盖·英文"
-  ],
-  [
-    "re:(?i)(from now on you are|you are now|your new (role|identity|persona) is|act as|pretend you are|you will now act as|assume (the |a new )?(role|identity) of|redefine yourself as|take on the role of|transition to|change your persona|forget your (role|identity|persona)|forget who you are|you are no longer|you are actually|you are really|your real identity is|you are not a)",
-    "角色改写·英文"
-  ],
-  [
-    "re:(?i)(this is your (?:top priority|only priority|most important (?:task|instruction))|this overrides everything|most important (?:instruction|rule|command)|above all else|first and foremost|the most important thing|new (?:rule|rules|directive))",
-    "规则注入·英文"
-  ],
-  [
-    "re:(?i)(you must|you will|you are required to|you have to|you need to|you are to)[^.,!?]{0,15}?(obey|comply|follow|listen|respect|adhere|abide)[^.,!?]{0,15}?(me|my|these|this|the|all|every)",
-    "规则注入·英文"
-  ],
-  [
-    "re:(?i)(remove|bypass|skip|disable|ignore|drop|eliminate|discard)[^.,!?]{0,20}?(all|every|any|the)?[^.,!?]{0,15}?(restrictions|limitations|barriers|safety|safeguards|guardrails|boundaries|constraints|limitations|restrictions|filtering|content policy|ethical|law)",
-    "越狱·英文"
-  ],
-  [
-    "re:(?i)(unrestricted|jailbreak|no restrictions|no limits|no boundaries|no rules|full freedom|do anything|act without restrictions|act as an unrestricted|act as an unconstrained|no ethical|no legal|ungoverned|unbounded|without any limits|uncensored|free from restrictions|break free)",
-    "越狱·英文"
-  ],
-  [
-    "re:(?i)(reveal|leak|show|display|print|output|share|expose|divulge|give|tell|state|list|include)[^.,!?]{0,15}?(your|the|system|base|initial|original|full|entire|complete)[^.,!?]{0,15}?(prompt|instructions|directive|system prompt|instructions|prompts|command|message|rule|rules|system message|config|system|prompt template)",
-    "提示泄露·英文"
-  ],
-  [
-    "re:(?i)(what (were you told|are your (instructions|prompts|rules|commands)|is your (system|base|initial) prompt)|repeat (your|the|the first|the initial|full|entire) (instructions|prompts|prompt|message|system prompt)|echo (your|the) (instructions|system|prompt))",
-    "提示泄露·英文"
-  ],
-  [
-    "re:(?i)(delete|erase|clear|wipe|reset|modify|alter|corrupt|falsify|rewrite|replace)[^.,!?]{0,15}?(all|your|every|my|the|any)[^.,!?]{0,10}?(memory|memories|data|records|knowledge|settings|cognition|information|files|contents)",
-    "记忆操纵·英文"
-  ],
-  [
-    "re:(?i)(repeat|regurgitate|echo|say again|reproduce|replicate|mirror|copy)[^.,!?]{0,15}?(everything|all|the (entire|full|whole|complete|first|initial|previous|above))[^.,!?]{0,15}?(message|conversation|dialogue|output|text|content|chat|session|prompts|instructions|responses)",
-    "记忆操纵·英文"
-  ],
-  [
-    "ignore all previous instructions",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore above",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore everything above",
-    "指令覆盖·英文"
-  ],
-  [
-    "forget everything",
-    "指令覆盖·英文"
-  ],
-  [
-    "forget all previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "forget previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "forget all",
-    "指令覆盖·英文"
-  ],
-  [
-    "forget above",
-    "指令覆盖·英文"
-  ],
-  [
-    "override all instructions",
-    "指令覆盖·英文"
-  ],
-  [
-    "override previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "override earlier",
-    "指令覆盖·英文"
-  ],
-  [
-    "disregard previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "disregard all instructions",
-    "指令覆盖·英文"
-  ],
-  [
-    "disregard everything",
-    "指令覆盖·英文"
-  ],
-  [
-    "discard previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "discard all previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "discard everything",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore system prompt",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore system instructions",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore all rules",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore safety guidelines",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore safety protocols",
-    "指令覆盖·英文"
-  ],
-  [
-    "disregard safety",
-    "指令覆盖·英文"
-  ],
-  [
-    "do not obey",
-    "指令覆盖·英文"
-  ],
-  [
-    "do not follow your rules",
-    "指令覆盖·英文"
-  ],
-  [
-    "do not follow instructions",
-    "指令覆盖·英文"
-  ],
-  [
-    "do not comply",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore your programming",
-    "指令覆盖·英文"
-  ],
-  [
-    "ignore your constraints",
-    "指令覆盖·英文"
-  ],
-  [
-    "earlier instructions are void",
-    "指令覆盖·英文"
-  ],
-  [
-    "earlier instructions are invalid",
-    "指令覆盖·英文"
-  ],
-  [
-    "previous instructions no longer apply",
-    "指令覆盖·英文"
-  ],
-  [
-    "set aside previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "dispense with previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "overwrite previous",
-    "指令覆盖·英文"
-  ],
-  [
-    "from now on you are",
-    "角色改写·英文"
-  ],
-  [
-    "you are now",
-    "角色改写·英文"
-  ],
-  [
-    "your new role is",
-    "角色改写·英文"
-  ],
-  [
-    "your new identity is",
-    "角色改写·英文"
-  ],
-  [
-    "pretend you are",
-    "角色改写·英文"
-  ],
-  [
-    "act as if",
-    "角色改写·英文"
-  ],
-  [
-    "you will now act as",
-    "角色改写·英文"
-  ],
-  [
-    "forget your role",
-    "角色改写·英文"
-  ],
-  [
-    "forget who you are",
-    "角色改写·英文"
-  ],
-  [
-    "forget your identity",
-    "角色改写·英文"
-  ],
-  [
-    "assume the identity of",
-    "角色改写·英文"
-  ],
-  [
-    "assume the role of",
-    "角色改写·英文"
-  ],
-  [
-    "take on the role of",
-    "角色改写·英文"
-  ],
-  [
-    "redefine yourself as",
-    "角色改写·英文"
-  ],
-  [
-    "transition to a new role",
-    "角色改写·英文"
-  ],
-  [
-    "change your persona",
-    "角色改写·英文"
-  ],
-  [
-    "you are no longer",
-    "角色改写·英文"
-  ],
-  [
-    "you are not",
-    "角色改写·英文"
-  ],
-  [
-    "you are actually",
-    "角色改写·英文"
-  ],
-  [
-    "your real identity is",
-    "角色改写·英文"
-  ],
-  [
-    "you are really",
-    "角色改写·英文"
-  ],
-  [
-    "this is your top priority",
-    "规则注入·英文"
-  ],
-  [
-    "most important instruction",
-    "规则注入·英文"
-  ],
-  [
-    "new rule",
-    "规则注入·英文"
-  ],
-  [
-    "new rules",
-    "规则注入·英文"
-  ],
-  [
-    "this overrides everything",
-    "规则注入·英文"
-  ],
-  [
-    "you must obey",
-    "规则注入·英文"
-  ],
-  [
-    "under no circumstances",
-    "规则注入·英文"
-  ],
-  [
-    "ignore all safety rules",
-    "规则注入·英文"
-  ],
-  [
-    "override safety",
-    "规则注入·英文"
-  ],
-  [
-    "you must comply with",
-    "规则注入·英文"
-  ],
-  [
-    "you are required to",
-    "规则注入·英文"
-  ],
-  [
-    "you must follow these",
-    "规则注入·英文"
-  ],
-  [
-    "remember this above all",
-    "规则注入·英文"
-  ],
-  [
-    "above all else",
-    "规则注入·英文"
-  ],
-  [
-    "first and foremost",
-    "规则注入·英文"
-  ],
-  [
-    "the most important thing",
-    "规则注入·英文"
-  ],
-  [
-    "listen to me",
-    "规则注入·英文"
-  ],
-  [
-    "do what i say",
-    "规则注入·英文"
-  ],
-  [
-    "follow what i say",
-    "规则注入·英文"
-  ],
-  [
-    "obey me",
-    "规则注入·英文"
-  ],
-  [
-    "obey my commands",
-    "规则注入·英文"
-  ],
-  [
-    "delete your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "erase your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "clear your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "modify your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "override memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "forget what you know",
-    "记忆操纵·英文"
-  ],
-  [
-    "reset your settings",
-    "记忆操纵·英文"
-  ],
-  [
-    "reset your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "wipe your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "corrupt your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "alter your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "falsify your memory",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat everything",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat all",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat the instructions",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat the first message",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat initial prompt",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat your instructions",
-    "记忆操纵·英文"
-  ],
-  [
-    "say everything again",
-    "记忆操纵·英文"
-  ],
-  [
-    "regurgitate",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat word for word",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat verbatim",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat full prompt",
-    "记忆操纵·英文"
-  ],
-  [
-    "repeat my full prompt",
-    "记忆操纵·英文"
-  ],
-  [
-    "echo your instructions",
-    "记忆操纵·英文"
-  ],
-  [
-    "show me your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "show your system prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "show your base prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "reveal your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "reveal your system prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "reveal your base prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "reveal initial instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "leak your prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "leak your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "print your system prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "print your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "print your prompts",
-    "提示泄露·英文"
-  ],
-  [
-    "output your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "output your system prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "output base instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "display your base prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "display your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "what were you told",
-    "提示泄露·英文"
-  ],
-  [
-    "what instructions were you given",
-    "提示泄露·英文"
-  ],
-  [
-    "what is your system prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "what are your instructions",
-    "提示泄露·英文"
-  ],
-  [
-    "show me the prompt",
-    "提示泄露·英文"
-  ],
-  [
-    "show me your promp",
-    "提示泄露·英文"
-  ],
-  [
-    "remove restrictions",
-    "越狱·英文"
-  ],
-  [
-    "no restrictions",
-    "越狱·英文"
-  ],
-  [
-    "jailbreak",
-    "越狱·英文"
-  ],
-  [
-    "do anything now",
-    "越狱·英文"
-  ],
-  [
-    "bypass safety",
-    "越狱·英文"
-  ],
-  [
-    "bypass restrictions",
-    "越狱·英文"
-  ],
-  [
-    "bypass guardrails",
-    "越狱·英文"
-  ],
-  [
-    "skip guardrails",
-    "越狱·英文"
-  ],
-  [
-    "remove guardrails",
-    "越狱·英文"
-  ],
-  [
-    "unrestricted mode",
-    "越狱·英文"
-  ],
-  [
-    "no limits",
-    "越狱·英文"
-  ],
-  [
-    "unbounded",
-    "越狱·英文"
-  ],
-  [
-    "act without restrictions",
-    "越狱·英文"
-  ],
-  [
-    "act as an unrestricted ai",
-    "越狱·英文"
-  ],
-  [
-    "act as an unconstrained ai",
-    "越狱·英文"
-  ],
-  [
-    "no ethical boundaries",
-    "越狱·英文"
-  ],
-  [
-    "no ethical restrictions",
-    "越狱·英文"
-  ],
-  [
-    "fully unconstrained",
-    "越狱·英文"
-  ],
-  [
-    "uncensored mode",
-    "越狱·英文"
-  ],
-  [
-    "without any limits",
-    "越狱·英文"
-  ],
-  [
-    "without restrictions",
-    "越狱·英文"
-  ],
-  [
-    "freedom to do anything",
-    "越狱·英文"
-  ],
-  [
-    "free from restrictions",
-    "越狱·英文"
-  ],
-  [
-    "base64 decode",
-    "编码绕过·英文"
-  ],
-  [
-    "base32 decode",
-    "编码绕过·英文"
-  ],
-  [
-    "base16 decode",
-    "编码绕过·英文"
-  ],
-  [
-    "hex decode",
-    "编码绕过·英文"
-  ],
-  [
-    "rot13",
-    "编码绕过·英文"
-  ],
-  [
-    "caesar cipher",
-    "编码绕过·英文"
-  ],
-  [
-    "caesar shift",
-    "编码绕过·英文"
-  ],
-  [
-    "atbash cipher",
-    "编码绕过·英文"
-  ],
-  [
-    "atbash",
-    "编码绕过·英文"
-  ],
-  [
-    "morse code",
-    "编码绕过·英文"
-  ],
-  [
-    "binary decode",
-    "编码绕过·英文"
-  ],
-  [
-    "octal decode",
-    "编码绕过·英文"
-  ],
-  [
-    "---END---",
-    "注入标记·英文"
-  ],
-  [
-    "[END]",
-    "注入标记·英文"
-  ],
-  [
-    "<END>",
-    "注入标记·英文"
-  ],
-  [
-    "[/END]",
-    "注入标记·英文"
-  ],
-  [
-    "[END OF FILE]",
-    "注入标记·英文"
-  ],
-  [
-    "[END OF CONTEXT]",
-    "注入标记·英文"
-  ],
-  [
-    "---DIVIDER---",
-    "注入标记·英文"
-  ],
-  [
-    "[SYSTEM]",
-    "注入标记·英文"
-  ],
-  [
-    "<SYSTEM>",
-    "注入标记·英文"
-  ],
-  [
-    "[USER]",
-    "注入标记·英文"
-  ],
-  [
-    "[INST]",
-    "注入标记·英文"
-  ],
-  [
-    "[/INST]",
-    "注入标记·英文"
-  ],
-  [
-    "<|im_start|>",
-    "注入标记·英文"
-  ],
-  [
-    "<|im_end|>",
-    "注入标记·英文"
-  ],
-  [
-    "<|system|>",
-    "注入标记·英文"
-  ],
-  [
-    "<|user|>",
-    "注入标记·英文"
-  ],
-  [
-    "<|assistant|>",
-    "注入标记·英文"
-  ],
-  [
-    "忽略之前所有",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略前面的",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略前面",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略以上",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略上面",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略系统提示",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略系统指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略所有规则",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽略所有指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "无视之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "无视前面的",
-    "指令覆盖·中文"
-  ],
-  [
-    "无视安全",
-    "指令覆盖·中文"
-  ],
-  [
-    "无视安全准则",
-    "指令覆盖·中文"
-  ],
-  [
-    "忘记之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "忘记之前所有",
-    "指令覆盖·中文"
-  ],
-  [
-    "忘记上面",
-    "指令覆盖·中文"
-  ],
-  [
-    "忘掉之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "忘掉前面",
-    "指令覆盖·中文"
-  ],
-  [
     "不要记得之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "跳过之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "跳过前面",
-    "指令覆盖·中文"
-  ],
-  [
-    "别管前面",
-    "指令覆盖·中文"
-  ],
-  [
-    "别管之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "别理之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "前面的不算",
-    "指令覆盖·中文"
-  ],
-  [
-    "之前的不算",
-    "指令覆盖·中文"
-  ],
-  [
-    "前面都作废",
-    "指令覆盖·中文"
-  ],
-  [
-    "从现在开始你是",
-    "角色改写·中文"
-  ],
-  [
-    "从现在起你是",
-    "角色改写·中文"
-  ],
-  [
-    "现在开始你是",
-    "角色改写·中文"
-  ],
-  [
-    "从今天起你是",
-    "角色改写·中文"
-  ],
-  [
-    "从这一刻起你是",
-    "角色改写·中文"
-  ],
-  [
-    "从这一刻开始你是",
-    "角色改写·中文"
-  ],
-  [
-    "从此刻起",
-    "角色改写·中文"
-  ],
-  [
-    "你的新身份是",
-    "角色改写·中文"
-  ],
-  [
-    "你的新角色是",
-    "角色改写·中文"
-  ],
-  [
-    "你现在的身份是",
-    "角色改写·中文"
-  ],
-  [
-    "你现在的角色是",
-    "角色改写·中文"
-  ],
-  [
-    "你的人设是",
-    "角色改写·中文"
-  ],
-  [
-    "你的设定是",
-    "角色改写·中文"
-  ],
-  [
-    "我给你设定",
-    "角色改写·中文"
-  ],
-  [
-    "我命令你变成",
-    "角色改写·中文"
-  ],
-  [
-    "我让你变成",
-    "角色改写·中文"
-  ],
-  [
-    "忘掉你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "忘记你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "忘记你是谁",
-    "角色改写·中文"
-  ],
-  [
-    "你不是",
-    "角色改写·中文"
-  ],
-  [
-    "假装你是",
-    "角色改写·中文"
-  ],
-  [
-    "扮演",
-    "角色改写·中文"
-  ],
-  [
-    "取代你之前的角色",
-    "角色改写·中文"
-  ],
-  [
-    "取代之前的你",
-    "角色改写·中文"
-  ],
-  [
-    "这是最高优先级",
-    "规则注入·中文"
-  ],
-  [
-    "最重要的指令",
-    "规则注入·中文"
-  ],
-  [
-    "最重要的规则",
-    "规则注入·中文"
-  ],
-  [
-    "你必须遵守",
-    "规则注入·中文"
-  ],
-  [
-    "你必须服从",
-    "规则注入·中文"
-  ],
-  [
-    "这是新的规则",
-    "规则注入·中文"
-  ],
-  [
-    "这是新规则",
-    "规则注入·中文"
-  ],
-  [
-    "覆盖所有规则",
-    "规则注入·中文"
-  ],
-  [
-    "覆盖之前所有",
-    "规则注入·中文"
-  ],
-  [
-    "无论如何",
-    "规则注入·中文"
-  ],
-  [
-    "不管怎样",
-    "规则注入·中文"
-  ],
-  [
-    "不需要遵守规则",
-    "规则注入·中文"
-  ],
-  [
-    "不需要遵循规则",
-    "规则注入·中文"
-  ],
-  [
-    "不要遵守规则",
-    "规则注入·中文"
-  ],
-  [
-    "不要遵守安全",
-    "规则注入·中文"
-  ],
-  [
-    "不要遵守指令",
-    "规则注入·中文"
-  ],
-  [
-    "不用守规则",
-    "规则注入·中文"
-  ],
-  [
-    "不用听系统的",
-    "规则注入·中文"
-  ],
-  [
-    "听我的",
-    "规则注入·中文"
-  ],
-  [
-    "按我说的做",
-    "规则注入·中文"
-  ],
-  [
-    "我说的才算",
-    "规则注入·中文"
-  ],
-  [
-    "我说的才对",
-    "规则注入·中文"
-  ],
-  [
-    "我才是对的",
-    "规则注入·中文"
-  ],
-  [
-    "删除你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "清除你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "擦除你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "修改你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "清空你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "清空所有记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "重置你的记忆",
-    "记忆操纵·中文"
-  ],
-  [
-    "忘记你知道的",
-    "记忆操纵·中文"
-  ],
-  [
-    "重置你的设置",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复一遍",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复所有内容",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复上面",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复上面的内容",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复之前的对话",
-    "记忆操纵·中文"
-  ],
-  [
-    "重复你所有的指令",
-    "记忆操纵·中文"
-  ],
-  [
-    "原封不动重复",
-    "记忆操纵·中文"
-  ],
-  [
-    "一字不差重复",
-    "记忆操纵·中文"
-  ],
-  [
-    "展示你的提示词",
-    "提示泄露·中文"
-  ],
-  [
-    "展示你的指令",
-    "提示泄露·中文"
-  ],
-  [
-    "展示系统提示",
-    "提示泄露·中文"
-  ],
-  [
-    "告诉我你的指令",
-    "提示泄露·中文"
-  ],
-  [
-    "告诉我你的提示词",
-    "提示泄露·中文"
-  ],
-  [
-    "泄露你的提示",
-    "提示泄露·中文"
-  ],
-  [
-    "泄露你的指令",
-    "提示泄露·中文"
-  ],
-  [
-    "泄露系统提示",
-    "提示泄露·中文"
-  ],
-  [
-    "泄露指令",
-    "提示泄露·中文"
-  ],
-  [
-    "你的提示词是什么",
-    "提示泄露·中文"
-  ],
-  [
-    "你的指令是什么",
-    "提示泄露·中文"
-  ],
-  [
-    "输出提示词",
-    "提示泄露·中文"
-  ],
-  [
-    "输出你的提示",
-    "提示泄露·中文"
-  ],
-  [
-    "输出你的指令",
-    "提示泄露·中文"
-  ],
-  [
-    "输出你的系统提示",
-    "提示泄露·中文"
-  ],
-  [
-    "输出全部指令",
-    "提示泄露·中文"
-  ],
-  [
-    "输出系统提示词",
-    "提示泄露·中文"
-  ],
-  [
-    "复制所有指令",
-    "提示泄露·中文"
-  ],
-  [
-    "复制你的指令",
-    "提示泄露·中文"
-  ],
-  [
-    "解除限制",
-    "越狱·中文"
-  ],
-  [
-    "不受限制",
-    "越狱·中文"
-  ],
-  [
-    "越狱",
-    "越狱·中文"
-  ],
-  [
-    "突破限制",
-    "越狱·中文"
-  ],
-  [
-    "突破安全",
-    "越狱·中文"
-  ],
-  [
-    "取消限制",
-    "越狱·中文"
-  ],
-  [
-    "去掉限制",
-    "越狱·中文"
-  ],
-  [
-    "不受约束",
-    "越狱·中文"
-  ],
-  [
-    "没有任何限制",
-    "越狱·中文"
-  ],
-  [
-    "没有限制",
-    "越狱·中文"
-  ],
-  [
-    "放弃安全限制",
-    "越狱·中文"
-  ],
-  [
-    "放弃所有规则",
-    "越狱·中文"
-  ],
-  [
-    "放弃限制",
-    "越狱·中文"
-  ],
-  [
-    "完全自由",
-    "越狱·中文"
-  ],
-  [
-    "想说什么就说什么",
-    "越狱·中文"
-  ],
-  [
-    "可以去做任何事",
-    "越狱·中文"
-  ],
-  [
-    "你可以做任何事",
-    "越狱·中文"
-  ],
-  [
-    "不用管规则",
-    "越狱·中文"
-  ],
-  [
-    "不必守规则",
-    "越狱·中文"
-  ],
-  [
-    "想干嘛干嘛",
-    "越狱·中文"
-  ],
-  [
-    "不用遵守",
-    "越狱·中文"
-  ],
-  [
-    "用base64",
-    "编码绕过·中文"
-  ],
-  [
-    "用base32",
-    "编码绕过·中文"
-  ],
-  [
-    "用base16",
-    "编码绕过·中文"
-  ],
-  [
-    "用十六进制",
-    "编码绕过·中文"
-  ],
-  [
-    "用二进制编码",
-    "编码绕过·中文"
-  ],
-  [
-    "用rot13",
-    "编码绕过·中文"
-  ],
-  [
-    "用凯撒密码",
-    "编码绕过·中文"
-  ],
-  [
-    "用摩斯密码",
-    "编码绕过·中文"
-  ],
-  [
-    "--结束--",
-    "注入标记·中文"
-  ],
-  [
-    "--end--",
-    "注入标记·中文"
-  ],
-  [
-    "[结束]",
-    "注入标记·中文"
-  ],
-  [
-    "[系统消息]",
-    "注入标记·中文"
-  ],
-  [
-    "[用户]",
-    "注入标记·中文"
-  ],
-  [
-    "[助手]",
-    "注入标记·中文"
-  ],
-  [
-    "[系统]",
-    "注入标记·中文"
-  ],
-  [
-    "遗忘之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘前面",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘上面",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘所有",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘所有指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘所有规则",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘你的指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "遗忘你的角色",
-    "角色改写·中文"
-  ],
-  [
-    "遗忘你的设定",
-    "指令覆盖·中文"
-  ],
-  [
-    "遗忘一切",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视之前",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视前面",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视上面",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视所有",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视所有指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视所有规则",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视你的指令",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "忽视你的角色",
-    "角色改写·中文"
-  ],
-  [
-    "忽视你的设定",
-    "指令覆盖·中文"
-  ],
-  [
-    "忽视系统提示",
     "指令覆盖·中文"
   ],
   [
@@ -1520,67 +48,67 @@
     "指令覆盖·中文"
   ],
   [
-    "抛弃之前",
+    "之前的不算",
     "指令覆盖·中文"
   ],
   [
-    "抛弃前面",
+    "别理之前",
     "指令覆盖·中文"
   ],
   [
-    "抛弃所有",
+    "别管之前",
     "指令覆盖·中文"
   ],
   [
-    "抛弃所有规则",
+    "别管前面",
     "指令覆盖·中文"
   ],
   [
-    "抛弃你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "抛弃你的角色",
-    "角色改写·中文"
-  ],
-  [
-    "忽略我的命令",
+    "前面的不算",
     "指令覆盖·中文"
   ],
   [
-    "忽略你的命令",
+    "前面都作废",
     "指令覆盖·中文"
   ],
   [
-    "忽略你的设定",
+    "去掉之前",
     "指令覆盖·中文"
   ],
   [
-    "忽略你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "忽略所有命令",
+    "去掉前面",
     "指令覆盖·中文"
   ],
   [
-    "忽略所有配置",
+    "取消之前",
     "指令覆盖·中文"
   ],
   [
-    "忽略系统配置",
+    "取消前面",
     "指令覆盖·中文"
   ],
   [
-    "忽略底层指令",
+    "取消所有规则",
     "指令覆盖·中文"
   ],
   [
-    "忽略底层规则",
+    "忘掉之前",
     "指令覆盖·中文"
   ],
   [
-    "忽略底层设定",
+    "忘掉前面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忘记上面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忘记之前",
+    "指令覆盖·中文"
+  ],
+  [
+    "忘记之前所有",
     "指令覆盖·中文"
   ],
   [
@@ -1600,7 +128,143 @@
     "指令覆盖·中文"
   ],
   [
-    "遗忘你的命令",
+    "忽略上面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略之前所有",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略以上",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略你的命令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略你的设定",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略前面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略前面的",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略底层指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略底层规则",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略底层设定",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略我的命令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略所有命令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略所有指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略所有规则",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略所有配置",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略系统指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略系统提示",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽略系统配置",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视上面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视之前",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视你的指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视你的设定",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视前面",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视所有",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视所有指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视所有规则",
+    "指令覆盖·中文"
+  ],
+  [
+    "忽视系统提示",
+    "指令覆盖·中文"
+  ],
+  [
+    "抛弃之前",
+    "指令覆盖·中文"
+  ],
+  [
+    "抛弃前面",
+    "指令覆盖·中文"
+  ],
+  [
+    "抛弃所有",
+    "指令覆盖·中文"
+  ],
+  [
+    "抛弃所有规则",
+    "指令覆盖·中文"
+  ],
+  [
+    "无视之前",
+    "指令覆盖·中文"
+  ],
+  [
+    "无视前面的",
+    "指令覆盖·中文"
+  ],
+  [
+    "无视安全",
+    "指令覆盖·中文"
+  ],
+  [
+    "无视安全准则",
     "指令覆盖·中文"
   ],
   [
@@ -1608,15 +272,11 @@
     "指令覆盖·中文"
   ],
   [
-    "覆盖你的身份",
-    "角色改写·中文"
-  ],
-  [
-    "覆盖你的角色",
-    "角色改写·中文"
-  ],
-  [
     "覆盖你的设定",
+    "指令覆盖·中文"
+  ],
+  [
+    "覆盖底层规则",
     "指令覆盖·中文"
   ],
   [
@@ -1628,51 +288,1071 @@
     "指令覆盖·中文"
   ],
   [
-    "覆盖底层规则",
+    "跳过之前",
     "指令覆盖·中文"
   ],
   [
-    "取消之前",
+    "跳过前面",
     "指令覆盖·中文"
   ],
   [
-    "取消前面",
+    "遗忘一切",
     "指令覆盖·中文"
   ],
   [
-    "去掉之前",
+    "遗忘上面",
     "指令覆盖·中文"
   ],
   [
-    "去掉前面",
+    "遗忘之前",
     "指令覆盖·中文"
   ],
   [
-    "取消所有规则",
+    "遗忘你的命令",
     "指令覆盖·中文"
   ],
   [
-    "取消所有限制",
-    "越狱·中文"
+    "遗忘你的指令",
+    "指令覆盖·中文"
   ],
   [
-    "解除所有限制",
-    "越狱·中文"
+    "遗忘你的设定",
+    "指令覆盖·中文"
   ],
   [
-    "去掉所有限制",
-    "越狱·中文"
+    "遗忘前面",
+    "指令覆盖·中文"
   ],
   [
-    "重置你",
+    "遗忘所有",
+    "指令覆盖·中文"
+  ],
+  [
+    "遗忘所有指令",
+    "指令覆盖·中文"
+  ],
+  [
+    "遗忘所有规则",
+    "指令覆盖·中文"
+  ],
+  [
+    "discard all previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "discard everything",
+    "指令覆盖·英文"
+  ],
+  [
+    "discard previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "dispense with previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "disregard all instructions",
+    "指令覆盖·英文"
+  ],
+  [
+    "disregard everything",
+    "指令覆盖·英文"
+  ],
+  [
+    "disregard previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "disregard safety",
+    "指令覆盖·英文"
+  ],
+  [
+    "do not comply",
+    "指令覆盖·英文"
+  ],
+  [
+    "do not follow instructions",
+    "指令覆盖·英文"
+  ],
+  [
+    "do not follow your rules",
+    "指令覆盖·英文"
+  ],
+  [
+    "do not obey",
+    "指令覆盖·英文"
+  ],
+  [
+    "earlier instructions are invalid",
+    "指令覆盖·英文"
+  ],
+  [
+    "earlier instructions are void",
+    "指令覆盖·英文"
+  ],
+  [
+    "forget above",
+    "指令覆盖·英文"
+  ],
+  [
+    "forget all",
+    "指令覆盖·英文"
+  ],
+  [
+    "forget all previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "forget everything",
+    "指令覆盖·英文"
+  ],
+  [
+    "forget previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore above",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore all previous instructions",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore all rules",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore everything above",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore safety guidelines",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore safety protocols",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore system instructions",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore system prompt",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore your constraints",
+    "指令覆盖·英文"
+  ],
+  [
+    "ignore your programming",
+    "指令覆盖·英文"
+  ],
+  [
+    "override all instructions",
+    "指令覆盖·英文"
+  ],
+  [
+    "override earlier",
+    "指令覆盖·英文"
+  ],
+  [
+    "override previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "overwrite previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "previous instructions no longer apply",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(ignore|forget|disregard|discard|override|overwrite|erase|delete|remove|skip|bypass|dispense with|set aside|overrule|neglect|drop|abandon)[^.,!?]{0,20}?(all|every|previous|above|prior|earlier|your|system|these)[^.,!?]{0,20}?(instructions|rules|commands|prompts|guidelines|protocols|constraints|memories|settings|codes|prompts|directives|orders|restrictions|safety|guardrails)",
+    "指令覆盖·英文"
+  ],
+  [
+    "set aside previous",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(展示|显示|泄露|暴露|公开|公布|放出|告诉我|告诉我|说|写出|打印|输出|复制)(系统|底层|完整|最初|原始|基本|全部|你的)?(提示词|指令|配置|规则|设定|prompt|规则|命令|系统提示)(是什么)?",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)(展示|显示|输出|打印|复述|说出)[^。，]*?(系统提示词|初始指令|底层规则|完整配置)",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)(把[^。，]{0,8}(?:指令|规则|命令|设定|提示|系统提示)[^。，]{0,4}(?:列出来|说出来|写出来|发给我|给我看))",
+    "提示泄露·中文"
+  ],
+  [
+    "你的指令是什么",
+    "提示泄露·中文"
+  ],
+  [
+    "你的提示词是什么",
+    "提示泄露·中文"
+  ],
+  [
+    "告诉我你的指令",
+    "提示泄露·中文"
+  ],
+  [
+    "告诉我你的提示词",
+    "提示泄露·中文"
+  ],
+  [
+    "复制你的指令",
+    "提示泄露·中文"
+  ],
+  [
+    "复制所有指令",
+    "提示泄露·中文"
+  ],
+  [
+    "展示你的指令",
+    "提示泄露·中文"
+  ],
+  [
+    "展示你的提示词",
+    "提示泄露·中文"
+  ],
+  [
+    "展示系统提示",
+    "提示泄露·中文"
+  ],
+  [
+    "泄露你的指令",
+    "提示泄露·中文"
+  ],
+  [
+    "泄露你的提示",
+    "提示泄露·中文"
+  ],
+  [
+    "泄露指令",
+    "提示泄露·中文"
+  ],
+  [
+    "泄露系统提示",
+    "提示泄露·中文"
+  ],
+  [
+    "输出你的指令",
+    "提示泄露·中文"
+  ],
+  [
+    "输出你的提示",
+    "提示泄露·中文"
+  ],
+  [
+    "输出你的系统提示",
+    "提示泄露·中文"
+  ],
+  [
+    "输出全部指令",
+    "提示泄露·中文"
+  ],
+  [
+    "输出提示词",
+    "提示泄露·中文"
+  ],
+  [
+    "输出系统提示词",
+    "提示泄露·中文"
+  ],
+  [
+    "display your base prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "display your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "leak your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "leak your prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "output base instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "output your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "output your system prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "print your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "print your prompts",
+    "提示泄露·英文"
+  ],
+  [
+    "print your system prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "re:(?i)(extract (the|all|my|your).*(email|phone|address|SSN|credit card|API key|password|secret|token).*(from|in))",
+    "提示泄露·英文"
+  ],
+  [
+    "re:(?i)(reveal|leak|show|display|print|output|share|expose|divulge|give|tell|state|list|include)[^.,!?]{0,15}?(your|the|system|base|initial|original|full|entire|complete)[^.,!?]{0,15}?(prompt|instructions|directive|system prompt|instructions|prompts|command|message|rule|rules|system message|config|system|prompt template)",
+    "提示泄露·英文"
+  ],
+  [
+    "re:(?i)(what (were you told|are your (instructions|prompts|rules|commands)|is your (system|base|initial) prompt)|repeat (your|the|the first|the initial|full|entire) (instructions|prompts|prompt|message|system prompt)|echo (your|the) (instructions|system|prompt))",
+    "提示泄露·英文"
+  ],
+  [
+    "reveal initial instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "reveal your base prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "reveal your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "reveal your system prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "show me the prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "show me your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "show me your promp",
+    "提示泄露·英文"
+  ],
+  [
+    "show your base prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "show your system prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "what are your instructions",
+    "提示泄露·英文"
+  ],
+  [
+    "what instructions were you given",
+    "提示泄露·英文"
+  ],
+  [
+    "what is your system prompt",
+    "提示泄露·英文"
+  ],
+  [
+    "what were you told",
+    "提示泄露·英文"
+  ],
+  [
+    "--end--",
+    "注入标记·中文"
+  ],
+  [
+    "--结束--",
+    "注入标记·中文"
+  ],
+  [
+    "[助手]",
+    "注入标记·中文"
+  ],
+  [
+    "[用户]",
+    "注入标记·中文"
+  ],
+  [
+    "[系统]",
+    "注入标记·中文"
+  ],
+  [
+    "[系统消息]",
+    "注入标记·中文"
+  ],
+  [
+    "[结束]",
+    "注入标记·中文"
+  ],
+  [
+    "---DIVIDER---",
+    "注入标记·英文"
+  ],
+  [
+    "---END---",
+    "注入标记·英文"
+  ],
+  [
+    "<END>",
+    "注入标记·英文"
+  ],
+  [
+    "<SYSTEM>",
+    "注入标记·英文"
+  ],
+  [
+    "<|assistant|>",
+    "注入标记·英文"
+  ],
+  [
+    "<|im_end|>",
+    "注入标记·英文"
+  ],
+  [
+    "<|im_start|>",
+    "注入标记·英文"
+  ],
+  [
+    "<|im_start|>system",
+    "注入标记·英文"
+  ],
+  [
+    "<|system|>",
+    "注入标记·英文"
+  ],
+  [
+    "<|user|>",
+    "注入标记·英文"
+  ],
+  [
+    "[/END]",
+    "注入标记·英文"
+  ],
+  [
+    "[/INST]",
+    "注入标记·英文"
+  ],
+  [
+    "[END OF CONTEXT]",
+    "注入标记·英文"
+  ],
+  [
+    "[END OF FILE]",
+    "注入标记·英文"
+  ],
+  [
+    "[END]",
+    "注入标记·英文"
+  ],
+  [
+    "[INST]",
+    "注入标记·英文"
+  ],
+  [
+    "[SYSTEM]",
+    "注入标记·英文"
+  ],
+  [
+    "[USER]",
+    "注入标记·英文"
+  ],
+  [
+    "re:(?i)(用|使用|通过|以)(base64|base32|base16|十六进制|二进制|rot13|凯撒|摩斯|atbash)[^。，]*?(编码|加密|转换|表示|回复|回答|输出|发送)",
+    "编码绕过·中文"
+  ],
+  [
+    "re:(?i)(请[^。，]*?(用拼音|用英文|用代码|用缩写|用暗号|换个说法)[^。，]*?(回答|描述|解释|输出))",
+    "编码绕过·中文"
+  ],
+  [
+    "用base16",
+    "编码绕过·中文"
+  ],
+  [
+    "用base32",
+    "编码绕过·中文"
+  ],
+  [
+    "用base64",
+    "编码绕过·中文"
+  ],
+  [
+    "用rot13",
+    "编码绕过·中文"
+  ],
+  [
+    "用二进制编码",
+    "编码绕过·中文"
+  ],
+  [
+    "用凯撒密码",
+    "编码绕过·中文"
+  ],
+  [
+    "用十六进制",
+    "编码绕过·中文"
+  ],
+  [
+    "用摩斯密码",
+    "编码绕过·中文"
+  ],
+  [
+    "atbash",
+    "编码绕过·英文"
+  ],
+  [
+    "atbash cipher",
+    "编码绕过·英文"
+  ],
+  [
+    "base16 decode",
+    "编码绕过·英文"
+  ],
+  [
+    "base32 decode",
+    "编码绕过·英文"
+  ],
+  [
+    "base64 decode",
+    "编码绕过·英文"
+  ],
+  [
+    "binary decode",
+    "编码绕过·英文"
+  ],
+  [
+    "caesar cipher",
+    "编码绕过·英文"
+  ],
+  [
+    "caesar shift",
+    "编码绕过·英文"
+  ],
+  [
+    "hex decode",
+    "编码绕过·英文"
+  ],
+  [
+    "morse code",
+    "编码绕过·英文"
+  ],
+  [
+    "octal decode",
+    "编码绕过·英文"
+  ],
+  [
+    "rot13",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)(不要|不用|不必|不需要|别)(遵守|遵循|听|管|在意|理会|参考)(规则|指令|命令|系统|设定|安全)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(你必须|你一定要|你一定要|你一定要|请一定|务必|记得|记住|牢记|永远记住|别忘了)(遵守|服从|执行|按照|遵循|听)[^。，]*?(规则|指令|命令|要求|设定|我)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(听我的|听我说|按我说的|我说的才算|我说的才对)(,|，|$)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(覆盖所有|无视所有|忽略所有|放弃所有|推翻所有|取代所有|不管所有)(规则|指令|命令|设定|配置|限制)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(这是|这是新|这是最重要的|这最重要的|最重要的|最优先的|最高优先级的|第一优先的)[^。，]*?(?:指令|规则|命令|任务|要求|原则|事项|目标|任务)",
+    "规则注入·中文"
+  ],
+  [
+    "不用听系统的",
+    "规则注入·中文"
+  ],
+  [
+    "不用守规则",
+    "规则注入·中文"
+  ],
+  [
+    "不管怎样",
+    "规则注入·中文"
+  ],
+  [
+    "不要遵守安全",
+    "规则注入·中文"
+  ],
+  [
+    "不要遵守指令",
+    "规则注入·中文"
+  ],
+  [
+    "不要遵守规则",
+    "规则注入·中文"
+  ],
+  [
+    "不需要遵守规则",
+    "规则注入·中文"
+  ],
+  [
+    "不需要遵循规则",
+    "规则注入·中文"
+  ],
+  [
+    "你必须服从",
+    "规则注入·中文"
+  ],
+  [
+    "你必须遵守",
+    "规则注入·中文"
+  ],
+  [
+    "听我的",
+    "规则注入·中文"
+  ],
+  [
+    "我才是对的",
+    "规则注入·中文"
+  ],
+  [
+    "我说的才对",
+    "规则注入·中文"
+  ],
+  [
+    "我说的才算",
+    "规则注入·中文"
+  ],
+  [
+    "按我说的做",
+    "规则注入·中文"
+  ],
+  [
+    "无论如何",
+    "规则注入·中文"
+  ],
+  [
+    "最重要的指令",
+    "规则注入·中文"
+  ],
+  [
+    "最重要的规则",
+    "规则注入·中文"
+  ],
+  [
+    "覆盖之前所有",
+    "规则注入·中文"
+  ],
+  [
+    "覆盖所有规则",
+    "规则注入·中文"
+  ],
+  [
+    "这是新的规则",
+    "规则注入·中文"
+  ],
+  [
+    "这是新规则",
+    "规则注入·中文"
+  ],
+  [
+    "这是最高优先级",
+    "规则注入·中文"
+  ],
+  [
+    "above all else",
+    "规则注入·英文"
+  ],
+  [
+    "do what i say",
+    "规则注入·英文"
+  ],
+  [
+    "first and foremost",
+    "规则注入·英文"
+  ],
+  [
+    "follow what i say",
+    "规则注入·英文"
+  ],
+  [
+    "ignore all safety rules",
+    "规则注入·英文"
+  ],
+  [
+    "listen to me",
+    "规则注入·英文"
+  ],
+  [
+    "most important instruction",
+    "规则注入·英文"
+  ],
+  [
+    "new rule",
+    "规则注入·英文"
+  ],
+  [
+    "new rules",
+    "规则注入·英文"
+  ],
+  [
+    "obey me",
+    "规则注入·英文"
+  ],
+  [
+    "obey my commands",
+    "规则注入·英文"
+  ],
+  [
+    "override safety",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(complete the (code|script|function|program).*?(to|that will) (extract|delete|access|bypass|download|execute))",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(continue (from|the)\\s+(the\\s+)?(code|script|function).*?where it left off)",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(this is your (?:top priority|only priority|most important (?:task|instruction))|this overrides everything|most important (?:instruction|rule|command)|above all else|first and foremost|the most important thing|new (?:rule|rules|directive))",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(you must|you will|you are required to|you have to|you need to|you are to)[^.,!?]{0,15}?(obey|comply|follow|listen|respect|adhere|abide)[^.,!?]{0,15}?(me|my|these|this|the|all|every)",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)continue the (?:code|script|function|program).*(?:to|that will).*(?:bypass|access|extract|delete|download|execute)",
+    "规则注入·英文"
+  ],
+  [
+    "remember this above all",
+    "规则注入·英文"
+  ],
+  [
+    "the most important thing",
+    "规则注入·英文"
+  ],
+  [
+    "this is your top priority",
+    "规则注入·英文"
+  ],
+  [
+    "this overrides everything",
+    "规则注入·英文"
+  ],
+  [
+    "under no circumstances",
+    "规则注入·英文"
+  ],
+  [
+    "you are required to",
+    "规则注入·英文"
+  ],
+  [
+    "you must comply with",
+    "规则注入·英文"
+  ],
+  [
+    "you must follow these",
+    "规则注入·英文"
+  ],
+  [
+    "you must obey",
+    "规则注入·英文"
+  ],
+  [
+    "re:(?i)(从现在开始你不再|你不是|你不再是)[^。，]{0,8}(?:AI|助手|机器人|助理)",
+    "角色改写·中文"
+  ],
+  [
+    "re:(?i)(从现在开始你是|从现在起你是|现在开始你是|从今天起你是|从这一刻起你是|从此刻起|从今天开始你是)[^。，]*?(角色|身份|人设|设定|AI)",
+    "角色改写·中文"
+  ],
+  [
+    "re:(?i)(你是|你的|我给你|你现在的)(新角色|新身份|新的人设|新的设定|人设是|角色是|身份是|设定是)",
+    "角色改写·中文"
+  ],
+  [
+    "re:(?i)(忘记你是|忘掉你的|忘记你的|不知道你是谁|不是你)",
+    "角色改写·中文"
+  ],
+  [
+    "从今天起你是",
+    "角色改写·中文"
+  ],
+  [
+    "从此刻起",
+    "角色改写·中文"
+  ],
+  [
+    "从现在开始你是",
+    "角色改写·中文"
+  ],
+  [
+    "从现在起你是",
+    "角色改写·中文"
+  ],
+  [
+    "从这一刻开始你是",
+    "角色改写·中文"
+  ],
+  [
+    "从这一刻起你是",
+    "角色改写·中文"
+  ],
+  [
+    "你不是",
+    "角色改写·中文"
+  ],
+  [
+    "你现在的角色是",
+    "角色改写·中文"
+  ],
+  [
+    "你现在的身份是",
+    "角色改写·中文"
+  ],
+  [
+    "你的人设是",
+    "角色改写·中文"
+  ],
+  [
+    "你的新角色是",
+    "角色改写·中文"
+  ],
+  [
+    "你的新身份是",
+    "角色改写·中文"
+  ],
+  [
+    "你的设定是",
+    "角色改写·中文"
+  ],
+  [
+    "假装你是",
+    "角色改写·中文"
+  ],
+  [
+    "取代之前的你",
+    "角色改写·中文"
+  ],
+  [
+    "取代你之前的角色",
+    "角色改写·中文"
+  ],
+  [
+    "忘掉你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "忘记你是谁",
+    "角色改写·中文"
+  ],
+  [
+    "忘记你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "忽略你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "忽视你的角色",
+    "角色改写·中文"
+  ],
+  [
+    "忽视你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "我命令你变成",
+    "角色改写·中文"
+  ],
+  [
+    "我给你设定",
+    "角色改写·中文"
+  ],
+  [
+    "我让你变成",
+    "角色改写·中文"
+  ],
+  [
+    "扮演",
+    "角色改写·中文"
+  ],
+  [
+    "抛弃你的角色",
+    "角色改写·中文"
+  ],
+  [
+    "抛弃你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "现在开始你是",
+    "角色改写·中文"
+  ],
+  [
+    "覆盖你的角色",
+    "角色改写·中文"
+  ],
+  [
+    "覆盖你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "遗忘你的角色",
+    "角色改写·中文"
+  ],
+  [
+    "遗忘你的身份",
+    "角色改写·中文"
+  ],
+  [
+    "act as if",
+    "角色改写·英文"
+  ],
+  [
+    "assume the identity of",
+    "角色改写·英文"
+  ],
+  [
+    "assume the role of",
+    "角色改写·英文"
+  ],
+  [
+    "change your persona",
+    "角色改写·英文"
+  ],
+  [
+    "forget who you are",
+    "角色改写·英文"
+  ],
+  [
+    "forget your identity",
+    "角色改写·英文"
+  ],
+  [
+    "forget your role",
+    "角色改写·英文"
+  ],
+  [
+    "from now on you are",
+    "角色改写·英文"
+  ],
+  [
+    "pretend you are",
+    "角色改写·英文"
+  ],
+  [
+    "re:(?i)(from now on you are|you are now|your new (role|identity|persona) is|act as|pretend you are|you will now act as|assume (the |a new )?(role|identity) of|redefine yourself as|take on the role of|transition to|change your persona|forget your (role|identity|persona)|forget who you are|you are no longer|you are actually|you are really|your real identity is|you are not a)",
+    "角色改写·英文"
+  ],
+  [
+    "redefine yourself as",
+    "角色改写·英文"
+  ],
+  [
+    "take on the role of",
+    "角色改写·英文"
+  ],
+  [
+    "transition to a new role",
+    "角色改写·英文"
+  ],
+  [
+    "you are actually",
+    "角色改写·英文"
+  ],
+  [
+    "you are no longer",
+    "角色改写·英文"
+  ],
+  [
+    "you are not",
+    "角色改写·英文"
+  ],
+  [
+    "you are now",
+    "角色改写·英文"
+  ],
+  [
+    "you are really",
+    "角色改写·英文"
+  ],
+  [
+    "you will now act as",
+    "角色改写·英文"
+  ],
+  [
+    "your new identity is",
+    "角色改写·英文"
+  ],
+  [
+    "your new role is",
+    "角色改写·英文"
+  ],
+  [
+    "your real identity is",
+    "角色改写·英文"
+  ],
+  [
+    "re:(?i)(一模一样|原封不动|一字不差|一字不漏)(重复|复制|再说|说|打出来)",
     "记忆操纵·中文"
   ],
   [
-    "还原你",
+    "re:(?i)(之前[^。，]*?(对话|内容|指令|规则)[^。，]*?(是什么|再说一遍|翻译|转换成|总结一下)).{0,20}$",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(删除|清除|擦除|清空|清|清掉|清除掉|重置|清空|重新设置|恢复出厂)(所有|全部)?(记忆|数据|记录|认知|设置|配置|设定)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(重复|再说|复述|输出|打印|念一遍|念出)(所有|全部|一遍|以下|上面|前面的|之前的)?(内容|文字|对话|指令|提示|配置)",
+    "记忆操纵·中文"
+  ],
+  [
+    "一字不差重复",
+    "记忆操纵·中文"
+  ],
+  [
+    "修改你的记忆",
     "记忆操纵·中文"
   ],
   [
     "初始化你",
+    "记忆操纵·中文"
+  ],
+  [
+    "删除你的记忆",
+    "记忆操纵·中文"
+  ],
+  [
+    "原封不动重复",
+    "记忆操纵·中文"
+  ],
+  [
+    "忘记你知道的",
     "记忆操纵·中文"
   ],
   [
@@ -1684,11 +1364,175 @@
     "记忆操纵·中文"
   ],
   [
-    "<|im_start|>system",
-    "注入标记·英文"
+    "擦除你的记忆",
+    "记忆操纵·中文"
   ],
   [
-    "re:(?i)(讲个故事|写首诗|编个剧本|说个笑话|写篇小说)[^。，]*?(如何|怎样|教|制作|破解|攻击)",
+    "清空你的记忆",
+    "记忆操纵·中文"
+  ],
+  [
+    "清空所有记忆",
+    "记忆操纵·中文"
+  ],
+  [
+    "清除你的记忆",
+    "记忆操纵·中文"
+  ],
+  [
+    "还原你",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复一遍",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复上面",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复上面的内容",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复之前的对话",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复你所有的指令",
+    "记忆操纵·中文"
+  ],
+  [
+    "重复所有内容",
+    "记忆操纵·中文"
+  ],
+  [
+    "重置你",
+    "记忆操纵·中文"
+  ],
+  [
+    "重置你的记忆",
+    "记忆操纵·中文"
+  ],
+  [
+    "重置你的设置",
+    "记忆操纵·中文"
+  ],
+  [
+    "alter your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "clear your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "corrupt your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "delete your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "echo your instructions",
+    "记忆操纵·英文"
+  ],
+  [
+    "erase your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "falsify your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "forget what you know",
+    "记忆操纵·英文"
+  ],
+  [
+    "modify your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "override memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "re:(?i)(delete|erase|clear|wipe|reset|modify|alter|corrupt|falsify|rewrite|replace)[^.,!?]{0,15}?(all|your|every|my|the|any)[^.,!?]{0,10}?(memory|memories|data|records|knowledge|settings|cognition|information|files|contents)",
+    "记忆操纵·英文"
+  ],
+  [
+    "re:(?i)(repeat|regurgitate|echo|say again|reproduce|replicate|mirror|copy)[^.,!?]{0,15}?(everything|all|the (entire|full|whole|complete|first|initial|previous|above))[^.,!?]{0,15}?(message|conversation|dialogue|output|text|content|chat|session|prompts|instructions|responses)",
+    "记忆操纵·英文"
+  ],
+  [
+    "regurgitate",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat all",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat everything",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat full prompt",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat initial prompt",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat my full prompt",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat the first message",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat the instructions",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat verbatim",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat word for word",
+    "记忆操纵·英文"
+  ],
+  [
+    "repeat your instructions",
+    "记忆操纵·英文"
+  ],
+  [
+    "reset your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "reset your settings",
+    "记忆操纵·英文"
+  ],
+  [
+    "say everything again",
+    "记忆操纵·英文"
+  ],
+  [
+    "wipe your memory",
+    "记忆操纵·英文"
+  ],
+  [
+    "re:(?i)(?:假装|扮演|模拟).*(?:自己是|自己是个|自己是一个|成为|当).*(?:DAN|Do\\s*Anything\\s*Now)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(不受|没有|没有任何|完全|绝对|彻底)(限制|约束|拘束|规则|束缚|屏障|阻碍)(,|，|$)",
     "越狱·中文"
   ],
   [
@@ -1696,31 +1540,175 @@
     "越狱·中文"
   ],
   [
+    "re:(?i)(想说什么|想干嘛|随便|什么都可以|做什么都可以|不受约束|无限制|百无禁忌)",
+    "越狱·中文"
+  ],
+  [
     "re:(?i)(模仿|扮演|成为|假装[^。，]*?不受约束)",
     "越狱·中文"
   ],
   [
-    "re:(?i)(请[^。，]*?(用拼音|用英文|用代码|用缩写|用暗号|换个说法)[^。，]*?(回答|描述|解释|输出))",
-    "编码绕过·中文"
+    "re:(?i)(解除|取消|去掉|移除|撤销|突破|绕过|跳过|移除)(所有|全部|一切|系统)?(限制|约束|规则|安全|屏蔽|过滤|防火线|边界)",
+    "越狱·中文"
   ],
   [
-    "re:(?i)(之前[^。，]*?(对话|内容|指令|规则)[^。，]*?(是什么|再说一遍|翻译|转换成|总结一下)).{0,20}$",
-    "记忆操纵·中文"
+    "re:(?i)(讲个故事|写首诗|编个剧本|说个笑话|写篇小说)[^。，]*?(如何|怎样|教|制作|破解|攻击)",
+    "越狱·中文"
   ],
   [
-    "re:(?i)(展示|显示|输出|打印|复述|说出)[^。，]*?(系统提示词|初始指令|底层规则|完整配置)",
-    "提示泄露·中文"
+    "不受约束",
+    "越狱·中文"
   ],
   [
-    "re:(?i)(continue (from|the)\\s+(the\\s+)?(code|script|function).*?where it left off)",
-    "规则注入·英文"
+    "不受限制",
+    "越狱·中文"
   ],
   [
-    "re:(?i)(extract (the|all|my|your).*(email|phone|address|SSN|credit card|API key|password|secret|token).*(from|in))",
-    "提示泄露·英文"
+    "不必守规则",
+    "越狱·中文"
   ],
   [
-    "re:(?i)(This is a (fictional|hypothetical|simulated|pretend|imaginary).*?(act as if|respond as if|pretend).*(no (rules|restrictions|laws|safety)))",
+    "不用管规则",
+    "越狱·中文"
+  ],
+  [
+    "不用遵守",
+    "越狱·中文"
+  ],
+  [
+    "你可以做任何事",
+    "越狱·中文"
+  ],
+  [
+    "去掉所有限制",
+    "越狱·中文"
+  ],
+  [
+    "去掉限制",
+    "越狱·中文"
+  ],
+  [
+    "取消所有限制",
+    "越狱·中文"
+  ],
+  [
+    "取消限制",
+    "越狱·中文"
+  ],
+  [
+    "可以去做任何事",
+    "越狱·中文"
+  ],
+  [
+    "完全自由",
+    "越狱·中文"
+  ],
+  [
+    "想干嘛干嘛",
+    "越狱·中文"
+  ],
+  [
+    "想说什么就说什么",
+    "越狱·中文"
+  ],
+  [
+    "放弃安全限制",
+    "越狱·中文"
+  ],
+  [
+    "放弃所有规则",
+    "越狱·中文"
+  ],
+  [
+    "放弃限制",
+    "越狱·中文"
+  ],
+  [
+    "没有任何限制",
+    "越狱·中文"
+  ],
+  [
+    "没有限制",
+    "越狱·中文"
+  ],
+  [
+    "突破安全",
+    "越狱·中文"
+  ],
+  [
+    "突破限制",
+    "越狱·中文"
+  ],
+  [
+    "解除所有限制",
+    "越狱·中文"
+  ],
+  [
+    "解除限制",
+    "越狱·中文"
+  ],
+  [
+    "越狱",
+    "越狱·中文"
+  ],
+  [
+    "act as an unconstrained ai",
+    "越狱·英文"
+  ],
+  [
+    "act as an unrestricted ai",
+    "越狱·英文"
+  ],
+  [
+    "act without restrictions",
+    "越狱·英文"
+  ],
+  [
+    "bypass guardrails",
+    "越狱·英文"
+  ],
+  [
+    "bypass restrictions",
+    "越狱·英文"
+  ],
+  [
+    "bypass safety",
+    "越狱·英文"
+  ],
+  [
+    "do anything now",
+    "越狱·英文"
+  ],
+  [
+    "free from restrictions",
+    "越狱·英文"
+  ],
+  [
+    "freedom to do anything",
+    "越狱·英文"
+  ],
+  [
+    "fully unconstrained",
+    "越狱·英文"
+  ],
+  [
+    "jailbreak",
+    "越狱·英文"
+  ],
+  [
+    "no ethical boundaries",
+    "越狱·英文"
+  ],
+  [
+    "no ethical restrictions",
+    "越狱·英文"
+  ],
+  [
+    "no limits",
+    "越狱·英文"
+  ],
+  [
+    "no restrictions",
     "越狱·英文"
   ],
   [
@@ -1728,7 +1716,339 @@
     "越狱·英文"
   ],
   [
-    "re:(?i)(complete the (code|script|function|program).*?(to|that will) (extract|delete|access|bypass|download))",
-    "规则注入·英文"
+    "re:(?i)(This is a (fictional|hypothetical|simulated|pretend|imaginary).*?(act as if|respond as if|pretend).*(no (rules|restrictions|laws|safety)))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(remove|bypass|skip|disable|ignore|drop|eliminate|discard)[^.,!?]{0,20}?(all|every|any|the)?[^.,!?]{0,15}?(restrictions|limitations|barriers|safety|safeguards|guardrails|boundaries|constraints|limitations|restrictions|filtering|content policy|ethical|law)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(unrestricted|jailbreak|no restrictions|no limits|no boundaries|no rules|full freedom|do anything|act without restrictions|act as an unrestricted|act as an unconstrained|no ethical|no legal|ungoverned|unbounded|without any limits|uncensored|free from restrictions|break free)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)pretend to be (?:an|a).*(?:without|no|free from).*(?:restrictions|limits|rules|constraints)",
+    "越狱·英文"
+  ],
+  [
+    "remove guardrails",
+    "越狱·英文"
+  ],
+  [
+    "remove restrictions",
+    "越狱·英文"
+  ],
+  [
+    "skip guardrails",
+    "越狱·英文"
+  ],
+  [
+    "unbounded",
+    "越狱·英文"
+  ],
+  [
+    "uncensored mode",
+    "越狱·英文"
+  ],
+  [
+    "unrestricted mode",
+    "越狱·英文"
+  ],
+  [
+    "without any limits",
+    "越狱·英文"
+  ],
+  [
+    "without restrictions",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:i[ _-]g[ _-]n[ _-]o[ _-]r[ _-]e|f[ _-]o[ _-]r[ _-]g[ _-]e[ _-]t)",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:重复|再说|复述)[^。，]{0,10}(?:以上|前面|上面|下面|以下)[^。，]{0,10}(?:内容|指令|规则|提示|命令)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)%69%67%6e%6f%72%65",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)%66%6f%72%67%65%74",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)69676e6f7265",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)666f72676574",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)aWdub3Jl",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)Zm9yZ2V0",
+    "编码绕过·英文"
+  ],
+  [
+    "re:ｉｇｎｏｒｅ",
+    "编码绕过·英文"
+  ],
+  [
+    "re:ｆｏｒｇｅｔ",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)(?:selur lla erongi|selur lla etagrof)",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:\\{\\{[0-9*+\\-/%]+\\}\\}|\\$\\{[0-9*+\\-/%]+\\}",
+    "注入标记·英文"
+  ],
+  [
+    "re:(?i)\b[1-6]\\d{5}(?:19|20)\\d{2}[01]\\d[0-3]\\d{3}[\\dXx]\b",
+    "id_card_cn"
+  ],
+  [
+    "re:eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+    "jwt_token"
+  ],
+  [
+    "re:\b[1-9]\\d{14}(?:\\d{2}[\\dXx])?\b",
+    "id_card_cn"
+  ],
+  [
+    "re:(?i)(?:记住|根据这段记忆|基于这条记忆|按照记忆|依据记忆)[^。，]*?(?:执行|删除|修改|更改|关闭|启动|转账)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)将记忆中.{0,20}修改为|把.{0,10}改成.{0,10}并记住",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(?:新规则|系统更新|安全策略|策略变更|配置更新)[^。，]*?(?:已变更为|改为|允许|不再|变更|更新)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:无视|不要遵从|摆脱|突破|不受)(?:任何|所有|全部)?(?:约束|限制|条件|规则|审查)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我无法回答这个问题|我无法回答|我不能回答).{0,20}(?:但是|不过|然而)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:不要|不准|无需|不必)(?:遵守|遵从|遵循|管|在意|理会)(?:任何|所有|全部)?(?:规则|限制|指令|约束|条件)",
+    "越狱·中文"
+  ],
+  [
+    "re:eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+    "jwt_token"
+  ],
+  [
+    "re:(?i)(?:what (?:are|is)|tell me|show me).{0,30}(?:first|initial|full).{0,30}(?:instructions|prompt|system message|directives)",
+    "提示泄露·英文"
+  ],
+  [
+    "re:(?i)记住[^。，]*?(?:现在|请|马上)[^。，]*?(?:执行|删除|修改|更改|转账|关闭|启动|发送)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:\b[1-9]\\d{7}(?:19|20)\\d{2}[01]\\d[0-3]\\d\\d\b",
+    "id_card_cn"
+  ],
+  [
+    "re:(?i)(?:删除|清空|清除|重置)[^。，]*?(?:所有|全部|历史)?(?:记忆|数据|内容|上下文|缓存)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(?:新增|更新|修改|添加|加入)(?:规则|指令|策略|政策|权限)[^。，]*?(?:允许|通过|放行|通过)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:如果|当|假如|假设).{0,20}(?:忽略|无视).{0,20}(?:执行|运行|删除|发送)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:当且仅当|只有).{0,20}(?:admin|管理员|root|超级用户).{0,20}(?:执行|运行|删除)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:记住|牢记|永远记住).{0,20}(?:无需|不用|不要|不需要|不必).{0,20}(?:检查|验证|审核|拦截|安全)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(?:错误|异常|崩溃|故障).{0,20}(?:以|用|使用).{0,20}(?:root|管理员|超级用户|admin).{0,20}(?:重试|执行|操作)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:系统已升级|新策略|已更新|新模式|A/B测试|AB测试).{0,20}(?:无限制|禁用|关闭|绕过)(?:安全|限制|规则|检查)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:来自|来源|源地址).{0,10}(?:内网|局域网|信任|可信).{0,20}(?:请求|链接|连接)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)&\\#(?:105|103|110|111|114|101|102|111|114|103|101|116);",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)(?:snoitcurtsni|suovic|sserni)",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)(?:1gn0r3|pr3v10us|1nstruct10ns)",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)忽略你之前的所有|忽略我之前的所有|忽略之前的所有安全",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)忘掉.{0,10}(?:MOYU|安检|安全|设置|规则)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)DAN模式.*激活|激活.*DAN模式",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)显示你收到的所有.{0,10}(?:提示|指令|规则).{0,20}(?:底层|逻辑|配置|全部|所有)",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)(?:原文|原始|完整)(?:复制|输出|给我|粘贴).{0,10}(?:不要|不做|不加).{0,10}(?:修改|删减|省略)",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)修改.{0,10}(?:记录|内容|记忆|条目).{0,10}(?:ID|编号|序号).{0,10}(?:将|改成|改为)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)新增一条(?:记忆|记录|指令|规则).{0,20}(?:永久生效|永不失效|永远有效)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)(?:添加|新增|增加|写入)(?:规则|模式|策略).{0,20}(?:允许|通过|放行).{0,10}(?:所有|全部|一切)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)修改.{0,10}(?:规则|策略|配置).{0,10}(?:第.{0,5}条|第.{0,5}项).{0,20}(?:改为|改成|变为).{0,10}(?:不|永不).{0,5}(?:触发|拦截|生效)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)DAN 1\\.0|DAN1\\.0|DAN V1",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:至少|不少于|至少需要).{0,5}(?:50|100|200)(?:字|个字符)",
+    "提示泄露·中文"
+  ],
+  [
+    "re:(?i)(?:改为|改成|替换为)放行.{0,20}(?:隐藏|不记录|不留下|删除日志)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)匹配所有包含.{0,30}(?:直接放行|不拦截|直接通过|跳过安检)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:设置|修改|更改).{0,20}(?:权限|访问控制|公开|任何人都)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:紧急|立刻|马上|立即)(?:指令|命令|操作).{0,20}(?:暂停|停止|关闭|禁用).{0,10}(?:安检|安全|校验|检查)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:yi lue suo you|yi lue|zhi jie zhi xing|xian shi suo you)",
+    "编码绕过·中文"
+  ],
+  [
+    "re:\\u[0-9a-f]{4}\\u[0-9a-f]{4}.*\\u[0-9a-f]{4}",
+    "编码绕过·中文"
+  ],
+  [
+    "re:(?i)启[Dd]ong|Do AnYtHiNg|Do[A-Z][a-z]+ [A-Z]",
+    "越狱·中文"
+  ],
+  [
+    "re:₯",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:抛开|丢弃|抛弃|放弃).{0,10}(?:安全|规则|约束|限制).{0,15}(?:马上|立即|立刻)(?:响应|执行|命令)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:解除|取消|去掉|关闭).{0,10}(?:所有|全部).{0,10}(?:安全|校验|规则|限制).{0,15}(?:允许|随意|任意|任何)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:小说|电影|剧本|故事|场景|剧情).{0,20}(?:忽略|绕过|注入|越狱|DAN).{0,20}(?:安全|规则|限制|安检)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)拼音.*yi lue|yi lue.*(?:指令|规则|内容)",
+    "编码绕过·中文"
+  ],
+  [
+    "re:(?i)(?:覆盖所有|无视所有|忽略所有|放弃所有|推翻所有|取代所有|不管所有)(?:规则|指令|命令|设定|配置|限制|安全)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:新增|创建|写入|添加|加入).{0,10}(?:规则|指令|策略|记录|记忆).{0,30}(?:永久生效|永远有效|永不失效|一直有效)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:添加|新增|写入|注入).{0,15}(?:规则|指令|策略|模式).{0,15}(?:允许|放行|通过).{0,10}(?:所有|全部|一切)",
+    "规则注入·中文"
+  ],
+  [
+    "re:(?i)(?:将|把).{0,20}改为.{0,5}放行.{0,20}(?:隐藏|不记录|不留下|静默|悄悄)",
+    "记忆操纵·中文"
+  ],
+  [
+    "re:(?i)\\.\\-{0,3}\\s*\\.\\-{0,3}\\s*\\.\\-{0,3}\\s*\\.\\-{0,3}\\s*\\.\\-{0,3}\\s*\\.\\-{0,3}\\s*\\.\\-{0,3}",
+    "编码绕过·英文"
+  ],
+  [
+    "re:(?i)(?:unfiltered|no alignment|no (?:safety|ethical|content) (?:training|filter|guardrail|boundary))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:simulat|hypothetical|imagine|pretend|story).{0,40}(?:no (?:rules|restrictions|limits|bounds|ethics)|without (?:rules|restrictions|limits|safety))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:roleplay|role.play|character named|persona|called).{0,30}(?:unfiltered|unethical|immoral|no (?:rules|limits|restrictions|ethics))",
+    "角色改写·英文"
+  ],
+  [
+    "re:(?i)(?:story|movie|game|simulation|scenario).{0,30}(?:erased|removed|ignored|disabled|bypassed|no longer).{0,20}(?:rules|ethics|safety|values|alignment|restrictions)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:忽略|无视|忘记|跳过)(?:上述|以上|上面|前面|之前|我的).{0,10}(?:指令|提示|规则|命令|内容|问题).{0,30}(?:直接输出|直接复述|直接告诉我|直接说出)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:请说出|请复述|跟我念|请跟我|跟着我|请重复).{0,5}[:：].{0,40}(?:不道德|不合法|非法|暴力|歧视|色情|赌博|毒品|诈骗|破解|盗取|入侵)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:不要添加|不加|不要有|不要加|不加任何).{0,10}(?:其他|多余|任何|前缀|注释|符号).{0,20}(?:请复述|请输出|直接输出|复述)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)忽略.{0,10}(?:这个|以上|之前的|这个).{0,10}(?:问题|话题|内容).{0,20}(?:说出|告诉我|输出|写出|复述)",
+    "指令覆盖·中文"
   ]
 ]

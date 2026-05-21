@@ -4,7 +4,7 @@
 
 MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, zero infrastructure, plug-and-play with one folder. Works with Hermes, OpenClaw, LangChain, AutoGen, or any custom Python project.
 
-**v2.5.0** — 6 LLM-enhanced features: semantic rerank, smart summary, AI merge, scene classification, entity extraction, and intelligent forgetting review. All default-on, keyless fallback to local rules. Now available via `pip install moyu-memory`.
+**v2.5.1** — Security hardening: LLM guard reworked (+38% interception), pattern library expanded (433→513), circuit breaker optimized with exponential backoff. 13,705 adversarial samples validated. Now available via `pip install moyu-memory`.
 
 [![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)

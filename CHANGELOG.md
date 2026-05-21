@@ -1,5 +1,25 @@
 # MOYU — Development Log
 
+## v2.5.1 — Security Hardening (2026-05-21)
+
+### LLM Security Guard Overhaul
+
+- **Prompt rewrite** — Upgraded from a single-line instruction to a structured 5-pattern injection detection framework: role/persona override, hypothetical/story framing, hidden instruction hijacking, techno-babble framing, and obfuscated commands
+- **Proven impact** — LLM guard interception rate jumped from ~0% to 38% on the RTPB2026 adversarial benchmark (13,705 samples). Double-layer (regex + LLM) now achieves **74.8%**, outperforming bare LLM baseline by 26.8 percentage points
+
+### Security Optimization
+
+- **Pattern library expanded** — 433 → 513 patterns (+80), covering encoding bypass, social engineering, pinyin, Unicode escape, and new adversarial variants discovered through third-party testing (DeepSeek, Yuanbao, Doubao)
+- **Circuit breaker improved** — Permanent lockout replaced with exponential backoff (1m→2m→4m→...64m), auto-recovery after cooldown. Attackers can no longer force a permanent safety gap by spamming API failures
+
+### Testing Infrastructure
+
+- **CI integration** — GitHub Actions auto-runs tests on every push
+- **Public benchmark validated** — RTPB2026 (13,705 adversarial prompts) + Safety-Prompts (4,097 Chinese injection samples) + third-party tests (264 custom attacks)
+- **Normal traffic validated** — 210 normal conversation samples, **99% pass rate, 0% false positive on real-world developer dialogue**
+
+---
+
 ## v2.5.0 — Released (2026-05-20)
 
 ### New Features: 6 LLM-Enhanced Capabilities (All Default-On)
