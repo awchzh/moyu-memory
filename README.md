@@ -7,6 +7,14 @@
 
 MOYU is a **security-first memory layer** for AI Agents. Pure Python, zero external dependencies at the storage layer — one folder, plug and play. LLM-enhanced features are **on by default**; no API key? Silent degrade, core memory keeps working.
 
+**v2.6.0** — Memory layering + self-evolving security rules + reproducible benchmark. Now available via `pip install moyu-memory`.
+
+[![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)
+[![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://pypi.org/project/moyu-memory/)
+[![License](https://img.shields.io/github/license/awchzh/moyu-memory)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/moyu-memory)](https://pypi.org/project/moyu-memory/)
+
 ### Why MOYU
 
 - **🛡️ Security built in** — Injection detection, PII redaction, file integrity verification, write burst protection — security gaps other memory tools leave open, MOYU handles by default
@@ -21,14 +29,6 @@ MOYU is a **security-first memory layer** for AI Agents. Pure Python, zero exter
 | **AI app developer** | Add memory to your product without leaking user privacy |
 | **Enterprise deployment** | Zero-trust, zero external deps (storage layer), third-party audited |
 | **Anyone who doesn't want API lock-in** | Fully local, your data stays on your machine |
-
-**v2.6.0** — Memory layering + self-evolving security rules + reproducible benchmark. Now available via `pip install moyu-memory`.
-
-[![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
-[![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)
-[![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://pypi.org/project/moyu-memory/)
-[![License](https://img.shields.io/github/license/awchzh/moyu-memory)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/moyu-memory)](https://pypi.org/project/moyu-memory/)
 
 ---
 
