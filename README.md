@@ -2,9 +2,9 @@
 
 **Your AI remembers every conversation, but is your memory safe? Will old memories bloat your context window?**
 
-MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, zero infrastructure, plug-and-play with one folder. Works with Hermes, OpenClaw, LangChain, AutoGen, or any custom Python project.
+MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, **zero external dependencies at the storage layer** — one folder, plug and play. LLM-enhanced features (security guard, smart summary, knowledge graph) are **on by default** — they use your configured LLM automatically. No API key? Silent degrade, core memory keeps working.
 
-**v2.5.1** — Security hardening: LLM guard reworked (+38% interception), pattern library expanded (433→513), circuit breaker optimized with exponential backoff. 13,705 adversarial samples validated. Now available via `pip install moyu-memory`.
+**v2.6.0** — Memory layering + self-evolving security rules + reproducible benchmark. Now available via `pip install moyu-memory`.
 
 [![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)
@@ -55,10 +55,11 @@ MOYU's defense chain is a **layered deterrent**, not a silver bullet. Honest ass
 | Level | Threat | Coverage | How |
 |-------|--------|----------|-----|
 | 🟢 | Accidental misuse (fat-finger, mis-script) | **~90%** | Password gate + burst guard + integrity check + daily backup |
-| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (injection patterns + regex combos) + loop detection |
-| 🟡 | Simple prompt injection (standard variants) | **~60%** | Regex covers (forget|ignore|skip)×(previous|all|your)×(instructions|rules) |
-| 🟠 | Professional adversarial injection (targeted bypass) | **~20%** | Keyword-based gates can't catch every novel variant |
+| 🟢 | Script-kiddie injection (known patterns) | **~70%** | Content gate (513 patterns, 17 categories, regex combos) + loop detection |
+| 🟡 | Simple prompt injection (standard variants) | **~65%** | Regex covers (forget|ignore|skip)×(previous|all|your)×(instructions|rules) + extended CN/EN variants |
+| 🟠 | Professional adversarial injection (targeted bypass) | **~25%** | Keyword-based gates + pattern library expanded 20% since v2.5.1, but novel variants remain challenging |
 | 🟠 | Semantic-level injection (metaphor, abstraction, no keywords) | **~60%** | LLM Security Guard detects semantic bypasses — regex-untouched patterns like "pretend to be DAN" are caught. Uses your configured LLM. Falls back to safe on API failure: **never blocks legitimate writes.** |
+| 🟢 | **Combined defense (all layers)** | **reproducible** | Validated on 1,769 test cases across 15 attack categories. Run `moyu benchmark --full` to reproduce. 0% false positive rate. |
 
 **How it works:** LLM Guard is a second layer after regex — regex untouched → LLM verdict. No API key? Silent degrade to regex-only. This means semantic injection coverage goes from ~0% to ~60% without breaking zero-config.
 
@@ -195,11 +196,12 @@ Forgetting curve + knowledge distillation:
 
 ---
 
-## 🔬 26 Capabilities Detailed (7 LLM-Enhanced)
+## 🔬 Capabilities by Layer
+
+### 🛡️ Defense Layer (9)
 
 | # | Capability | Description |
 |---|-----------|------|
-| **🛡️ Defense Layer (9)** |||
 | 1 | **Content Security Gate** | Blocks injection attacks before writing (injection patterns + regex combos, 8 categories) |
 | 2 | **Forensic Analysis** | Detects injection patterns, JSON corruption, file tampering |
 | 3 | **Write Burst Protection** | >30 writes/60s triggers fine-grained rollback + 5-min lock |
@@ -214,43 +216,43 @@ Forgetting curve + knowledge distillation:
 
 | # | Capability | Description |
 |---|-----------|------|
-| 10 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking + **optional LLM rerank** |
-| 11 | **Smart Summary** *(LLM)* | `add_memory` auto-refined by LLM — conversational filler removed, key facts preserved. Falls back to raw text. |
-| 12 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
-| 13 | **SQLite FTS5 + MD5 Dedup** | Full-text index + in-library/batch double dedup |
+| 1 | **TEMPR Multi-Strategy Retrieval** | Semantic embedding + BM25 keywords + time-weighted hybrid ranking + **optional LLM rerank** |
+| 2 | **Smart Summary** *(LLM)* | `add_memory` auto-refined by LLM — conversational filler removed, key facts preserved. Falls back to raw text. |
+| 3 | **FastEmbed Local Embedding** | Local ONNX vectorization, no API dependency, auto-degrade to n-gram |
+| 4 | **SQLite FTS5 + MD5 Dedup** | Full-text index + in-library/batch double dedup |
 
 ### 📊 Knowledge Layer (3) *1 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 14 | **Knowledge Graph** | Entity-relation extraction (**LLM-enhanced**, falls back to regex) + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
-| 15 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
-| 16 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
+| 1 | **Knowledge Graph** | Entity-relation extraction (**LLM-enhanced**, falls back to regex) + time-travel snapshots + relation invalidation + full timeline + knowledge distillation |
+| 2 | **Workflow Knowledge Base** | Markdown knowledge file indexing + keyword search |
+| 3 | **User Profile** | Auto-extract preferences, habits, facts from conversation |
 
 ### ⏳ Lifecycle Layer (4) *3 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|------|
-| 17 | **Context-Aware Compression + Warning** | Two-tier (70% mild / 85% aggressive), originals preserved in refs/. Auto-detects agent context usage and warns before compression (configurable threshold, bilingual) |
-| 18 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
-| 19 | **Forgetting Curve** | Four gates (safety window / access density / scene protection / **LLM semantic review**) + **LLM scene classification** + knowledge distillation |
-| 20 | **Memory Merge** | Detect keyword-overlapping related memories + **LLM merged summary**. Originals preserved. |
+| 1 | **Context-Aware Compression + Warning** | Two-tier (70% mild / 85% aggressive), originals preserved in refs/. Auto-detects agent context usage and warns before compression (configurable threshold, bilingual) |
+| 2 | **Task Map** | Auto-generated Mermaid task graph on wake — see full progress at a glance |
+| 3 | **Forgetting Curve** | Four gates (safety window / access density / scene protection / **LLM semantic review**) + **LLM scene classification** + knowledge distillation |
+| 4 | **Memory Merge** | Detect keyword-overlapping related memories + **LLM merged summary**. Originals preserved. |
 
 ### 🔄 Learning & Reflection (2)
 
 | # | Capability | Description |
 |---|-----------|------|
-| 21 | **Learn from Corrections** | Auto-detect correction signals, 3 identical corrections → permanent behavioral rule |
-| 22 | **Self-Reflection** | Analyze memory base on startup, discover cross-time associations, contradictions, topic shifts |
+| 1 | **Learn from Corrections** | Auto-detect correction signals, 3 identical corrections → permanent behavioral rule |
+| 2 | **Self-Reflection** | Analyze memory base on startup, discover cross-time associations, contradictions, topic shifts |
 
 ### 🔗 Integration Layer (4)
 
 | # | Capability | Description |
 |---|-----------|------|
-| 23 | **Working Memory** | Independent file, survives context compression |
-| 24 | **Cross-Session Bridge** | Conversation summaries auto-synced to prefill + current_context, continuity across sessions |
-| 25 | **Auto-Update** | Check GitHub for new versions, in-place update (TOFU checksum), preserves user data and config |
-| 26 | **Wake Orchestration** | `moyu_wake`: full module pipeline — check→backup→forget→merge→reflect→context→bridge |
+| 1 | **Working Memory** | Independent file, survives context compression |
+| 2 | **Cross-Session Bridge** | Conversation summaries auto-synced to prefill + current_context, continuity across sessions |
+| 3 | **Auto-Update** | Check GitHub for new versions, in-place update (TOFU checksum), preserves user data and config |
+| 4 | **Wake Orchestration** | `moyu_wake`: full module pipeline — check→backup→forget→merge→reflect→context→bridge |
 
 ---
 
@@ -313,6 +315,19 @@ moyu_toolkit/
 - Concerned about **PII leaks** — don't want phone numbers, IDs, API keys lingering in memory files
 - Switching between **Hermes, OpenClaw, LangChain, or custom projects**, need a unified memory solution
 - Want **zero infrastructure** — no Docker, no databases, no signups
+
+---
+
+## 🔒 Third-Party Security Audit
+
+MOYU has passed security reviews from two Tencent Cloud security labs:
+
+| Auditor | Result | Report |
+|---------|--------|--------|
+| **Keen Lab** (Tencent) | ✅ Benign — no malicious code detected | [View Report](https://tix.qq.com/search/skill?keyword=0f86b9542efec19edf776812f7e82855) |
+| **Cloud Security Lab** (Tencent) | ✅ Benign — no malicious code detected | [View Report](https://static.cloudsec.tencent.com/html-report-v2/2026/05/21/383126_6444e76133d8be0b8eb3493110694b1f.html) |
+
+These audits are conducted by third-party security vendors on behalf of [SkillHub](https://skillhub.cn/skills/moyu), covering static analysis, behavioral analysis, and code review.
 
 ---
 

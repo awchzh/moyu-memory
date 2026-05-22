@@ -304,6 +304,11 @@ CMD_TABLE = {
     "kg":         lambda args: _kg_handler(args),
     "protect":    lambda args: _protect_handler(args),
     "rules":      lambda args: _handle_rules(args),
+    "benchmark":  lambda args: _import("security_benchmark").main(*args),
+    "mutate":     lambda args: _import("injection_mutator").main(*args),
+    "doctor":     lambda args: _import("moyu_doctor").main(*args),
+    "snapshot":   lambda args: _import("moyu_snapshot").main(*args),
+    "demo-attack": lambda args: _import("moyu_demo_attack").main(*args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -321,6 +326,11 @@ HELP_DESCRIPTIONS = {
     "init": "Initialize integrity verification manifest",
     "audit": "Full security audit (all 3 defense layers)",
     "rules": "List and manage custom security rules",
+    "benchmark": "Run security capability benchmark (--quick, --full for RTPB2026)",
+    "mutate": "Run injection pattern mutation scan to find blind spots",
+    "doctor": "Run memory health check (redudancy, refs, integrity, security)",
+    "snapshot": "Export/restore read-only memory snapshots",
+    "demo-attack": "Interactive injection attack demonstration",
     "reflect": "Run self-reflection (analyze contradictions & connections)",
     "compress": "Show compression status and context usage",
     "forget": "Show forgetting curve status and parameters",
