@@ -1,8 +1,27 @@
-# MOYU — Secure Memory Toolkit for AI Agents
+---
 
-**Your AI remembers every conversation, but is your memory safe? Will old memories bloat your context window?**
+**Your AI remembers every conversation. But:**
 
-MOYU is a lightweight memory toolkit that gives your Agent a **secure, self-managing, cross-session persistent** memory system. Pure Python, **zero external dependencies at the storage layer** — one folder, plug and play. LLM-enhanced features (security guard, smart summary, knowledge graph) are **on by default** — they use your configured LLM automatically. No API key? Silent degrade, core memory keeps working.
+- **Is someone writing garbage into your memory?**
+- **Did that private info you discussed yesterday leak into a file?**
+- **Context window full — will you lose what matters?**
+
+MOYU is a **security-first memory layer** for AI Agents. Pure Python, zero external dependencies at the storage layer — one folder, plug and play. LLM-enhanced features are **on by default**; no API key? Silent degrade, core memory keeps working.
+
+### Why MOYU
+
+- **🛡️ Security built in** — Injection detection, PII redaction, file integrity verification, write burst protection — security gaps other memory tools leave open, MOYU handles by default
+- **🧠 Install and use** — `pip install moyu-memory` → `moyu search "what did we talk about"`. No Docker, no database, no API key required for core memory
+- **🔄 Teach it on the fly** — Spot an attack that slipped through? Tell it once. Takes effect immediately. No release cycle
+
+### Who is it for
+
+| You | Why MOYU |
+|-----|----------|
+| **Local Agent user (Claude Code, Codex, OpenAI Assistant)** | Your agent needs persistent memory with real security |
+| **AI app developer** | Add memory to your product without leaking user privacy |
+| **Enterprise deployment** | Zero-trust, zero external deps (storage layer), third-party audited |
+| **Anyone who doesn't want API lock-in** | Fully local, your data stays on your machine |
 
 **v2.6.0** — Memory layering + self-evolving security rules + reproducible benchmark. Now available via `pip install moyu-memory`.
 
