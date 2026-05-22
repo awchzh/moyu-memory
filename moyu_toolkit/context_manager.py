@@ -536,6 +536,15 @@ def status_line() -> str:
         auto_pct = int(cfg["auto_threshold"] * 100)
         lines.append(f"MOYU预算: {budget_pct:.0f}% ({left}% left) — mild {mild_pct}% / auto {auto_pct}%")
     lines.append(provider_context_line())
+    
+    # If provider context exceeds warn threshold, add a user-visible alert
+    name, data = get_context()
+    if name and data:
+        pct = data.get("pct", 0)
+        warn_at = int(cfg.get("warn_threshold", DEFAULT_WARN) * 100)
+        if isinstance(pct, (int, float)) and pct >= warn_at:
+            lines.append(f"⚠️ 对话已深（{pct}%），建议 /new 开新窗口继续")
+    
     warn_pct = int(cfg.get("warn_threshold", DEFAULT_WARN) * 100)
     lines.append(f"预警线: {warn_pct}%")
     return "\n".join(lines) if lines else ""
