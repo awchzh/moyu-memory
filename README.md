@@ -171,7 +171,7 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 ## 📋 Command Reference
 
 ### Defense & Security
-`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu init` `moyu rules`
+`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu init` `moyu rules` `moyu protect`
 `moyu benchmark` `moyu demo-attack` `moyu doctor` `moyu mutate`
 
 ### Memory & Retrieval
