@@ -104,33 +104,9 @@ def _call_llm(prompt: str) -> str:
     if _LLM_EXTRACT_FAILURES >= 3:
         return ""
 
-    import yaml, requests as rq
-    cfg_path = get_config_path()
-    if not os.path.exists(cfg_path):
-        return ""
-    with open(cfg_path) as f:
-        cfg = yaml.safe_load(f) or {}
-
-    api_cfg = cfg.get("api", {})
-    key = (api_cfg.get("api_key", "")
-           or os.environ.get("MOYU_API_KEY", ""))
-
-    if not key or key == "your-api-key-here":
-        try:
-            env_path = os.path.expanduser("~/.hermes/.env")
-            if os.path.exists(env_path):
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("DEEPSEEK_API_KEY="):
-                            key = line.strip().split("=", 1)[1]
-                            break
-        except Exception:
-            pass
-
-    if not key or key == "your-api-key-here":
-        key = os.environ.get("DEEPSEEK_API_KEY", "")
-
-    if not key or key == "your-api-key-here":
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
+    if not api_key or api_key == "your-api-key-here":
         global _LLM_EXTRACT_NO_KEY_WARNED
         if not _LLM_EXTRACT_NO_KEY_WARNED:
             _LLM_EXTRACT_NO_KEY_WARNED = True
@@ -138,21 +114,21 @@ def _call_llm(prompt: str) -> str:
         _LLM_EXTRACT_FAILURES += 1
         return ""
 
-    url = api_cfg.get("base_url", "https://api.openai.com/v1").rstrip("/") + "/chat/completions"
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-    try:
-        resp = rq.post(url, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                       json={"model": model, "messages": [
-                           {"role": "system", "content": "You are a precise relation extractor."},
-                           {"role": "user", "content": prompt}
-                       ], "temperature": 0.1}, timeout=15)
-        if resp.status_code == 200:
-            _LLM_EXTRACT_FAILURES = 0
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-    except Exception:
-        pass
-    _LLM_EXTRACT_FAILURES += 1
-    return ""
+    result = call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": "You are a precise relation extractor."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        max_tokens=500,
+        timeout=15,
+    )
+    if result:
+        _LLM_EXTRACT_FAILURES = 0
+    else:
+        _LLM_EXTRACT_FAILURES += 1
+    return result
 
 
 def _extract_fallback(text: str) -> List[Dict]:

@@ -1,24 +1,40 @@
 # MOYU — Development Log
 
-## v2.5.1 — Security Hardening (2026-05-21)
+## v2.7.0 — 架构统一 + 检索全链路 + 安全加固 (2026-05-23)
 
-### LLM Security Guard Overhaul
+### 架构：统一 LLM 客户端 (`_llm_client.py`)
 
-- **Prompt rewrite** — Upgraded from a single-line instruction to a structured 5-pattern injection detection framework: role/persona override, hypothetical/story framing, hidden instruction hijacking, techno-babble framing, and obfuscated commands
-- **Proven impact** — LLM guard interception rate jumped from ~0% to 38% on the RTPB2026 adversarial benchmark (13,705 samples). Double-layer (regex + LLM) now achieves **74.8%**, outperforming bare LLM baseline by 26.8 percentage points
+- **6 路调用合一** — `learner.py` / `knowledge_graph.py` / `forgetting_curve.py` / `agent_memory.py`(×2) / `memory_merge.py` 各自手搓的 LLM 调用全部替换为统一入口
+- **消除密钥解析副本** — 密钥解析、基础 URL 环境变量覆盖（`MOYU_LLM_BASE_URL`）、model auto-correct 只在一个文件维护
+- **NAS 端代码审查** — REST API 直连双脑联动，审查产出 `MOYU_LLM_BASE_URL` 遗漏修复 + 非200显式返回
 
-### Security Optimization
+### 检索权重全链路 (Phase 1-3)
 
-- **Pattern library expanded** — 433 → 513 patterns (+80), covering encoding bypass, social engineering, pinyin, Unicode escape, and new adversarial variants discovered through third-party testing (DeepSeek, Yuanbao, Doubao)
-- **Circuit breaker improved** — Permanent lockout replaced with exponential backoff (1m→2m→4m→...64m), auto-recovery after cooldown. Attackers can no longer force a permanent safety gap by spamming API failures
+- **Phase 1: 加权检索** — `score_and_rank` 从等权求和改为 config.yaml 加权，新增 entity 维度（默认0.0），归一化动态计算。`moyu config show/set` CLI 可配
+- **Phase 2: 反馈收集** — `moyu search --vote <id> good|bad`、`moyu ref`、`moyu learn` 自动写入 JSONL 日志，按月切分
+- **Phase 3: 自适应调优** — `moyu tune` / `--dry-run` / `--reset`，渐变小步长调整
 
-### Testing Infrastructure
+### 新命令
 
-- **CI integration** — GitHub Actions auto-runs tests on every push
-- **Public benchmark validated** — RTPB2026 (13,705 adversarial prompts) + Safety-Prompts (4,097 Chinese injection samples) + third-party tests (264 custom attacks)
-- **Normal traffic validated** — 210 normal conversation samples, **99% pass rate, 0% false positive on real-world developer dialogue**
+| 命令 | 作用 |
+|:----|:----|
+| `moyu inject` | 标准化记忆注入，输出自动带 `[NOTE]` 上下文预警 |
+| `moyu quickstart` | 5 分钟交互式演示 — 零配置展示防御链效果 |
+| `moyu config` | 检索引擎权重查看/调整 |
+| `moyu setup agents` | 首次运行自动检测 Agent + 集成配置 |
+| `moyu search --vote` | 搜索反馈 (Phase 2) |
 
----
+### 安全加固
+
+- 词库 **516 条**
+- LLM 安检 prompt **5 类 → 8 类**（新增越狱短词、PII 提取、社会工程分类）
+- short-word 正则经 NAS 审查后因误报风险回退
+
+### 双躯壳联动
+
+- **路径 1（首选）** — NAS REST API 直连 (`192.168.1.21:8788`)，`POST /api/chat/start` 发消息，`GET /api/session` 读回复
+- **路径 2（备选）** — Kimi WebBridge → Chrome → NAS WebUI
+- 单次讨论上限 10 轮，防上下文溢出
 
 ## v2.5.0 — Released (2026-05-20)
 

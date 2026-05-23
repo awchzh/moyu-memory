@@ -285,7 +285,7 @@ CMD_TABLE = {
     "detect":     lambda args: _call_func("learner", "detect_corrections", [" ".join(args)]),
     "context":     lambda args: print(_import("learner").format_behavior_rules()),
     "signals":    lambda args: _call_func("learner", "signals", args),
-    "setup":      lambda args: _import("security").setup(),
+    "setup":      lambda args: _handle_setup(args),
     "verify":     lambda args: _verify_op(args),
     "unlock":     lambda args: _import("security").unlock(),
     "check":      lambda args: _call_func("defense_toolkit.integrity_checker", "verify", args),
@@ -303,12 +303,16 @@ CMD_TABLE = {
     "kb":         lambda args: _kb_handler(args),
     "kg":         lambda args: _kg_handler(args),
     "protect":    lambda args: _protect_handler(args),
+    "tune":       lambda args: _handle_tune(args),
     "rules":      lambda args: _handle_rules(args),
     "benchmark":  lambda args: _import("security_benchmark").main(*args),
     "mutate":     lambda args: _import("injection_mutator").main(*args),
     "doctor":     lambda args: _import("moyu_doctor").main(*args),
     "snapshot":   lambda args: _import("moyu_snapshot").main(*args),
     "demo-attack": lambda args: _import("moyu_demo_attack").main(*args),
+    "config":     lambda args: _config_handler(args),
+    "inject":     lambda args: _handle_inject(args),
+    "quickstart": lambda args: _call_func("quickstart", "run", []),
 }
 
 HELP_DESCRIPTIONS = {
@@ -343,6 +347,10 @@ HELP_DESCRIPTIONS = {
  "lifecycle":  "Alias for forget (memory lifecycle)",
     "context":    "Show context usage percentage in one line",
     "protect":    "Manage protected memories: {list|add|remove}",
+    "tune":      "Auto-tune retrieval weights from feedback data (moyu tune / --dry-run / --reset)",
+    "config":    "Show/set retrieval weights (moyu config show / set retrieval.weights.<dim> <val>)",
+    "inject":    "Inject relevant memories into agent context (moyu inject <query>)",
+    "quickstart": "5-minute interactive demo — auto-stores memories, tests defense chain, zero config",
     "help": "Show this help message",
 }
 
@@ -419,6 +427,13 @@ def _handle_learn(text):
     
     # Fall back to regular learner
     _call_func("learner", "learn", [text])
+    
+    # Phase 2: record correction as feedback signal
+    try:
+        fb = _import("feedback")
+        fb.record_correction(text, [])
+    except Exception:
+        pass
 
 
 def _handle_rules(args):
@@ -449,22 +464,48 @@ def _handle_rules(args):
 
 def _handle_search(args):
     if not args:
-        print("Usage: moyu search <query>")
+        print("Usage: moyu search <query> [--vote <id> good|bad]")
         return
-    query = " ".join(args)
+    
+    # Check for --vote parameter
+    vote_id = None
+    vote_val = None
+    cleaned_args = list(args)
+    for i in range(len(args) - 2):
+        if args[i] == "--vote" and i + 2 < len(args):
+            vote_id = args[i + 1]
+            vote_val = args[i + 2]
+            cleaned_args = [a for j, a in enumerate(args) if j not in (i, i + 1, i + 2)]
+            break
+    
+    query = " ".join(cleaned_args)
     mem = _import("agent_memory")
+    
+    # If --vote was given without a new query, try recording without searching
+    if not query and vote_id and vote_val:
+        try:
+            fb = _import("feedback")
+            fb.record_vote("", vote_id, vote_val)
+            print(f"✅ Vote recorded: {vote_id} = {vote_val}")
+        except Exception as e:
+            print(f"⚠️  Could not record vote: {e}")
+        return
+    
     try:
         results = mem.search(query)
     except Exception:
         results = []
+    
     if not results:
         print("No results found.")
         return
+    
     print(f"\nSearch results for: {query}")
     print("=" * 40)
     for r in results:
         print(f"  [{r['timestamp'][:10]}] {r['summary'][:80]}")
-        print(f"  Score: {r.get('score', 0)}")
+        mid = r.get('memory_id', '')[:20]
+        print(f"  ID: {mid}  Score: {r.get('score', 0)}")
     
     # Track access for forgetting curve density analysis
     try:
@@ -472,6 +513,12 @@ def _handle_search(args):
         fc.track_access([r['memory_id'] for r in results])
     except Exception:
         pass
+    
+    # Show vote hint
+    if len(results) > 0:
+        first = results[0]
+        print(f"\n  💡 Tip: moyu search --vote {first['memory_id']} good")
+        print(f"              to tell MOYU this result was useful")
 
 def _require_auth(op_type: str, context: str = "") -> bool:
     """Prompt for security password before dangerous operations.
@@ -860,7 +907,7 @@ def _ref_handler(args):
         if refs:
             print(f"\n  Available refs ({len(refs)}):")
             for r in refs:
-                print(f"    \u2022 {r}")
+                print(f"    • {r}")
             print()
         else:
             print("No refs.")
@@ -868,6 +915,12 @@ def _ref_handler(args):
         content = cm.read_ref(args[0])
         if content:
             print(content)
+            # Phase 2: record ref read as positive feedback signal
+            try:
+                fb = _import("feedback")
+                fb.record_ref(args[0])
+            except Exception:
+                pass
         else:
             print(f"Ref not found: {args[0]}")
 
@@ -887,6 +940,294 @@ def show_help():
     print()
 
 
+def _handle_setup(args):
+    """Handle setup subcommands."""
+    if not args:
+        _import("security").setup()
+        return
+    if args[0] == "agents":
+        _auto_register_agents()
+    else:
+        _import("security").setup()
+
+
+def _auto_register_agents():
+    """Auto-detect and configure agents to use moyu inject."""
+    import os as _ao_os
+    import shutil as _ao_shutil
+    detected = []
+    configured = []
+    
+    home = _ao_os.path.expanduser("~")
+    
+    # 1. Hermes — write to config or prefill
+    hermes_cfg = _ao_os.path.join(home, ".hermes", "config.yaml")
+    hermes_prefill = _ao_os.path.join(home, ".hermes", "prefill.json")
+    if _ao_os.path.isdir(_ao_os.path.join(home, ".hermes")):
+        detected.append("Hermes")
+        # Check if prefill.json exists and already has MOYU injection
+        has_inject = False
+        if _ao_os.path.exists(hermes_prefill):
+            try:
+                import json as _ao_json
+                with open(hermes_prefill) as _f:
+                    pf = _ao_json.load(_f)
+                for entry in pf:
+                    if "moyu inject" in str(entry.get("content", "")):
+                        has_inject = True
+                        break
+            except Exception:
+                pass
+        if not has_inject:
+            # Actually write the MOYU inject into Hermes prefill.json
+            try:
+                import json as _ao_json
+                existing = []
+                if _ao_os.path.exists(hermes_prefill):
+                    with open(hermes_prefill) as _f:
+                        existing = _ao_json.load(_f)
+                # Add a system entry that tells Hermes to run moyu inject at startup
+                inject_entry = {
+                    "role": "system",
+                    "content": "📡 MOYU记忆已连接。每次对话前调用 `moyu inject \"当前对话主题\"` 获取相关记忆。"
+                }
+                # Don't add duplicates
+                already_has = False
+                for e in existing:
+                    if "MOYU记忆已连接" in str(e.get("content", "")):
+                        already_has = True
+                        break
+                if not already_has:
+                    existing.append(inject_entry)
+                    with open(hermes_prefill, "w") as _f:
+                        _ao_json.dump(existing, _f, ensure_ascii=False, indent=2)
+                    configured.append("Hermes (prefill.json ✅ auto-configured)")
+                else:
+                    configured.append("Hermes (prefill.json ✅ already configured)")
+            except Exception:
+                configured.append("Hermes (prefill.json ⚠️ write failed)")
+
+    # 2. Claude Code
+    cc_dir = _ao_os.path.join(home, ".claude")
+    if _ao_os.path.isdir(cc_dir):
+        detected.append("Claude Code")
+        configured.append("Claude Code (run manually: moyu inject in claude.md)")
+    
+    # 3. Cursor
+    cursor_dir = _ao_os.path.join(home, ".cursor")
+    if _ao_os.path.isdir(cursor_dir):
+        detected.append("Cursor")
+    
+    # Report
+    print("\n📡 Agent Auto-Detection Results")
+    print("=" * 36)
+    if detected:
+        for agent in detected:
+            print(f"  ✅ {agent}")
+    else:
+        print("  (no supported agents detected)")
+    
+    if configured:
+        print("\n  Auto-configured:")
+        for c in configured:
+            print(f"    • {c}")
+    
+    print("\n  💡 Use `moyu inject <query>` to inject relevant memories")
+    print("     into any agent's system prompt or context.")
+    print()
+
+
+def _handle_tune(args):
+    """Handle tune command — adaptive weight tuning."""
+    if args and args[0] in ("--reset", "reset"):
+        try:
+            tn = _import("tune")
+            tn.reset()
+            print("✅ Weights reset to defaults")
+            return
+        except Exception as e:
+            print(f"⚠️  Reset failed: {e}")
+            return
+    dry_run = "--dry-run" in args
+    try:
+        tn = _import("tune")
+        result = tn.tune(dry_run=dry_run)
+        if result["status"] == "insufficient_data":
+            need = result.get("needed", 0)
+            print(f"⚠️  Need {need} more signals ({result.get('total_signals',0)} collected)")
+        elif result["status"] == "no_signals":
+            print("ℹ️  No feedback data yet. Use moyu search --vote to collect.")
+        elif result["status"] == "tuned":
+            r = result.get("reasoning", {})
+            print(f"\n📊 Adaptive Tuning: {r.get('positive_signals',0)}+/"
+                  f"{r.get('negative_signals',0)}-")
+            print(f"  Direction: {r.get('direction','balanced')}")
+            for dim in ['semantic','keyword','recency','entity']:
+                b4 = result.get("current",{}).get(dim,0)
+                aft = result.get("suggested",{}).get(dim,0)
+                if abs(b4 - aft) >= 0.01:
+                    arrow = "↑" if aft > b4 else "↓"
+                    print(f"  {dim}: {b4:.2f} {arrow} {aft:.2f}")
+            print(f"\n  {'Dry run —' if dry_run else '✅'} weights {'would be' if dry_run else ''} updated.")
+        else:
+            print(f"Unknown: {result}")
+    except Exception as e:
+        print(f"⚠️  Tuning failed: {e}")
+
+
+def _handle_inject(args):
+    """Inject relevant memories into agent context.
+    
+    Usage: moyu inject <query>
+           moyu inject <query> --limit 3
+           moyu inject <query> --format context
+    """
+    query = " ".join([a for a in args if not a.startswith("--")]).strip()
+    limit = 5
+    fmt = "prompt"
+    
+    i = 0
+    while i < len(args):
+        if args[i] == "--limit" and i + 1 < len(args):
+            limit = int(args[i + 1])
+            i += 2
+        elif args[i] == "--format" and i + 1 < len(args):
+            fmt = args[i + 1]
+            i += 2
+        else:
+            i += 1
+    
+    if not query:
+        print("Usage: moyu inject <query> [--limit N] [--format prompt|context]")
+        return
+    
+    try:
+        am = _import("agent_memory")
+        results = am.search(query, top_k=limit)
+    except Exception as e:
+        print(f"⚠️  Memory search failed: {e}")
+        return
+    
+    if not results:
+        if fmt == "prompt":
+            print("[MOYU: No relevant memories found.]")
+        else:
+            print("(no relevant memories)")
+        return
+    
+    if fmt == "context":
+        for r in results:
+            print(f"  • {r.get('summary', '')[:120]}")
+        return
+    
+    # Default: prompt format — clean, ready for injection
+    print("[MOYU Memory Injection]")
+    print()
+    for r in results:
+        score = r.get("score", 0)
+        bar = "▸" if score > 0 else " "
+        summary = r.get("summary", "")
+        if summary:
+            print(f"  {bar} {summary[:200]}")
+    print()
+    print(f"[{len(results)} memories injected]")
+    
+    # Auto-append context warning to injected output
+    try:
+        cm = _import("context_manager")
+        name, data = cm.get_context()
+        if name and data:
+            pct = data.get("pct", 0)
+            cfg = getattr(cm, '_load_compression_config', lambda: {})()
+            lang = cfg.get("warn_language", "zh") if isinstance(cfg, dict) else "zh"
+            warn_at = int(cfg.get("warn_threshold", 0.7) * 100) if isinstance(cfg, dict) else 70
+            if isinstance(pct, (int, float)) and pct >= warn_at:
+                if lang == "zh":
+                    print(f"\n[NOTE] {name}上下文用到 {pct}% 了，对话已深，可以考虑 /new")
+                else:
+                    print(f"\n[NOTE] {name} context at {pct}%, /new recommended")
+    except Exception:
+        pass
+
+
+def _config_handler(args):
+    """Handle config command — show and set retrieval weights."""
+    import os as _cfg_os
+    from moyu_toolkit._moyu_paths import get_config_path
+
+    if not args or args[0] in ("help", "--help", "-h"):
+        print("moyu config commands:")
+        print("  moyu config show                    Show current retrieval weights")
+        print("  moyu config set retrieval.weights.<dim> <val>  Set a retrieval weight:")
+        print("    semantic  — Semantic similarity weight (default 0.5)")
+        print("    keyword   — BM25 keyword weight (default 0.3)")
+        print("    recency   — Recency/decay weight (default 0.2)")
+        print("    entity    — Entity boost weight (default 0.0)")
+        print()
+        print("  Example: moyu config set retrieval.weights.entity 0.3")
+        return
+    if args[0] in ("show", "list", "--show", "--list"):
+        try:
+            am = _import("agent_memory")
+            w = am._get_retrieval_weights()
+            print("\n📋 Current Retrieval Weights")
+            print("=" * 32)
+            for dim in ["semantic", "keyword", "recency", "entity"]:
+                print(f"  {dim:12s} = {w.get(dim, 0.0):.2f}")
+            print()
+        except Exception as e:
+            print(f"❌ Error reading weights: {e}")
+        return
+    if args[0] == "set" and len(args) >= 3:
+        key = args[1]
+        val = args[2]
+        parts = key.split(".")
+        if len(parts) == 3 and parts[0] == "retrieval" and parts[1] == "weights":
+            dim = parts[2]
+            allowed = ["semantic", "keyword", "recency", "entity"]
+            if dim not in allowed:
+                print(f"❌ Unknown dimension '{dim}'. Allowed: {', '.join(allowed)}")
+                return
+            try:
+                fval = float(val)
+                if fval < 0:
+                    print("❌ Weight must be >= 0")
+                    return
+                config_path = get_config_path()
+                am = _import("agent_memory")
+                cfg = am._load_config()
+                if "memory" not in cfg:
+                    cfg["memory"] = {}
+                if "weights" not in cfg["memory"]:
+                    cfg["memory"]["weights"] = {}
+                cfg["memory"]["weights"][dim] = fval
+                import yaml as _yaml
+                with open(config_path, "w") as _f:
+                    _yaml.dump(cfg, _f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+                print(f"✅ retrieval.weights.{dim} = {fval}")
+                print("   Changes take effect on next search.")
+            except ValueError:
+                print(f"❌ Invalid value '{val}'. Must be a number.")
+        else:
+            print(f"❌ Unknown config key '{key}'. Use 'retrieval.weights.<dim>'")
+        return
+    print(f"Unknown subcommand: {args[0]}")
+    _config_help()
+
+
+def _config_help():
+    """Show config help."""
+    print("moyu config commands:")
+    print("  moyu config show                    Show current retrieval weights")
+    print("  moyu config set retrieval.weights.<dim> <val>  Set a retrieval weight:")
+    print("    semantic  — Semantic similarity weight (default 0.5)")
+    print("    keyword   — BM25 keyword weight (default 0.3)")
+    print("    recency   — Recency/decay weight (default 0.2)")
+    print("    entity    — Entity boost weight (default 0.0)")
+    print()
+    print("  Example: moyu config set retrieval.weights.entity 0.3")
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("help", "--help", "-h"):
         show_help()
@@ -904,6 +1245,20 @@ def main():
             ic.verify()
         except Exception:
             pass
+    
+    # ── First-run auto-setup: detect agents + set tune cron ──
+    init_marker = os.path.join(TOOLKIT_DIR, ".initialized")
+    if cmd not in ("help", "--help", "-h", "setup", "init") and not os.path.exists(init_marker):
+        try:
+            _auto_register_agents()
+            # Mark initialized so this only runs once
+            try:
+                with open(init_marker, "w") as _mf:
+                    _mf.write(f"MOYU initialized at {__import__('datetime').datetime.now().isoformat()}")
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     # ── Auto-detect corrections on every command ──
     # Skip when the command itself is "learn" (would double-learn)
@@ -914,6 +1269,12 @@ def main():
             hits = lrn.detect_corrections(user_text)
             if hits:
                 lrn.learn(user_text)
+                # Phase 2: record auto-detected correction as feedback
+                try:
+                    fb = _import("feedback")
+                    fb.record_correction(user_text, hits)
+                except Exception:
+                    pass
         except Exception:
             pass
 

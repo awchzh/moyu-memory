@@ -134,29 +134,20 @@ def _register_new_signal(text: str):
 # ==================== API Calls ====================
 
 def _call_llm(prompt: str) -> str:
-    import yaml, requests as rq
-    cfg_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-    if not os.path.exists(cfg_path):
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
+    if not api_key:
         return ""
-    with open(cfg_path) as f:
-        cfg = yaml.safe_load(f) or {}
-    api_cfg = cfg.get("api", {})
-    key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not key:
-        return ""
-    url = api_cfg.get("base_url", "https://api.openai.com/v1").rstrip("/") + "/chat/completions"
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-    try:
-        resp = rq.post(url, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                       json={"model": model, "messages": [
-                           {"role": "system", "content": "You are an experience extractor."},
-                           {"role": "user", "content": prompt}
-                       ], "temperature": 0.1}, timeout=15)
-        if resp.status_code == 200:
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-    except Exception:
-        pass
-    return ""
+    return call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": "You are an experience extractor."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        max_tokens=500,
+        timeout=15,
+    )
 
 
 # ==================== Core Logic ====================

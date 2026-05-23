@@ -61,6 +61,7 @@ memory:
     keyword: 0.3
     recency: 0.2
     semantic: 0.5
+    entity: 0.0
   llm_summary:
     enabled: true
   llm_merge:

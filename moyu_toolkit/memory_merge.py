@@ -31,38 +31,14 @@ _LLM_MERGE_NO_KEY_WARNED = False
 
 
 def _call_llm_merge(system_prompt: str, user_prompt: str) -> str:
-    """Call LLM for merge summarization. Returns empty string on failure."""
+    """Call LLM for merge summarization. Returns empty string on failure.
+    Uses unified _llm_client for config resolution and HTTP call."""
     global _LLM_MERGE_FAILURES
     if _LLM_MERGE_FAILURES >= 3:
         return ""
 
-    cfg_path = get_config_path()
-    if not os.path.exists(cfg_path):
-        return ""
-    try:
-        import yaml
-        with open(cfg_path) as f:
-            cfg = yaml.safe_load(f) or {}
-    except Exception:
-        return ""
-
-    api_cfg = cfg.get("api", {})
-    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not api_key or api_key == "your-api-key-here":
-        try:
-            env_path = os.path.expanduser("~/.hermes/.env")
-            if os.path.exists(env_path):
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("DEEPSEEK_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                            break
-        except Exception:
-            pass
-
-    if not api_key or api_key == "your-api-key-here":
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_MERGE_NO_KEY_WARNED
         if not _LLM_MERGE_NO_KEY_WARNED:
@@ -71,34 +47,21 @@ def _call_llm_merge(system_prompt: str, user_prompt: str) -> str:
         _LLM_MERGE_FAILURES += 1
         return ""
 
-    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-
-    try:
-        import requests
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.1,
-                "max_tokens": 300,
-            },
-            timeout=15,
-        )
-        if resp.status_code == 200:
-            _LLM_MERGE_FAILURES = 0
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        else:
-            _LLM_MERGE_FAILURES += 1
-            return ""
-    except Exception:
+    result = call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.1,
+        max_tokens=300,
+        timeout=15,
+    )
+    if result:
+        _LLM_MERGE_FAILURES = 0
+    else:
         _LLM_MERGE_FAILURES += 1
-        return ""
+    return result
 
 
 def _llm_merge_summaries(items: list) -> str:

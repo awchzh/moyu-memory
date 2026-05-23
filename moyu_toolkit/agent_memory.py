@@ -107,8 +107,22 @@ WRITE_BURST_THRESHOLD = 30   # max writes in the window before trigger
 WRITE_BURST_WINDOW = 60      # seconds
 WRITE_LOCK_MINUTES = 5       # auto-lock duration after burst
 
-# TEMPR retrieval weights (used only as fallback when RRF disabled)
-TEMPR_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2}
+# Default retrieval weights — overridden by config.yaml memory.weights
+DEFAULT_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2, "entity": 0.0}
+
+
+def _get_retrieval_weights() -> dict:
+    """Read retrieval weights from config.yaml, falling back to DEFAULT_WEIGHTS."""
+    config = _load_config()
+    cfg_w = config.get("memory", {}).get("weights", {})
+    weights = {}
+    for dim in ["semantic", "keyword", "recency", "entity"]:
+        val = cfg_w.get(dim)
+        if isinstance(val, (int, float)) and val >= 0:
+            weights[dim] = float(val)
+        else:
+            weights[dim] = DEFAULT_WEIGHTS[dim]
+    return weights
 
 # Source weight map — agent_confirmed facts are equal to user; system/default discounted
 SOURCE_WEIGHTS = {
@@ -331,15 +345,28 @@ def score_and_rank(semantic_scores: list, bm25_norm_scores: list,
                    recency_scores: list, entity_boosts: list,
                    top_k: int, has_real_embeddings: bool = True,
                    source_weights: list = None,
-                   connectivity_bonuses: dict = None) -> List[Tuple[float, int]]:
-    """Hybrid scoring: semantic gate → combined score → sort.
+                   connectivity_bonuses: dict = None,
+                   retrieval_weights: dict = None) -> List[Tuple[float, int]]:
+    """Hybrid scoring: semantic gate → weighted fusion → sort.
     
     - Semantic gate only applies when has_real_embeddings=True (FastEmbed/API).
       When using n-gram fallback, semantic scores are meaningless, so the gate
       is bypassed.
     - source_weights: per-entry weight from SOURCE_WEIGHTS map (1.0 for user/agent_confirmed).
     - connectivity_bonuses: cross-memory entity linking boost.
+    - retrieval_weights: configurable weights from config.yaml memory.weights.
+      If None, defaults from DEFAULT_WEIGHTS are used.
     """
+    if retrieval_weights is None:
+        retrieval_weights = DEFAULT_WEIGHTS.copy()
+    
+    w_sem = retrieval_weights.get("semantic", 0.5)
+    w_bm25 = retrieval_weights.get("keyword", 0.3)
+    w_rec = retrieval_weights.get("recency", 0.2)
+    w_ent = retrieval_weights.get("entity", 0.0)
+    weight_sum = w_sem + w_bm25 + w_rec + w_ent
+    if weight_sum <= 0:
+        weight_sum = 1.0  # prevent division by zero
     scored = []
     for i in range(len(semantic_scores)):
         sem = semantic_scores[i]
@@ -350,7 +377,7 @@ def score_and_rank(semantic_scores: list, bm25_norm_scores: list,
         rec = recency_scores[i]
         ent = entity_boosts[i] if i < len(entity_boosts) else 0.0
         
-        raw = sem + bm25 + rec + ent
+        raw = sem * w_sem + bm25 * w_bm25 + rec * w_rec + ent * w_ent
         
         # Source weight: agent_confirmed = user = 1.0, system/agent = 0.85
         if source_weights and i < len(source_weights):
@@ -358,7 +385,7 @@ def score_and_rank(semantic_scores: list, bm25_norm_scores: list,
         
         # Cross-memory entity connectivity bonus (per-result, after weighting)
         # This is separate from entity_boosts (which rewards query-entity overlap)
-        max_possible = 1.0 + 1.0 + 1.0 + ENTITY_BOOST_WEIGHT
+        max_possible = weight_sum + ENTITY_BOOST_WEIGHT
         normalized = min(raw / max_possible, 1.0)
         scored.append((normalized, i))
     
@@ -920,38 +947,13 @@ _LLM_RERANK_NO_KEY_WARNED = False
 
 def _call_llm_rerank(system_prompt: str, user_prompt: str) -> str:
     """Call configured LLM for reranking. Returns empty string on failure.
-    Same pattern as forgetting_curve._call_llm."""
+    Uses unified _llm_client for config resolution and HTTP call."""
     global _LLM_RERANK_FAILURES
     if _LLM_RERANK_FAILURES >= 3:
         return ""
 
-    cfg_path = get_config_path()
-    if not os.path.exists(cfg_path):
-        return ""
-    try:
-        import yaml
-        with open(cfg_path) as f:
-            cfg = yaml.safe_load(f) or {}
-    except Exception:
-        return ""
-
-    api_cfg = cfg.get("api", {})
-    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not api_key or api_key == "your-api-key-here":
-        try:
-            env_path = os.path.expanduser("~/.hermes/.env")
-            if os.path.exists(env_path):
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("DEEPSEEK_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                            break
-        except Exception:
-            pass
-
-    if not api_key or api_key == "your-api-key-here":
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_RERANK_NO_KEY_WARNED
         if not _LLM_RERANK_NO_KEY_WARNED:
@@ -960,34 +962,21 @@ def _call_llm_rerank(system_prompt: str, user_prompt: str) -> str:
         _LLM_RERANK_FAILURES += 1
         return ""
 
-    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-
-    try:
-        import requests
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.1,
-                "max_tokens": 500,
-            },
-            timeout=15,
-        )
-        if resp.status_code == 200:
-            _LLM_RERANK_FAILURES = 0
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        else:
-            _LLM_RERANK_FAILURES += 1
-            return ""
-    except Exception:
+    result = call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.1,
+        max_tokens=500,
+        timeout=15,
+    )
+    if result:
+        _LLM_RERANK_FAILURES = 0
+    else:
         _LLM_RERANK_FAILURES += 1
-        return ""
+    return result
 
 
 def _llm_rerank(query: str, candidates: list) -> list:
@@ -1071,38 +1060,13 @@ _LLM_SUMMARY_NO_KEY_WARNED = False
 
 def _call_llm_summary(system_prompt: str, user_prompt: str) -> str:
     """Call LLM for summarization. Returns empty string on failure.
-    Shares failure counter isolation with rerank — separate reset logic."""
+    Uses unified _llm_client for config resolution and HTTP call."""
     global _LLM_SUMMARY_FAILURES
     if _LLM_SUMMARY_FAILURES >= 3:
         return ""
 
-    cfg_path = get_config_path()
-    if not os.path.exists(cfg_path):
-        return ""
-    try:
-        import yaml
-        with open(cfg_path) as f:
-            cfg = yaml.safe_load(f) or {}
-    except Exception:
-        return ""
-
-    api_cfg = cfg.get("api", {})
-    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not api_key or api_key == "your-api-key-here":
-        try:
-            env_path = os.path.expanduser("~/.hermes/.env")
-            if os.path.exists(env_path):
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("DEEPSEEK_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                            break
-        except Exception:
-            pass
-
-    if not api_key or api_key == "your-api-key-here":
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_SUMMARY_NO_KEY_WARNED
         if not _LLM_SUMMARY_NO_KEY_WARNED:
@@ -1111,34 +1075,21 @@ def _call_llm_summary(system_prompt: str, user_prompt: str) -> str:
         _LLM_SUMMARY_FAILURES += 1
         return ""
 
-    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-
-    try:
-        import requests
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.1,
-                "max_tokens": 300,
-            },
-            timeout=15,
-        )
-        if resp.status_code == 200:
-            _LLM_SUMMARY_FAILURES = 0
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        else:
-            _LLM_SUMMARY_FAILURES += 1
-            return ""
-    except Exception:
+    result = call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.1,
+        max_tokens=300,
+        timeout=15,
+    )
+    if result:
+        _LLM_SUMMARY_FAILURES = 0
+    else:
         _LLM_SUMMARY_FAILURES += 1
-        return ""
+    return result
 
 
 def _llm_summarize(text: str) -> str:
@@ -1332,7 +1283,8 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     ranked = score_and_rank(sem_scores, bm25_scores, recency_scores, entity_boosts, candidate_k,
                             has_real_embeddings=has_real_embeds,
                             source_weights=source_weights,
-                            connectivity_bonuses=connectivity_bonuses)
+                            connectivity_bonuses=connectivity_bonuses,
+                            retrieval_weights=_get_retrieval_weights())
     
     results = []
     for score, i in ranked:
@@ -1354,6 +1306,7 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
             results = reranked
 
     return results[:top_k]
+
 
 
 def stats():

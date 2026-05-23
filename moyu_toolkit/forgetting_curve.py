@@ -297,38 +297,13 @@ _LLM_NO_KEY_WARNED = False
 
 def _call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.1, max_tokens: int = 500) -> str:
     """Call the configured LLM API. Returns empty string on failure.
-    Reads config.yaml → api section, with fallback to env vars and ~/.hermes/.env."""
+    Uses unified _llm_client for config resolution and HTTP call."""
     global _LLM_FAILURES
     if _LLM_FAILURES >= 3:
         return ""
 
-    try:
-        import yaml
-        cfg_path = Path(get_config_path())
-        if not cfg_path.exists():
-            return ""
-        with open(cfg_path) as f:
-            cfg = yaml.safe_load(f) or {}
-    except Exception:
-        return ""
-
-    api_cfg = cfg.get("api", {})
-    api_key = api_cfg.get("api_key", "") or os.environ.get("MOYU_API_KEY", "")
-    if not api_key or api_key == "your-api-key-here":
-        try:
-            env_path = os.path.expanduser("~/.hermes/.env")
-            if os.path.exists(env_path):
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("DEEPSEEK_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                            break
-        except Exception:
-            pass
-
-    if not api_key or api_key == "your-api-key-here":
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-
+    from _llm_client import resolve_llm_config, call_llm_api
+    api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_NO_KEY_WARNED
         if not _LLM_NO_KEY_WARNED:
@@ -337,38 +312,21 @@ def _call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.1, ma
         _LLM_FAILURES += 1
         return ""
 
-    base_url = os.environ.get("MOYU_LLM_BASE_URL", api_cfg.get("base_url", "https://api.openai.com/v1")).rstrip("/")
-    model = api_cfg.get("chat_model", "gpt-4o-mini")
-
-    # Auto-correct model name for known providers
-    if "deepseek.com" in base_url and model.startswith("gpt-"):
-        model = "deepseek-chat"
-
-    try:
-        import requests
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            _LLM_FAILURES = 0
-            return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        else:
-            _LLM_FAILURES += 1
-            return ""
-    except Exception:
+    result = call_llm_api(
+        api_key, base_url, model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=30,
+    )
+    if result:
+        _LLM_FAILURES = 0
+    else:
         _LLM_FAILURES += 1
-        return ""
+    return result
 
 
 # ── Stage 4: LLM Review ──
