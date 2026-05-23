@@ -1,0 +1,11 @@
+# MANIFEST.in — MOYU source distribution manifest
+# Explicitly exclude internal/private files from sdist
+
+prune tests
+prune __pycache__
+prune *.pyc
+prune .DS_Store
+
+exclude moyu_toolkit/墨羽项目.md
+exclude moyu_toolkit/SKILL.md
+exclude moyu_toolkit/墨羽项目_学习者模块设计.md
