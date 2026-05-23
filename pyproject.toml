@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "moyu-memory"
-version = "2.7.0"
+version = "2.7.1"
 description = "Zero-trust memory toolkit for AI Agents. Pure Python, zero infrastructure, self-defending."
 readme = "README.md"
 license = {text = "MIT"}
@@ -47,8 +47,12 @@ moyu = "moyu_toolkit.moyu:main_cli"
 
 [tool.setuptools.packages.find]
 include = ["moyu_toolkit*", "moyu*"]
+exclude = ["moyu_toolkit.墨羽项目"]
 
 [tool.setuptools.package-data]
 "moyu_toolkit" = ["*.yaml", "*.json", "*.md", "*.txt"]
 "moyu_toolkit.defense_toolkit" = ["*.json"]
 "moyu_toolkit.tests" = ["*.py"]
+
+[tool.setuptools.exclude-package-data]
+"moyu_toolkit" = ["墨羽项目.md", "SKILL.md"]
