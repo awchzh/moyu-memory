@@ -9,7 +9,6 @@
 - **MANIFEST.in added** — Excludes internal files from sdist
 - **`scripts/preflight.py` added** — Pre-build check: catches internal document leaks before they ship
 - **`pyproject.toml` fixed** — `exclude-package-data` ensures wheel clean
-- **`墨羽项目.md` removed from git tracking** — No longer leaks into distributions
 
 ## v2.7.0 — 架构统一 + 检索全链路 + 安全加固 (2026-05-23)
 
