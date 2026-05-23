@@ -13,6 +13,12 @@ pip install moyu-memory
 moyu quickstart    # 5-minute interactive demo, zero config
 ```
 
+[![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/moyu-memory)](https://pypi.org/project/moyu-memory/)
+[![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://pypi.org/project/moyu-memory/)
+[![License](https://img.shields.io/github/license/awchzh/moyu-memory)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/moyu-memory)](https://pypi.org/project/moyu-memory/)
+
 ---
 
 ### Three things that make MOYU different
