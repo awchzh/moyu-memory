@@ -1,20 +1,5 @@
 # MOYU — Development Log
 
-## v2.7.3 — Frequency Guard + Read Monitoring (2026-05-24)
-
-### 🧱 Frequency Guard V1.0
-
-- **Unified frequency monitoring framework** — `frequency_guard.py` replaces hard-coded write burst protection with a configurable sliding window engine.
-- **Write burst protection** (unchanged behavior): >30 writes/60s → rollback + 5min lock.
-- **Read burst monitoring** (new): >100 reads/60s → alert log (no blocking). Every `moyu search` is tracked.
-- **`moyu frequency stats`** — Check current frequency status for all rules.
-- **`moyu frequency unlock <name>`** — Manually unlock a rule.
-- **Backward compatible** — old lock files (`write_lock.json`, `write_freq.json`) reused; same file paths. No config changes needed.
-
-### 🛡️ Security
-
-- Defense chain expanded from 9 to 10 capabilities: added **access behavior monitoring** (read frequency).
-
 ## v2.7.2 — Auto memory extraction + Session bridge V2.2 (2026-05-24)
 
 ### 🆕 Auto Memory Extraction
