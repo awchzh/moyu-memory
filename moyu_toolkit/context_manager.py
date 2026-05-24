@@ -205,16 +205,14 @@ class InjectionPayload:
         return round(min(self.total_chars() / self.budget * 100, 100), 1)
 
     def level(self) -> str:
-        """Return current status level: 'ok', 'warn', 'mild', 'auto', or 'over'."""
-        pct = self.total_chars() / self.budget if self.budget > 0 else 1
+        """Return current compression level: over > auto > mild > warn > ok."""
+        pct = self.usage_pct()
         if pct >= 1.0:
             return "over"
         if pct >= self.auto_at:
             return "auto"
         if pct >= self.mild_at:
             return "mild"
-        if pct >= DEFAULT_WARN:
-            return "warn"
         return "ok"
 
     def compress(self) -> list[dict]:

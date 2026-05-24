@@ -83,6 +83,12 @@ def get_storage_path(base_path: str) -> str:
     if not user_id:
         return base_path
 
-    user_path = os.path.join(base_path, user_id)
+    # Sanitize: only allow alphanumeric, underscore, hyphen
+    import re
+    safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', user_id)
+    if safe_id != user_id:
+        safe_id = safe_id or "default"
+
+    user_path = os.path.join(base_path, safe_id)
     os.makedirs(user_path, exist_ok=True)
     return user_path

@@ -315,13 +315,14 @@ def add_triples(text: str, valid_from: str = None) -> int:
             else:
                 kg["entities"][name]["last_seen"] = now
                 kg["entities"][name]["mention_count"] += 1
-        # Only add if no record of this relation exists at all (active or inactive)
-        # This prevents: (a) duplicates, (b) re-activating an intentionally invalidated relation
-        exists = any(
+        # Only add if no *active* record of this relation exists
+        # Invalidated relations CAN be re-added (reactivation)
+        exists_active = any(
             r["source"] == sn and r["target"] == tn and r["relation"] == t["relation"]
+            and r.get("valid_until") is None
             for r in kg["relations"]
         )
-        if not exists:
+        if not exists_active:
             kg["relations"].append({
                 "source": sn, "target": tn, "relation": t["relation"],
                 "weight": 1, "created": now,

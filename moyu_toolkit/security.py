@@ -379,7 +379,7 @@ def unlock():
         print("\n⏹  Cancelled.")
         return False
 
-    if _sha256(pw) == safe_word_hash:
+    if _hash_equal(_sha256(pw), safe_word_hash):
         LOCK_FILE.unlink(missing_ok=True)
         _clear_failures()
         print("✅ Lock removed")

@@ -197,7 +197,8 @@ def llm_scan(text: str) -> dict:
 
     try:
         import yaml
-        cfg_path = os.path.join(os.path.dirname(__file__), "..", "config.yaml")
+        from moyu_toolkit._moyu_paths import get_config_path
+        cfg_path = get_config_path()
         if not os.path.exists(cfg_path):
             return {"verdict": "safe", "reason": "config.yaml not found"}
         with open(cfg_path) as f:
@@ -394,7 +395,8 @@ def _load_alert_config() -> dict:
     """Load alert config from config.yaml. Returns {channel, webhook, target} or empty."""
     try:
         import yaml
-        cfg_path = os.path.join(os.path.dirname(BASE), "config.yaml")
+        from moyu_toolkit._moyu_paths import get_config_path
+        cfg_path = get_config_path()
         if os.path.exists(cfg_path):
             with open(cfg_path) as f:
                 cfg = yaml.safe_load(f) or {}

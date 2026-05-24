@@ -54,7 +54,8 @@ IGNORE_PATTERNS = [r"他\w*不", r"我不(知道|确定)", r"不太好",
 
 def _load_config() -> dict:
     import yaml
-    cfg_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    from moyu_toolkit._moyu_paths import get_config_path
+    cfg_path = get_config_path()
     if os.path.exists(cfg_path):
         try:
             with open(cfg_path) as f:
@@ -250,11 +251,17 @@ def _extract_lesson(text: str) -> str:
 
 
 def _similar(a: str, b: str) -> bool:
-    wa = set(re.findall(r'[\u4e00-\u9fff]', a))
-    wb = set(re.findall(r'[\u4e00-\u9fff]', b))
-    if not wa or not wb:
+    wa_cn = set(re.findall(r'[\u4e00-\u9fff]', a))
+    wb_cn = set(re.findall(r'[\u4e00-\u9fff]', b))
+    # Chinese char overlap
+    if wa_cn or wb_cn:
+        return len(wa_cn & wb_cn) / max(len(wa_cn), len(wb_cn), 1) > 0.3
+    # English fallback: compare word-level tokens
+    wa_en = set(re.findall(r'[a-zA-Z]+', a.lower()))
+    wb_en = set(re.findall(r'[a-zA-Z]+', b.lower()))
+    if not wa_en or not wb_en:
         return False
-    return len(wa & wb) / max(len(wa), len(wb)) > 0.3
+    return len(wa_en & wb_en) / max(len(wa_en), len(wb_en), 1) > 0.3
 
 
 # ==================== Persistence ====================

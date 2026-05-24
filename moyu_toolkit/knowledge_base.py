@@ -53,7 +53,9 @@ def _scan_md_files() -> List[Path]:
     kdir = _knowledge_dir()
     if not kdir.exists():
         return []
-    return sorted(kdir.glob("*.md"))
+    files = sorted(kdir.glob("*.md"))
+    # Sanitize: ensure no paths escape the knowledge directory
+    return [f for f in files if f.resolve().parent == kdir.resolve()]
 
 
 # ── Frontmatter parser ──

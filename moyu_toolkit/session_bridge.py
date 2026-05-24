@@ -399,8 +399,12 @@ def _sync_to_prefill(data: dict):
                 prefill.append({"role": "user", "content": r["user"]})
             if r.get("assistant"):
                 prefill.append({"role": "assistant", "content": r["assistant"]})
+        if not clean_rounds:
+            print(f"⚠️ Prefill: all rounds blocked by security gate — prefill will only contain system message", file=sys.stderr)
     except ImportError:
         pass
+    except Exception:
+        print(f"⚠️ Prefill Security Gate: content_scan failed — writing prefill without security scan", file=sys.stderr)
 
     with open(prefill_path, 'w') as f:
         json.dump(prefill, f, ensure_ascii=False, indent=2)
@@ -479,7 +483,8 @@ def status():
 
     decisions = data.get("decisions", [])
     if decisions:
-        print(f"  Decisions:      {len(decisions)} (latest: {decisions[-1][:40]})" if decisions[-1] else "")
+        latest = decisions[-1][:40] if decisions[-1] else "(empty)"
+        print(f"  Decisions:      {len(decisions)} (latest: {latest})")
     pending = data.get("pending", [])
     if pending:
         print(f"  Pending:        {len(pending)} items")

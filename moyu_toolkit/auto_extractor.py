@@ -388,9 +388,14 @@ def _semantic_dedup(summary: str) -> bool:
         return False  # Can't check, let it through
 
     try:
-        from agent_memory import _load_index, _load_memories
+        from moyu_toolkit import agent_memory as am
+        _load_index = am._load_index
+        _load_memories = am._load_memories
     except ImportError:
-        return False
+        try:
+            from agent_memory import _load_index, _load_memories
+        except ImportError:
+            return False
 
     # Get embedding for new text
     vec = embed_fn(summary)
@@ -532,13 +537,13 @@ def extract_and_store(conversation_text: str, source: str = "auto_extracted") ->
                     "method": "llm",
                 })
 
-    # Update stats
+    # Update stats — always save, even if nothing stored (paused_types may have changed)
     if stored_count > 0:
         stats["total_extracted"] = stats.get("total_extracted", 0) + stored_count
-        # Keep only last 200 entries to prevent unbounded growth
-        if len(stats.get("extracted", [])) > 200:
-            stats["extracted"] = stats["extracted"][-200:]
-        _save_stats(stats)
+    # Keep only last 200 entries to prevent unbounded growth
+    if len(stats.get("extracted", [])) > 200:
+        stats["extracted"] = stats["extracted"][-200:]
+    _save_stats(stats)
 
     return stored_count
 

@@ -65,6 +65,26 @@ def _ensure_paths(rule_name: str):
 
 
 # ============================================================
+#  Timestamp helpers
+# ============================================================
+
+def _ts_to_unix(ts_str: str) -> float:
+    """Parse ISO timestamp string to unix timestamp. Handles missing/partial microseconds."""
+    if not ts_str:
+        return 0.0
+    try:
+        # Try with microseconds first, then without
+        for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
+            try:
+                return datetime.strptime(ts_str, fmt).timestamp()
+            except ValueError:
+                continue
+        return 0.0
+    except Exception:
+        return 0.0
+
+
+# ============================================================
 #  Flock (file-level locking for thread/process safety)
 # ============================================================
 
@@ -160,7 +180,8 @@ class FrequencyGuard:
                 os.remove(lock_path)
                 return False
         except Exception:
-            return False
+            # Corrupted lock file — treat as locked to be safe
+            return True
 
     def lock_remaining(self, rule_name: str) -> float:
         """Get remaining lock time in seconds. Returns 0 if not locked."""
@@ -269,7 +290,6 @@ class FrequencyGuard:
     def _rollback_burst(self, burst_records: list) -> int:
         """Rollback entries written during the burst window. Returns count removed."""
         min_unix = min(burst_records)
-        cutoff_ts = datetime.fromtimestamp(min_unix).isoformat()
         removed_count = 0
 
         # conversation_memory.json — direct file ops, no cross-module import
@@ -279,7 +299,7 @@ class FrequencyGuard:
                 with open(mem_path) as f:
                     memories = json.load(f)
                 before = len(memories)
-                memories = [m for m in memories if m.get("timestamp", "") < cutoff_ts]
+                memories = [m for m in memories if _ts_to_unix(m.get("timestamp", "")) < min_unix]
                 removed = before - len(memories)
                 if removed:
                     with open(mem_path, 'w') as f:
@@ -295,7 +315,7 @@ class FrequencyGuard:
                 with open(vec_path) as f:
                     idx = json.load(f)
                 before = len(idx.get("vectors", []))
-                idx["vectors"] = [v for v in idx.get("vectors", []) if v.get("timestamp", "") < cutoff_ts]
+                idx["vectors"] = [v for v in idx.get("vectors", []) if _ts_to_unix(v.get("timestamp", "")) < min_unix]
                 removed = before - len(idx["vectors"])
                 if removed:
                     with open(vec_path, 'w') as f:

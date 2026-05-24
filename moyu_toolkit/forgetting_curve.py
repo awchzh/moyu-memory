@@ -302,7 +302,7 @@ def _call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.1, ma
     if _LLM_FAILURES >= 3:
         return ""
 
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_NO_KEY_WARNED
@@ -498,7 +498,7 @@ def _llm_classify_scenes(memories: list, user_labels: dict = None) -> dict:
             import json as _j
             cleaned = response_text.strip()
             if cleaned.startswith("```"):
-                cleaned = cleaned.split("\\n", 1)[1] if "\\n" in cleaned else cleaned[3:]
+                cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
                 if cleaned.endswith("```"):
                     cleaned = cleaned[:-3]
             parsed = _j.loads(cleaned)

@@ -69,6 +69,10 @@ moyu_toolkit/SKILL.md
 # 工具包内部数据（用户自己的数据）
 moyu_toolkit/memory_data/
 moyu_toolkit/__pycache__/
+moyu_toolkit/.initialized
+moyu_toolkit/.session_tip_shown
+moyu_toolkit/墨羽项目.md
+traffic_data/
 
 # Build artifacts
 *.egg-info/

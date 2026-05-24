@@ -605,6 +605,7 @@ def add_memory(summary: str, source: str = "user",
     except ImportError:
         pass
     except Exception:
+        print("⚠️ Content Security Gate check failed — memory written without security scan")
         pass
 
     # ── PII Redaction: detect and mask sensitive info before storage ──
@@ -617,6 +618,7 @@ def add_memory(summary: str, source: str = "user",
     except ImportError:
         pass
     except Exception:
+        print("⚠️ PII redaction failed — storage may contain unmasked sensitive info")
         pass
 
     # ── LLM Security Guard (optional second layer) ──

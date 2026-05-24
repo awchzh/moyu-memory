@@ -111,7 +111,13 @@ def cmd_audit():
     # Layer 2: Integrity Check (on-wake detection)
     ic = _import("defense_toolkit.integrity_checker")
     import os as _os
-    storage_base = _os.environ.get("MOYU_STORAGE", get_default_storage() if 'get_default_storage' in dir() else _os.path.join(TOOLKIT_DIR, "memory_data"))
+    storage_base = _os.environ.get("MOYU_STORAGE", "")
+    if not storage_base:
+        try:
+            from moyu_toolkit._moyu_paths import get_default_storage
+            storage_base = get_default_storage()
+        except Exception:
+            storage_base = _os.path.join(TOOLKIT_DIR, "memory_data")
     manifest_path = _os.path.join(storage_base, "manifest.json")
     backup_dir = _os.path.join(storage_base, "backups")
     has_manifest = _os.path.exists(manifest_path)

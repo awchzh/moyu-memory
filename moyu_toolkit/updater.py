@@ -264,6 +264,11 @@ def update(dry_run: bool = False) -> dict:
                     shutil.copytree(item, dest)
                 else:
                     shutil.copy2(item, dest)
+            # Also restore memory_data from separate backup
+            if mem_backup and mem_backup.exists():
+                if mem_data.exists():
+                    shutil.rmtree(mem_data, ignore_errors=True)
+                shutil.copytree(mem_backup, mem_data)
         # Mark failed update state even after rollback (prevents silent mixed versions)
         _fail_marker = TOOLKIT_DIR / ".UPDATE_FAILED"
         try:

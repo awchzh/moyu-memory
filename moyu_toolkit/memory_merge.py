@@ -131,8 +131,8 @@ def _save_memories(memories: list):
 def _tokenize(text: str) -> set:
     """Extract meaningful keywords from text."""
     text = text.lower()
-    # Chinese words (2-4 chars)
-    cn = re.findall(r'[\u4e00-\u9fff]{2,4}', text)
+    # Chinese words (2-5 chars, captures longer compound terms)
+    cn = re.findall(r'[\u4e00-\u9fff]{2,5}', text)
     # English words (3+ chars, skip common)
     en = re.findall(r'[a-z]{3,}', text)
     stopwords = {'the', 'and', 'for', 'not', 'are', 'was', 'but', 'have',
@@ -237,7 +237,16 @@ def run(dry_run: bool = False) -> dict:
             summ = m.get("summary", "")[:150]
             details.append(f"• [{ts}] ({src}) {summ}")
 
-        # Create merged entry
+        # Create merged entry with security check
+        try:
+            from defense_toolkit.integrity_checker import content_scan
+            hits = content_scan(merged_summary)
+            if hits:
+                print(f"⚠️ memory_merge: skipped — merged content blocked by security gate: {', '.join(hits)}")
+                continue
+        except Exception:
+            pass
+
         merged_id = f"MERGE-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         merged_entry = {
             "id": merged_id,
