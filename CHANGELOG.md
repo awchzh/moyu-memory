@@ -1,6 +1,6 @@
 # MOYU — Development Log
 
-## v2.7.3 — Frequency Guard + Read Monitoring (2026-05-24)
+## v2.7.4 — Frequency Guard + Read Monitoring (2026-05-24)
 
 ### 🧱 Frequency Guard V1.0
 
