@@ -470,148 +470,16 @@ def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
     return _get_ngram_embedding(text)
 
 
-# ==================== Write Frequency Guard (Burst Protection) ====================
+# ==================== Frequency Guard (Burst Protection, unified) ====================
 
-class _Flock:
-    """Simple file lock via fcntl.flock. Prevents concurrent writes to shared state files."""
-    def __init__(self, path: str):
-        self.path = path
-        self.fp = None
-    def __enter__(self):
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        self.fp = open(self.path, 'w')
-        fcntl.flock(self.fp, fcntl.LOCK_EX)
-        return self
-    def __exit__(self, *args):
-        if self.fp:
-            fcntl.flock(self.fp, fcntl.LOCK_UN)
-            self.fp.close()
-            self.fp = None
+from frequency_guard import record_write as _record_write
+from frequency_guard import is_write_locked as _check_write_lock
+from frequency_guard import record_read as _record_read
 
 
-def _check_write_lock() -> bool:
-    """Check if memory writes are currently locked after a burst event."""
-    if not os.path.exists(WRITE_LOCK_FILE):
-        return False
-    try:
-        with open(WRITE_LOCK_FILE) as f:
-            lock = json.load(f)
-        elapsed = time.time() - lock.get("locked_at", 0)
-        if elapsed < WRITE_LOCK_MINUTES * 60:
-            return True  # still locked
-        else:
-            os.remove(WRITE_LOCK_FILE)  # expired
-            return False
-    except Exception:
-        return False
-
-
-def _record_write():
-    """Record a memory write timestamp. If burst threshold exceeded, trigger rollback + lock."""
-    with _Flock(WRITE_FLOCK_FILE):
-        now = time.time()
-        records = []
-        if os.path.exists(WRITE_FREQ_FILE):
-            try:
-                with open(WRITE_FREQ_FILE) as f:
-                    records = json.load(f)
-            except Exception:
-                records = []
-    
-        # Prune entries outside the window
-        cutoff = now - WRITE_BURST_WINDOW
-        records = [t for t in records if t > cutoff]
-        records.append(now)
-    
-        # Check burst
-        if len(records) > WRITE_BURST_THRESHOLD:
-            # Burst detected — save the burst timestamps before clearing
-            burst_records = list(records)
-            _handle_write_burst(burst_records)
-            # Clear freq records after handling
-            with open(WRITE_FREQ_FILE, 'w') as f:
-                json.dump([], f)
-            return
-    
-        # Save updated records
-        with open(WRITE_FREQ_FILE, 'w') as f:
-            json.dump(records, f)
-
-
-def _handle_write_burst(burst_records: list = None):
-    """Fine-grained rollback: remove entries written during the burst window.
-    Does NOT touch entries written before the burst started.
-    Locks writes and sends alert."""
-    from defense_toolkit.integrity_checker import log, BASE
-
-    # Lock writes
-    lock_data = {
-        "locked_at": time.time(),
-        "lock_minutes": WRITE_LOCK_MINUTES,
-        "reason": f"Write burst: >{WRITE_BURST_THRESHOLD} writes in {WRITE_BURST_WINDOW}s",
-        "timestamp": datetime.now().isoformat(),
-    }
-    os.makedirs(os.path.dirname(WRITE_LOCK_FILE), exist_ok=True)
-    with open(WRITE_LOCK_FILE, 'w') as f:
-        json.dump(lock_data, f, ensure_ascii=False, indent=2)
-
-    # Determine burst window: earliest timestamp in burst_records is the cutoff
-    cutoff_ts = None
-    if burst_records:
-        min_unix = min(burst_records)
-        cutoff_ts = datetime.fromtimestamp(min_unix).isoformat()
-    else:
-        # Fallback: use current time minus burst window
-        cutoff_ts = datetime.fromtimestamp(time.time() - WRITE_BURST_WINDOW).isoformat()
-
-    # Fine-grained rollback: remove entries written during burst window
-    removed_count = 0
-
-    # conversation_memory.json: remove entries with timestamp >= cutoff_ts
-    mem_path = _storage_path("conversation_memory.json")
-    if os.path.exists(mem_path):
-        try:
-            with open(mem_path) as f:
-                memories = json.load(f)
-            before = len(memories)
-            memories = [m for m in memories if m.get("timestamp", "") < cutoff_ts]
-            removed = before - len(memories)
-            if removed:
-                with open(mem_path, 'w') as f:
-                    json.dump(memories, f, ensure_ascii=False, indent=2)
-                removed_count += removed
-        except Exception:
-            pass
-
-    # vector_index.json: remove entries with timestamp >= cutoff_ts
-    vec_path = _storage_path("vector_index.json")
-    if os.path.exists(vec_path):
-        try:
-            with open(vec_path) as f:
-                idx = json.load(f)
-            before = len(idx.get("vectors", []))
-            idx["vectors"] = [v for v in idx.get("vectors", []) if v.get("timestamp", "") < cutoff_ts]
-            removed = before - len(idx["vectors"])
-            if removed:
-                with open(vec_path, 'w') as f:
-                    json.dump(idx, f, ensure_ascii=False, indent=2)
-                removed_count += removed
-        except Exception:
-            pass
-
-    if removed_count:
-        log(f"Write burst: removed {removed_count} entry/entries after burst, locked {WRITE_LOCK_MINUTES}min", "CRITICAL")
-
-    # Send alert
-    try:
-        from defense_toolkit.integrity_checker import _send_alert
-        _send_alert(
-            f"🔴 MOYU Write Burst Alert: locked for {WRITE_LOCK_MINUTES}min",
-            f"Detected >{WRITE_BURST_THRESHOLD} writes in {WRITE_BURST_WINDOW}s\n"
-            f"Actions: removed {removed_count} burst entries, writes locked for {WRITE_LOCK_MINUTES}min"
-        )
-    except Exception:
-        pass
+def _handle_write_burst(_burst_records=None):
+    """Legacy no-op — kept for backward compat. FrequencyGuard handles it now."""
+    pass
 
 
 # ==================== Lazy Initialization ====================
@@ -1170,6 +1038,11 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     7. score_and_rank: semantic gate → source-weighted → combined → sorted
     8. (Optional) LLM rerank: semantic reordering of top-2k candidates
     """
+    # Record read event for frequency monitoring
+    try:
+        _record_read()
+    except Exception:
+        pass
     # Load vectors from vector index (JSON)
     idx = _load_index()
     vectors = idx.get("vectors", [])
