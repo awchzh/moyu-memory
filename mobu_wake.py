@@ -87,7 +87,26 @@ def wake(dry_run: bool = False) -> list:
     if report_msg:
         messages.append(report_msg)
 
-    # ── 2. Update check (silent) ──
+    # ── 2. MoBai 状态层 ──
+    if not dry_run:
+        try:
+            sys.path.insert(0, MOBAI_DIR)
+            from state_manager import context_summary, sync_from_nas, mark_dirty
+            # 先从 NAS 拉取最新状态
+            if sync_from_nas():
+                messages.append("从 NAS 同步了最新状态")
+            # 读取状态摘要
+            summary = context_summary()
+            if summary:
+                messages.append(summary)
+            # 能在醒来说明上一轮正常结束，清 dirty 标记
+            mark_dirty(False)
+        except ImportError:
+            pass
+        except Exception:
+            pass
+
+    # ── 3. Update check (silent) ──
     try:
         up = _import("updater")
         info = up.check()

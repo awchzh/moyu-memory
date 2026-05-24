@@ -23,7 +23,6 @@ import re
 import time
 import collections
 import hashlib
-import fcntl
 import numpy as np
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
@@ -99,13 +98,7 @@ from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
 
 STORAGE_PATH = get_default_storage()
 
-# Write frequency guard (burst protection)
-WRITE_FREQ_FILE = os.path.join(STORAGE_PATH, "write_freq.json")
-WRITE_LOCK_FILE = os.path.join(STORAGE_PATH, "write_lock.json")
-WRITE_FLOCK_FILE = os.path.join(STORAGE_PATH, "write_flock.lock")
-WRITE_BURST_THRESHOLD = 30   # max writes in the window before trigger
-WRITE_BURST_WINDOW = 60      # seconds
-WRITE_LOCK_MINUTES = 5       # auto-lock duration after burst
+# Frequency guard — imported from frequency_guard.py
 
 # Default retrieval weights — overridden by config.yaml memory.weights
 DEFAULT_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2, "entity": 0.0}

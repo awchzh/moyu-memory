@@ -268,35 +268,41 @@ class FrequencyGuard:
 
     def _rollback_burst(self, burst_records: list) -> int:
         """Rollback entries written during the burst window. Returns count removed."""
-        from agent_memory import _load_memories, _save_memories, _load_index, _save_index
-
         min_unix = min(burst_records)
         cutoff_ts = datetime.fromtimestamp(min_unix).isoformat()
         removed_count = 0
 
-        # conversation_memory.json
-        try:
-            memories = _load_memories()
-            before = len(memories)
-            memories = [m for m in memories if m.get("timestamp", "") < cutoff_ts]
-            removed = before - len(memories)
-            if removed:
-                _save_memories(memories)
-                removed_count += removed
-        except Exception:
-            pass
+        # conversation_memory.json — direct file ops, no cross-module import
+        mem_path = os.path.join(STORAGE_PATH, "conversation_memory.json")
+        if os.path.exists(mem_path):
+            try:
+                with open(mem_path) as f:
+                    memories = json.load(f)
+                before = len(memories)
+                memories = [m for m in memories if m.get("timestamp", "") < cutoff_ts]
+                removed = before - len(memories)
+                if removed:
+                    with open(mem_path, 'w') as f:
+                        json.dump(memories, f, ensure_ascii=False, indent=2)
+                    removed_count += removed
+            except Exception:
+                pass
 
-        # vector_index.json
-        try:
-            idx = _load_index()
-            before = len(idx.get("vectors", []))
-            idx["vectors"] = [v for v in idx.get("vectors", []) if v.get("timestamp", "") < cutoff_ts]
-            removed = before - len(idx["vectors"])
-            if removed:
-                _save_index(idx)
-                removed_count += removed
-        except Exception:
-            pass
+        # vector_index.json — direct file ops
+        vec_path = os.path.join(STORAGE_PATH, "vector_index.json")
+        if os.path.exists(vec_path):
+            try:
+                with open(vec_path) as f:
+                    idx = json.load(f)
+                before = len(idx.get("vectors", []))
+                idx["vectors"] = [v for v in idx.get("vectors", []) if v.get("timestamp", "") < cutoff_ts]
+                removed = before - len(idx["vectors"])
+                if removed:
+                    with open(vec_path, 'w') as f:
+                        json.dump(idx, f, ensure_ascii=False, indent=2)
+                    removed_count += removed
+            except Exception:
+                pass
 
         if removed_count:
             try:
