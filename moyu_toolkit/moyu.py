@@ -319,6 +319,7 @@ CMD_TABLE = {
     "quickstart": lambda args: _call_func("quickstart", "run", []),
     "extract":    lambda args: _handle_extract(args),
     "session":    lambda args: _handle_session(args),
+    "frequency":  lambda args: _handle_frequency(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -359,6 +360,7 @@ HELP_DESCRIPTIONS = {
     "quickstart": "5-minute interactive demo — auto-stores memories, tests defense chain, zero config",
     "extract":    "Auto-extract memories from conversation text (moyu extract <text> / stats)",
     "session":    "Session state — state, prompt, decisions, pending (moyu session <state|prompt|decision|pending>)",
+    "frequency":  "Frequency guard — stats, unlock (moyu frequency stats / unlock <name>)",
     "help": "Show this help message",
 }
 
@@ -1263,6 +1265,41 @@ def _handle_session(args):
     else:
         print(f"Unknown session subcommand: {cmd}")
         print("Usage: moyu session <state|prompt|decision|pending|clear>")
+
+
+def _handle_frequency(args):
+    """Handle frequency command — guard stats and unlock.
+
+    Usage:
+        moyu frequency stats           Show frequency guard stats
+        moyu frequency unlock <name>   Unlock a rule (write/read)
+    """
+    try:
+        fg = _import("frequency_guard")
+    except ImportError:
+        print("⚠️  frequency_guard not available")
+        return
+    except Exception as e:
+        print(f"⚠️  frequency_guard failed to load: {e}")
+        return
+
+    if not args or args[0] in ("stats", "--stats"):
+        s = fg.guard_stats()
+        print("📊 Frequency Guard Stats")
+        for name, info in s.items():
+            status = "🔒 LOCKED" if info["locked"] else "✅ OK"
+            print(f"  [{name}] {info['recent_count']}/{info['threshold']} in {info['window']}s — {status}")
+            if info["locked"]:
+                remaining = fg.get_guard().lock_remaining(name)
+                print(f"           Lock expires in {remaining:.0f}s")
+        return
+
+    if args[0] == "unlock" and len(args) >= 2:
+        fg.get_guard().unlock(args[1])
+        print(f"✅ Unlocked ({args[1]})")
+        return
+
+    print("Usage: moyu frequency stats | moyu frequency unlock <name>")
 
 
 def _config_handler(args):
