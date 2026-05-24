@@ -184,6 +184,7 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 `moyu search <query>` `moyu search --vote <id> good|bad` `moyu search --ns <ns>`
 `moyu inject <query>` `moyu config show` `moyu config set retrieval.weights.<dim> <val>`
 `moyu tune` / `--dry-run` / `--reset` `moyu stats` `moyu status`
+`moyu extract <text>` `moyu extract stats`
 
 ### Knowledge Layer
 `moyu kg search <entity>` `moyu kg history <entity>` `moyu kb search <keyword>`
@@ -193,6 +194,10 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 
 ### Learning & Maintenance
 `moyu learn <text>` `moyu quickstart` `moyu reflect` `moyu setup agents` `moyu update`
+
+### Session & Bridge
+`moyu session state` `moyu session prompt`
+`moyu session decision <text>` `moyu session pending <text>` `moyu session clear`
 
 ---
 
