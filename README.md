@@ -204,8 +204,8 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 
 ## 📚 Documentation
 
-- [FAQ & 反模式](docs/FAQ.md) — 常见翻车场景和解决方法
-- [Python API 集成指南](docs/python_api.md) — 代码调用示例和集成模式
+- [FAQ & Anti-Patterns](docs/FAQ.md) — Common pitfalls and solutions
+- [Python API Integration Guide](docs/python_api.md) — Code examples and integration patterns
 
 ---
 
