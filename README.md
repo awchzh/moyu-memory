@@ -72,7 +72,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 8 | User Isolation & Encryption (opt-in) | Per-user directories + AES-256-GCM encryption |
 | 9 | LLM Security Guard | Regex-untouched inputs → LLM verdict (8 classes). **Never blocks legitimate writes** |
 
-### 🧠 Memory & Retrieval Layer (7) *2 LLM-Enhanced*
+### 🧠 Memory & Retrieval Layer (8) *2 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|-------------|
@@ -83,6 +83,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 5 | SQLite FTS5 + MD5 Dedup | Full-text index + in-memory/batch double dedup |
 | 6 | Search Feedback Collection | Explicit votes + implicit ref/correction signals — feeds adaptive tuning |
 | 7 | Adaptive Weight Tuning | `moyu tune` — auto-optimizes retrieval weights from feedback data |
+| 8 | Auto Memory Extraction | Dual-channel fact extraction from conversation: fast rules (27 patterns, 0 token cost) + LLM (semantic edge cases). Enabled by default on every `moyu` command. |
 
 ### 📊 Knowledge Layer (3) *1 LLM-Enhanced*
 
@@ -111,12 +112,17 @@ moyu quickstart    # 5-minute interactive demo, zero config
 ### 🔗 Integration Layer (5)
 
 | # | Capability | Description |
-|---|-----------|-------------|
+|:--|-----------|-------------|
 | 1 | Working Memory | Independent file, survives context compression |
-| 2 | Cross-Session Bridge | Summaries auto-synced to prefill + current_context |
+| 2 | Cross-Session Bridge | 10-turn summaries + 3-round conversations + state (topic, decisions, pending) auto-synced across sessions. **Hermes users**: zero-config via prefill. **Other agents**: add a line to system prompt (see below) |
 | 3 | Auto-Update | GitHub release check + TOFU checksum + in-place update |
 | 4 | Wake Orchestration | Check→backup→forget→merge→reflect→context→bridge — fully automatic |
 | 5 | Memory Injection | `moyu inject` — standardized injection with built-in context warning |
+
+> **For non-Hermes agents** — add this line to your Agent's system prompt to enable session continuation:
+> ```
+> When starting a new conversation, read ~/.moyu/session_state.json and use its content to continue from the previous session's context.
+> ```
 
 ### 🛡️ Security Assessment
 

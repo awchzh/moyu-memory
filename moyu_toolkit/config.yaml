@@ -66,6 +66,7 @@ memory:
     enabled: true
   llm_merge:
     enabled: true
+  auto_extract: true
 search:
   llm_rerank:
     enabled: true

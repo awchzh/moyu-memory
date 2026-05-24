@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-session_bridge.py — MOYU Session Bridge (V2.1)
+session_bridge.py — MOYU Session Bridge (V2.2)
 
 Bridges conversations across sessions with TWO coordinated approaches:
   1. Round-based logging (user text + assistant summary, max 3 rounds)
@@ -48,6 +48,8 @@ def _default_data() -> dict:
         "conversation_count": 0,
         "rounds": [],
         "turns": [],
+        "decisions": [],
+        "pending": [],
     }
 
 
@@ -61,6 +63,10 @@ def _load() -> dict:
                 data["rounds"] = []
             if "turns" not in data:
                 data["turns"] = []
+            if "decisions" not in data:
+                data["decisions"] = []
+            if "pending" not in data:
+                data["pending"] = []
             return data
         except (json.JSONDecodeError, Exception):
             pass
@@ -120,6 +126,73 @@ def format_context_summary() -> str:
     if data.get("user_intent"):
         lines.append(f"意向：{data['user_intent']}")
     return "\n".join(lines)
+
+
+# ==================== V2.2: State management ====================
+
+MAX_STATE_ITEMS = 10
+
+
+def add_decision(text: str):
+    """Append a decision. Capped at MAX_STATE_ITEMS."""
+    data = _load()
+    if "decisions" not in data:
+        data["decisions"] = []
+    data["decisions"].append(text)
+    if len(data["decisions"]) > MAX_STATE_ITEMS:
+        data["decisions"] = data["decisions"][-MAX_STATE_ITEMS:]
+    data["last_updated"] = datetime.now().isoformat()
+    _save(data)
+    _sync_to_state_file(data)
+
+
+def add_pending(text: str):
+    """Append a pending item. Capped at MAX_STATE_ITEMS."""
+    data = _load()
+    if "pending" not in data:
+        data["pending"] = []
+    data["pending"].append(text)
+    if len(data["pending"]) > MAX_STATE_ITEMS:
+        data["pending"] = data["pending"][-MAX_STATE_ITEMS:]
+    data["last_updated"] = datetime.now().isoformat()
+    _save(data)
+    _sync_to_state_file(data)
+
+
+def remove_pending(text: str):
+    """Remove a pending item by exact text match."""
+    data = _load()
+    if "pending" not in data:
+        return
+    data["pending"] = [p for p in data["pending"] if p != text]
+    data["last_updated"] = datetime.now().isoformat()
+    _save(data)
+    _sync_to_state_file(data)
+
+
+def format_state_summary() -> str:
+    """Return a one-line state summary: topic, decisions, pending.
+    Self-contained, reads from bridge data only."""
+    data = _load()
+    parts = []
+
+    if data.get("topic"):
+        parts.append(f"上次聊到「{data['topic']}」")
+
+    decisions = data.get("decisions", [])
+    if decisions:
+        parts.append(f"已有决定：{'；'.join(decisions[-3:])}")
+
+    pending = data.get("pending", [])
+    if pending:
+        pending_str = "、".join(pending[:3])
+        if len(pending) > 3:
+            pending_str += f" 等{len(pending)}项"
+        parts.append(f"待办：{pending_str}")
+
+    if parts:
+        return "🧠 " + " | ".join(parts)
+    return ""
 
 
 # ==================== V2.1: Round-based logging ====================
@@ -182,6 +255,74 @@ def _sync_all(data: dict):
     """Sync bridge data to all external targets."""
     _sync_to_prefill(data)
     _sync_to_context_md(data)
+    _sync_to_state_file(data)
+
+
+def _sync_to_state_file(data: dict):
+    """Write ~/.moyu/session_state.json — generic, Agent-agnostic state file.
+    
+    Any Agent that reads this file at startup can pick up the last session state.
+    This is the foundation of the "prompt injection" approach.
+    """
+    state_path = Path.home() / ".moyu" / "session_state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    state = {
+        "topic": data.get("topic"),
+        "decisions": data.get("decisions", []),
+        "pending": data.get("pending", []),
+        "round_count": data.get("conversation_count", 0),
+        "last_updated": data.get("last_updated"),
+    }
+    state_summary = format_state_summary()
+
+    with open(state_path, "w") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+
+    # Also write an easy-to-read summary
+    summary_path = Path.home() / ".moyu" / "session_summary.txt"
+    with open(summary_path, "w") as f:
+        f.write(state_summary or "")
+
+
+def generate_session_prompt() -> str:
+    """Generate a system prompt snippet that users can paste into their Agent's
+    system prompt configuration.
+
+    The prompt tells the Agent to read ~/.moyu/session_state.json at startup
+    and use its content to continue the conversation from where it left off.
+
+    Returns the prompt text as a string.
+    """
+    prompt = r"""## Session Continuation (MOYU)
+
+When starting a new conversation, read ~/.moyu/session_state.json at the very beginning.
+If the file exists and has content, use it to understand the context of the previous session.
+
+The file contains:
+- "topic": what the previous conversation was about
+- "decisions": key decisions made during previous sessions (most recent first)
+- "pending": items still waiting to be addressed or completed
+- "round_count": total number of conversation rounds across all sessions
+
+If the file exists, start your first response by naturally acknowledging the
+previous session's context — mention the topic, any relevant decisions, and
+any pending items that should be followed up.
+
+If the file does not exist or is empty, proceed as a normal first conversation.
+"""
+    return prompt.strip()
+
+
+def write_session_prompt():
+    """Write the generated session prompt to ~/.moyu/session_prompt.md.
+    
+    Users can read this file and paste its content into their Agent's
+    system prompt configuration for automatic session continuation.
+    """
+    prompt_path = Path.home() / ".moyu" / "session_prompt.md"
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(generate_session_prompt() + "\n")
 
 
 def _sync_to_prefill(data: dict):
@@ -189,10 +330,19 @@ def _sync_to_prefill(data: dict):
     Write ~/.hermes/prefill.json in Hermes native format.
 
     Structure:
-      [0] system — 10-turn summary
+      [0] system — state summary + 10-turn summary
       [1..] user/assistant — 3-round conversation (user text verbatim, asst compressed)
     """
     lines = []
+
+    # State summary (V2.2)
+    try:
+        summary = format_state_summary()
+        if summary:
+            lines.append(summary)
+            lines.append("")
+    except Exception:
+        pass
 
     # System: 10-turn summary
     turns = data.get("turns", [])
@@ -320,12 +470,19 @@ def _context_md_path() -> Path:
 def status():
     """Print readable status."""
     data = _load()
-    print(f"\n🌉 MOYU Session Bridge  V2.1")
+    print(f"\n🌉 MOYU Session Bridge  V2.2")
     print("=" * 50)
     print(f"  Session count:  {data.get('conversation_count', 0)}")
     last_up = data.get('last_updated')
     print(f"  Last updated:   {last_up[:16] if last_up else 'never'}")
     print(f"  Topic:          {data.get('topic', '—') or '—'}")
+
+    decisions = data.get("decisions", [])
+    if decisions:
+        print(f"  Decisions:      {len(decisions)} (latest: {decisions[-1][:40]})" if decisions[-1] else "")
+    pending = data.get("pending", [])
+    if pending:
+        print(f"  Pending:        {len(pending)} items")
 
     rounds = data.get("rounds", [])
     print(f"  Rounds:         {len(rounds)} / {MAX_ROUNDS}")
@@ -356,15 +513,16 @@ def status():
 def demo() -> dict:
     return {
         "capability": 15,
-        "title": "Session Bridge (V2.1)",
-        "output": """\
-🌉 V2.1 FEATURE — Session Bridge
+        "title": "Session Bridge V2.2",
+        "output": """\\
+🌉 V2.2 FEATURE — Session Bridge
 ────────────────────────────────────
   log_round(user_text, assistant_summary) → 3-round storage + prefill + context.md
   log_turn(summary) → 10-turn legacy storage
+  add_decision(text) / add_pending(text) / remove_pending(text) → state tracking
+  format_state_summary() → one-line topic + decisions + pending
   Auto-syncs to ~/.hermes/prefill.json for system-level injection
-  Auto-syncs to ~/Documents/MoBai/current_context.md for readable fallback
-  New window sees conversation as if it never ended.""",
+  New window sees conversation and state as if it never ended.""",
     }
 
 
@@ -396,7 +554,7 @@ if __name__ == "__main__":
         print("✅ Turn logged (legacy)")
 
     elif cmd == "save":
-        topic = input("Topic: ") if sys.stdin.isatty() else "MOYU V2.1"
+        topic = input("Topic: ") if sys.stdin.isatty() else "MOYU V2.2"
         update(topic=topic)
         print("✅ Session bridge updated")
 
@@ -404,6 +562,35 @@ if __name__ == "__main__":
         data = _load()
         _sync_all(data)
         print("✅ Re-synced all outputs")
+
+    elif cmd == "state":
+        print(format_state_summary() or "（暂无状态）")
+
+    elif cmd == "decision":
+        add_decision(" ".join(args[1:]))
+        print(f"✅ Decision recorded")
+
+    elif cmd in ("pending", "add_pending"):
+        add_pending(" ".join(args[1:]))
+        print(f"✅ Pending added")
+
+    elif cmd == "remove_pending":
+        remove_pending(" ".join(args[1:]))
+        print(f"✅ Pending removed")
+
+    elif cmd == "prompt":
+        prompt = generate_session_prompt()
+        print(prompt)
+        print()
+        print("---")
+        print("要保存到文件，运行：python3 session_bridge.py write-prompt")
+        print("或将以上内容粘贴到你的 Agent 的 system prompt 配置中。")
+
+    elif cmd in ("write-prompt", "init-prompt"):
+        write_session_prompt()
+        prompt_path = Path.home() / ".moyu" / "session_prompt.md"
+        print(f"✅ Session prompt 已写入 {prompt_path}")
+        print("将文件内容粘贴到你的 Agent 的 system prompt 配置中即可。")
 
     else:
         print(f"Unknown command: {cmd}")

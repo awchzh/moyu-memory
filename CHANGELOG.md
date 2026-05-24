@@ -1,5 +1,30 @@
 # MOYU — Development Log
 
+## v2.7.2 — Auto memory extraction + Session bridge V2.2 (2026-05-24)
+
+### 🆕 Auto Memory Extraction
+
+- **`moyu extract <text>`** — Manual extraction from any text. Extracts facts into memory.
+- **Automatic extraction** — Every `moyu` command scans its text arguments for facts to store. Enabled by default (`memory.auto_extract: true` in config.yaml).
+- **Dual-channel pipeline**: Fast path (27 regex patterns, 0 token cost) + Slow path (LLM, ~500 tokens for edge cases).
+- **Extraction scope**: preferences, decisions, corrections, personal info, technical details, habits, relations, project info, cognitive judgments.
+- **Built-in safety**: semantic dedup (cosine >0.88 skipped), type density cap (10/24h per type), max 5 per call.
+
+### 🔧 Session Bridge V2.2 — State Management
+
+- **`add_decision(text)`** / **`add_pending(text)`** / **`remove_pending(text)`** — Track decisions and todos across sessions.
+- **`format_state_summary()`** — One-line summary (topic + decisions + pending).
+- **`moyu session`** — New CLI group: `state`, `prompt`, `decision`, `pending`, `clear`.
+- **Generic state file** — `~/.moyu/session_state.json` written on every state change. Any Agent can read it.
+- **Hermes users**: zero-config — state auto-synced to prefill.
+- **Other agents**: run `moyu session prompt` or paste a one-liner into system prompt.
+- **Backwards compatible**: old 10-turn summaries + 3-round conversations continue to work unchanged.
+
+### 📝 Documentation
+
+- README: Memory & Retrieval Layer now 8 capabilities (added Auto Memory Extraction).
+- README: Cross-Session Bridge updated with V2.2 features + setup instructions for non-Hermes agents.
+
 ## v2.7.1 — Interactive quickstart + build hygiene (2026-05-23)
 
 ### Experience

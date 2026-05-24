@@ -26,6 +26,7 @@ MODULES = [
     "learner",
     "defense_toolkit.integrity_checker",
     "security",
+    "auto_extractor",
 ]
 
 

@@ -39,10 +39,14 @@ TOOLKIT_DIR = str(get_package_dir())
 sys.path.insert(0, TOOLKIT_DIR)
 
 
-def _import(name):
+def _import(name, silent=False):
     import importlib.util
     path = os.path.join(TOOLKIT_DIR, *name.split(".")) + ".py"
+    if silent and not os.path.exists(path):
+        return None
     spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        return None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -313,6 +317,8 @@ CMD_TABLE = {
     "config":     lambda args: _config_handler(args),
     "inject":     lambda args: _handle_inject(args),
     "quickstart": lambda args: _call_func("quickstart", "run", []),
+    "extract":    lambda args: _handle_extract(args),
+    "session":    lambda args: _handle_session(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -321,7 +327,7 @@ HELP_DESCRIPTIONS = {
     "status": "Show system status with defense chain visualization",
     "learn": "Learn from a user correction",
     "detect": "Detect correction signals in text",
-    "context": "Get behavioral rules for system prompt",
+    "context": "Get behavioral rules (for agent context)",
     "signals": "View active trigger words (learner)",
     "setup": "Set a security password",
     "verify": "Verify a dangerous operation",
@@ -351,6 +357,8 @@ HELP_DESCRIPTIONS = {
     "config":    "Show/set retrieval weights (moyu config show / set retrieval.weights.<dim> <val>)",
     "inject":    "Inject relevant memories into agent context (moyu inject <query>)",
     "quickstart": "5-minute interactive demo — auto-stores memories, tests defense chain, zero config",
+    "extract":    "Auto-extract memories from conversation text (moyu extract <text> / stats)",
+    "session":    "Session state — state, prompt, decisions, pending (moyu session <state|prompt|decision|pending>)",
     "help": "Show this help message",
 }
 
@@ -1033,7 +1041,7 @@ def _auto_register_agents():
             print(f"    • {c}")
     
     print("\n  💡 Use `moyu inject <query>` to inject relevant memories")
-    print("     into any agent's system prompt or context.")
+    print("     into any agent's context or prompt.")
     print()
 
 
@@ -1150,6 +1158,113 @@ def _handle_inject(args):
         pass
 
 
+def _handle_extract(args):
+    """Handle extract command — auto-extract memories from text.
+    
+    Usage: moyu extract <text>
+           moyu extract stats
+    """
+    try:
+        ae = _import("auto_extractor")
+    except ImportError:
+        print("⚠️  auto_extractor not available (added in v2.7.x)")
+        return
+    except Exception as e:
+        print(f"⚠️  auto_extractor failed to load: {e}")
+        return
+
+    if not args:
+        print("Usage: moyu extract <text> | moyu extract stats")
+        return
+
+    if args[0] in ("stats", "--stats"):
+        s = ae.stats()
+        print(f"📊 Auto Extractor Stats")
+        print(f"   Total extracted: {s['total_extracted']}")
+        print(f"   By method: {s['by_method']}")
+        print(f"   By type: {s['by_type']}")
+        if s["paused_types"]:
+            print(f"   ⏸️  Paused types: {s['paused_types']}")
+        return
+
+    text = " ".join(args)
+    count = ae.extract_and_store(text)
+    print(f"✅ Extracted {count} memories")
+    if count == 0:
+        print("   (no new facts found — text may be too short or contain only noise)")
+
+
+def _handle_session(args):
+    """Handle session command — show state, generate prompt, manage decisions/pending.
+
+    Usage:
+        moyu session state           Show session state summary
+        moyu session prompt          Generate system prompt snippet for manual config
+        moyu session decision <text> Record a decision
+        moyu session pending <text>  Add a pending item
+        moyu session clear           Clear all decisions and pending
+    """
+    sb = _import("session_bridge")
+
+    if not args:
+        print("Usage: moyu session <state|prompt|decision|pending|clear>")
+        print()
+        print("  moyu session state    — Show current session state")
+        print("  moyu session prompt   — Get prompt snippet for Agent system prompt")
+        print("  moyu session decision <text>  — Record a decision")
+        print("  moyu session pending <text>   — Add a pending item")
+        print("  moyu session clear    — Clear all decisions and pending")
+        print()
+        print("  For Hermes users: session state auto-syncs to prefill — zero config.")
+        print("  For other agents: run `moyu session prompt` and paste into system prompt.")
+        return
+
+    cmd = args[0]
+
+    if cmd in ("state", "status"):
+        summary = sb.format_state_summary()
+        if summary:
+            print(summary)
+        else:
+            print("（暂无状态）")
+
+    elif cmd == "prompt":
+        prompt = sb.generate_session_prompt()
+        print(prompt)
+        print()
+        print("---")
+        print("Copy the text above into your Agent's system prompt configuration.")
+        print("Or run `moyu session prompt > ~/.moyu/session_prompt.md` to save to file.")
+
+    elif cmd in ("decision", "decide"):
+        text = " ".join(args[1:])
+        if not text:
+            print("Usage: moyu session decision <text>")
+            return
+        sb.add_decision(text)
+        print(f"✅ Decision recorded")
+
+    elif cmd in ("pending", "todo", "add"):
+        text = " ".join(args[1:])
+        if not text:
+            print("Usage: moyu session pending <text>")
+            return
+        sb.add_pending(text)
+        print(f"✅ Pending added")
+
+    elif cmd == "clear":
+        from session_bridge import _load, _sync_all
+        data = sb._load()
+        data["decisions"] = []
+        data["pending"] = []
+        sb._sync_all(data)
+        print("✅ Session state cleared")
+
+    else:
+        print(f"Unknown session subcommand: {cmd}")
+        print("Usage: moyu session <state|prompt|decision|pending|clear>")
+
+
 def _config_handler(args):
     """Handle config command — show and set retrieval weights."""
     import os as _cfg_os
@@ -1228,6 +1343,20 @@ def _config_help():
     print("  Example: moyu config set retrieval.weights.entity 0.3")
 
 
+def _load_auto_extract_config() -> bool:
+    """Load auto_extract enabled flag from config.yaml. Returns True by default."""
+    try:
+        import yaml as _yaml
+        cfg_path = os.path.join(TOOLKIT_DIR, "config.yaml")
+        if os.path.exists(cfg_path):
+            with open(cfg_path) as _f:
+                cfg = _yaml.safe_load(_f) or {}
+            return cfg.get("memory", {}).get("auto_extract", True)
+    except Exception:
+        pass
+    return True
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("help", "--help", "-h"):
         show_help()
@@ -1260,6 +1389,28 @@ def main():
         except Exception:
             pass
 
+    # ── First-run session state tip (show once after update) ──
+    session_tip_marker = os.path.join(TOOLKIT_DIR, ".session_tip_shown")
+    if cmd not in ("help", "--help", "-h", "setup", "init", "session") and not os.path.exists(session_tip_marker):
+        try:
+            sb = _import("session_bridge")
+            # Check if session state has content - if not, show tip
+            summary = sb.format_state_summary()
+            if not summary:
+                print()
+                print("  🌉 Tip: Session state lets you continue conversations across sessions.")
+                print("     Hermes users: zero config — state auto-syncs to prefill.")
+                print("     Other agents: run `moyu session prompt` for setup instructions.")
+                print()
+            # Mark shown (even if no content, don't show again)
+            try:
+                with open(session_tip_marker, "w") as _tf:
+                    _tf.write(f"Session tip shown at {__import__('datetime').datetime.now().isoformat()}")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     # ── Auto-detect corrections on every command ──
     # Skip when the command itself is "learn" (would double-learn)
     if rest and cmd != "learn":
@@ -1275,6 +1426,29 @@ def main():
                     fb.record_correction(user_text, hits)
                 except Exception:
                     pass
+        except Exception:
+            pass
+
+    # ── Auto-extract memories from command text (when enabled) ──
+    # Silently runs extractor on every moyu command's text arguments.
+    # Skip when the command itself is "extract" (would double-extract).
+    # User only sees output if something was actually stored.
+    # Disable via config.yaml → memory.auto_extract: false
+    if rest and cmd != "extract":
+        cmd_text = " ".join(rest)
+        try:
+            # Import without triggering hard error if module not available
+            ae = _import("auto_extractor", silent=True)
+            if ae is None:
+                pass
+            else:
+                # Check config for auto_extract flag
+                _cfg_ae = _load_auto_extract_config()
+                if _cfg_ae:
+                    count = ae.extract_and_store(cmd_text)
+                    if count > 0:
+                        # Only show brief feedback when something was stored
+                        print(f"🧠 从输入中提取了 {count} 条记忆")
         except Exception:
             pass
 
