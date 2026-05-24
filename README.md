@@ -58,7 +58,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 
 *New here? Start with the "Three things that make MOYU different" section above, then the comparison table.*
 
-### 🛡️ Defense Layer (9)
+### 🛡️ Defense Layer (10)
 
 | # | Capability | Description |
 |---|-----------|-------------|
@@ -71,6 +71,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 7 | Integrity Check & Recovery | SHA256 manifest + daily backups (3-day retention) |
 | 8 | User Isolation & Encryption (opt-in) | Per-user directories + AES-256-GCM encryption |
 | 9 | LLM Security Guard | Regex-untouched inputs → LLM verdict (8 classes). **Never blocks legitimate writes** |
+| 10 | Access Behavior Monitoring | Read burst detection (>100 reads/60s → alert). Every search is tracked. |
 
 ### 🧠 Memory & Retrieval Layer (8) *2 LLM-Enhanced*
 
