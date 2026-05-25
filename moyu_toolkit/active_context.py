@@ -89,14 +89,22 @@ class Todo:
 
     @staticmethod
     def done(tid: str):
+        if not tid:
+            print("⚠️  Error: empty todo id")
+            return
         ctx = _load()
+        found = False
         for t in ctx["todos"]:
             if str(t["id"]) == tid or t["text"].startswith(tid):
                 t["done"] = True
                 t["completed_at"] = datetime.now().isoformat()
+                found = True
         ctx["last_updated"] = datetime.now().isoformat()
         _save(ctx)
-        print(f"✅ Completed: {tid}")
+        if found:
+            print(f"✅ Completed: {tid}")
+        else:
+            print(f"⚠️  Todo not found: {tid}")
 
 
 def format_context() -> str:
@@ -161,7 +169,7 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
         print("Usage: status | start | set task | add | todo")
-        sys.exit(0)
+        sys.exit(1)
     cmd = sys.argv[1]
     if cmd == "status": status()
     elif cmd == "start": start_session()

@@ -39,7 +39,8 @@ def _load_demos() -> list:
             mod = __import__(import_name, fromlist=["demo"])
             if hasattr(mod, "demo"):
                 d = mod.demo()
-                results.append(d)
+                if d is not None:
+                    results.append(d)
         except Exception as e:
             print(f"  ⚠️  {mod_path}: {e}", file=sys.stderr)
 

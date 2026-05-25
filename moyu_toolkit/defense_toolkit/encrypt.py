@@ -24,15 +24,12 @@ ENC_HEADER = b"ENCv1:"  # Prefix on all encrypted files
 # ── Lazy-load cryptography (optional dep) ──
 _CRYPTO_AVAILABLE = False
 _CRYPTO_ERROR = None
-_fernet = None
 
 
 def _check_crypto():
     global _CRYPTO_AVAILABLE, _CRYPTO_ERROR
     if not _CRYPTO_AVAILABLE and _CRYPTO_ERROR is None:
         try:
-            # We import specific modules instead of the full library
-            # to minimize import time
             import cryptography
             _CRYPTO_AVAILABLE = True
         except ImportError:
@@ -76,7 +73,7 @@ def _derive_key(password: str, salt: bytes = None) -> tuple:
 
 def encrypt_bytes(data: bytes, password: str) -> bytes:
     """Encrypt bytes with AES-256-GCM. Returns base64-encoded ciphertext
-    in format: ENCv1:{base64(salt + nonce + ciphertext + tag)}.
+    in format: ENCv1:{base64(salt + nonce + ciphertext)}.
 
     Raises RuntimeError if cryptography is not installed.
     """
@@ -150,8 +147,10 @@ def encrypt_file(path: str, password: str):
         return  # Already encrypted
 
     encrypted = encrypt_bytes(data, password)
-    with open(path, "wb") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
         f.write(encrypted)
+    os.replace(tmp, path)  # atomic on POSIX and macOS
 
 
 def decrypt_file(path: str, password: str) -> bytes:

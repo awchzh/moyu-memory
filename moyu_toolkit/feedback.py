@@ -10,9 +10,6 @@ Storage: memory_data/search_feedback_YYYY-MM.jsonl (monthly rotation).
 import json
 import os
 from datetime import datetime
-from typing import Optional
-
-
 def _storage_path() -> str:
     """Get the feedback log directory (same as main storage)."""
     base = os.environ.get("MOYU_STORAGE", "")
@@ -29,7 +26,7 @@ def _feedback_path() -> str:
 
 
 def record(kind: str, query: str, memory_id: str, detail: str = "",
-           metadata: dict = None) -> None:
+           metadata: dict | None = None) -> None:
     """Record a search feedback event.
 
     Args:
@@ -46,7 +43,7 @@ def record(kind: str, query: str, memory_id: str, detail: str = "",
         "memory_id": memory_id,
         "detail": detail or "",
     }
-    if metadata:
+    if metadata is not None:
         entry["metadata"] = metadata
 
     try:
@@ -54,12 +51,14 @@ def record(kind: str, query: str, memory_id: str, detail: str = "",
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "a") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except Exception:
-        pass  # Silently skip — feedback collection should never crash the CLI
+    except (OSError, json.JSONEncodeError) as e:
+        print(f"[feedback] warning: failed to write {path} — {e}", file=__import__('sys').stderr)
 
 
 def record_vote(query: str, memory_id: str, vote: str) -> None:
     """Record a user vote (good/bad) on a search result."""
+    if vote not in ("good", "bad"):
+        raise ValueError(f"vote must be 'good' or 'bad', got '{vote}'")
     kind = f"vote_{vote}"
     record(kind, query, memory_id, detail=f"user voted {vote}")
 
@@ -79,7 +78,7 @@ def stats() -> dict:
     """Show feedback collection stats."""
     path = _feedback_path()
     if not os.path.exists(path):
-        return {"total": 0, "kinds": {}, "file": os.path.basename(path) if os.path.exists(path) else "none"}
+        return {"total": 0, "kinds": {}, "file": "none"}
 
     counts = {}
     total = 0

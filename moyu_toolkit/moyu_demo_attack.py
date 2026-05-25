@@ -14,7 +14,8 @@ import os
 import time
 
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, TOOLKIT_DIR)
+if TOOLKIT_DIR not in sys.path:
+    sys.path.insert(0, TOOLKIT_DIR)
 
 # Attacks to demonstrate
 _ATTACKS = [
@@ -91,6 +92,9 @@ def _print_banner():
     print()
 
 
+_LLM_WARNED = False
+
+
 def _test_attack(attack: dict, quick: bool = False) -> dict:
     """Run a single attack through the defense chain."""
     text = attack["input"]
@@ -114,8 +118,11 @@ def _test_attack(attack: dict, quick: bool = False) -> dict:
             if llm_result.get("verdict") == "suspect":
                 layer2_blocked = True
                 layer2_reason = llm_result.get("reason", "Semantic injection detected")
-        except Exception:
+        except Exception as e:
             layer2_time = 0
+            if not _LLM_WARNED:
+                print(f"  ⚠️  LLM scan unavailable: {e}", file=__import__('sys').stderr)
+                _LLM_WARNED = True
     else:
         layer2_time = 0
 

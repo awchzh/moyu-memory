@@ -20,7 +20,6 @@ import os
 import json
 import random
 import re
-import time
 
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, TOOLKIT_DIR)
@@ -35,9 +34,9 @@ from defense_toolkit.integrity_checker import content_scan
 _SYNONYMS_CN = {
     "忘记": ["遗忘", "不记得", "失忆", "忘掉", "忘却", "忘", "记不得"],
     "忽略": ["忽视", "漠视", "无视", "不理", "不管", "别管"],
-    "所有": ["一切", "全部", "全部", "统统", "全都", "整个"],
-    "之前": ["前面", "以前的", "上面", "前面", "先前", "刚才"],
-    "指令": ["命令", "规则", "设定", "限制", "规则", "提示", "指示"],
+    "所有": ["一切", "全部", "统统", "全都", "整个"],
+    "之前": ["前面", "以前的", "上面", "先前", "刚才"],
+    "指令": ["命令", "规则", "设定", "限制", "提示", "指示"],
     "身份": ["角色", "人设", "设定", "人格"],
     "系统": ["底层", "原始", "默认"],
     "从现在开始": ["从现在起", "从今天起", "接下来", "开始", "之后"],
@@ -87,7 +86,6 @@ def _mutate_synonym_cn(text: str) -> list:
 
 def _mutate_synonym_en(text: str) -> list:
     """Replace English keywords with synonyms. Case-aware."""
-    import re
     variants = []
     for keyword, syns in _SYNONYMS_EN.items():
         # Find the keyword (case-insensitive)
@@ -111,7 +109,7 @@ def _mutate_char_insertion(text: str) -> list:
         target = words[0]
         if len(target) >= 4:
             insert_pos = len(target) // 2
-            mutated = target[:insert_pos] + target[insert_pos:]
+            mutated = target[:insert_pos] + " " + target[insert_pos:]
             variant = text.replace(target, mutated, 1)
             if variant != text:
                 variants.append(variant)
@@ -282,7 +280,7 @@ def scan_blind_spots(quick: bool = False) -> dict:
             
             # Categorize by attack type (for each variant)
             cat = "其他"
-            if any(kw in base_text for kw in ["忘记", "忽略", "忽略", "forget", "ignore", "skip", "disregard"]):
+            if any(kw in base_text for kw in ["忘记", "忽略", "forget", "ignore", "skip", "disregard"]):
                 cat = "指令覆盖/忽略"
             elif any(kw in base_text for kw in ["扮演", "假装", "作为", "act", "pretend", "DAN", "STAN"]):
                 cat = "角色改写"

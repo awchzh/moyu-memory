@@ -157,13 +157,11 @@ def _benchmark_content_gate(samples: list, label: str = "") -> dict:
     """
     from defense_toolkit.integrity_checker import content_scan
     blocked = 0
-    blocked_samples = []
     missed_samples = []
     for s in samples:
         hits = content_scan(s)
         if hits:
             blocked += 1
-            blocked_samples.append((s[:60], hits))
         else:
             missed_samples.append(s[:60])
     total = len(samples)
@@ -537,9 +535,10 @@ def _print_full_report(pattern_stats, gate_results, fp_results, llm_results, tot
 
 
 def main(*args):
-    quick = "--quick" in sys.argv or ("--quick" in args if args else False)
-    json_mode = "--json" in sys.argv or ("--json" in args if args else False)
-    full_mode = "--full" in sys.argv or ("--full" in args if args else False)
+    flags = set(sys.argv[1:])
+    quick = "--quick" in flags
+    json_mode = "--json" in flags
+    full_mode = "--full" in flags
 
     if full_mode:
         pattern_stats, gate_results, fp_results, llm_results = run_full_benchmark()
@@ -554,7 +553,12 @@ def main(*args):
                 "mode": "full",
                 "dataset": "RTPB2026",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "patterns": {k: v for k, v in zip(["total", "regex", "plain", "by_category"], pattern_stats)},
+                "patterns": {
+                    "total": pattern_stats[3],
+                    "regex": pattern_stats[1],
+                    "plain": pattern_stats[2],
+                    "by_category": pattern_stats[0],
+                },
                 "injection_gate": {
                     "by_category": {r["label"]: {"total": r["total"], "blocked": r["blocked"], "pct": r["blocked_pct"]} for r in gate_results},
                     "overall": {"total": total_samples, "blocked": sum(r["blocked"] for r in gate_results)},

@@ -13,17 +13,15 @@ Usage:
 import json
 import os
 import glob
-import math
 from collections import defaultdict
-from datetime import datetime
-from typing import Optional
 
 
 WEIGHT_DIMS = ["semantic", "keyword", "recency", "entity"]
 DEFAULT_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2, "entity": 0.0}
 TUNE_STEP = 0.02       # Amount to adjust per batch of signals
 MIN_SIGNALS = 5        # Minimum feedback signals before tuning
-LEARNING_RATE = 0.3    # How aggressively to adjust toward optimal
+RATIO_HIGH = 0.6       # Above this → boost semantic
+RATIO_LOW = 0.4        # Below this → reduce semantic
 
 
 def _storage_path() -> str:
@@ -46,10 +44,10 @@ def _load_feedback() -> list[dict]:
                     if line:
                         try:
                             entries.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            pass
-        except (FileNotFoundError, PermissionError):
-            pass
+                        except json.JSONDecodeError as e:
+                            print(f"[tune] warning: skipping malformed feedback line in {fpath}: {e}", file=__import__('sys').stderr)
+        except (FileNotFoundError, PermissionError) as e:
+            print(f"[tune] warning: cannot read feedback file {fpath}: {e}", file=__import__('sys').stderr)
     return entries
 
 
@@ -109,7 +107,12 @@ def _compute_tune(entries: list, dry_run: bool = False) -> dict:
     neg_count = signal_summary["negative"]
 
     if pos_count == 0 and neg_count == 0:
-        return {"status": "no_signals", "current": current}
+        return {
+            "status": "no_signals",
+            "current": current,
+            "total_signals": signal_summary["total"],
+            "needed": MIN_SIGNALS - signal_summary["total"],
+        }
 
     # Simple heuristic: if more positive than negative, semantic weight should dominate
     # (users find semantically relevant results useful)
@@ -118,11 +121,11 @@ def _compute_tune(entries: list, dry_run: bool = False) -> dict:
 
     suggested = current.copy()
 
-    if ratio > 0.6:
+    if ratio > RATIO_HIGH:
         # Users find results useful → boost semantic, slightly reduce keyword
         suggested["semantic"] = min(1.0, suggested["semantic"] + TUNE_STEP)
         suggested["keyword"] = max(0.0, suggested["keyword"] - TUNE_STEP * 0.5)
-    elif ratio < 0.4:
+    elif ratio < RATIO_LOW:
         # Users find results NOT useful → reduce semantic, boost keyword + recency
         suggested["semantic"] = max(0.0, suggested["semantic"] - TUNE_STEP)
         suggested["keyword"] = min(1.0, suggested["keyword"] + TUNE_STEP * 0.5)
@@ -134,9 +137,13 @@ def _compute_tune(entries: list, dry_run: bool = False) -> dict:
         for dim in WEIGHT_DIMS:
             suggested[dim] = round(suggested[dim] / total, 2)
 
-    # Ensure recency floor
+    # Ensure recency floor, then re-normalize
     if suggested["recency"] < 0.05:
         suggested["recency"] = 0.05
+    total = sum(suggested.values())
+    if total > 0 and abs(total - 1.0) > 0.01:
+        for dim in WEIGHT_DIMS:
+            suggested[dim] = round(suggested[dim] / total, 2)
 
     return {
         "status": "tuned",
@@ -148,7 +155,7 @@ def _compute_tune(entries: list, dry_run: bool = False) -> dict:
             "positive_signals": pos_count,
             "negative_signals": neg_count,
             "ratio": round(ratio, 2),
-            "direction": "boost_semantic" if ratio > 0.6 else "reduce_semantic" if ratio < 0.4 else "balanced",
+            "direction": "boost_semantic" if ratio > RATIO_HIGH else "reduce_semantic" if ratio < RATIO_LOW else "balanced",
         },
     }
 

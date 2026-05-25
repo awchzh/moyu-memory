@@ -20,7 +20,7 @@ import os
 import json
 import hashlib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, TOOLKIT_DIR)
@@ -32,10 +32,6 @@ STORAGE = get_default_storage()
 # ═══════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════
-
-def _fmt(n):
-    """Color-code a number: green=good, yellow=warn, red=bad."""
-    return n
 
 def _load_json(filename, default=None):
     path = os.path.join(STORAGE, filename)
@@ -241,7 +237,17 @@ def check_security_events(days: int = 7) -> dict:
         return {"events": 0, "message": "No security events logged"}
     
     cutoff = time.time() - days * 86400
-    recent = [e for e in log if e.get("timestamp", 0) >= cutoff or (isinstance(e.get("timestamp"), str) and e["timestamp"])]
+    def _to_ts(v):
+        if isinstance(v, (int, float)):
+            return v
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    recent = [e for e in log if (ts := _to_ts(e.get("timestamp"))) is not None and ts >= cutoff]
     
     blocks = sum(1 for e in recent if "block" in str(e.get("event", "")).lower() or "拦截" in str(e.get("event", "")))
     bursts = sum(1 for e in recent if "burst" in str(e.get("event", "")).lower() or "爆发" in str(e.get("event", "")))
@@ -398,7 +404,7 @@ def print_report(checks: dict, score: int, grade: str):
     
     # 4. Integrity
     integ = checks.get("integrity", {})
-    if integ.get("manifest"):
+    if integ.get("manifest") is True:
         print(f"  🛡️  Integrity:          ✅ Manifest OK ({integ.get('protected_files', 0)} files)")
     else:
         print(f"  🛡️  Integrity:          ⚠️  {integ.get('note', 'Not set up')}")
@@ -453,8 +459,9 @@ def diagnose(quick: bool = False) -> dict:
 
 
 def main(*args):
-    quick = "--quick" in sys.argv or ("--quick" in args if args else False)
-    json_mode = "--json" in sys.argv or ("--json" in args if args else False)
+    flags = set(sys.argv[1:])
+    quick = "--quick" in flags
+    json_mode = "--json" in flags
     
     checks = diagnose(quick)
     score, grade = compute_health_score(checks)

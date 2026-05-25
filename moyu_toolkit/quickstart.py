@@ -60,7 +60,7 @@ def run():
     _setup()
     _print_banner()
 
-    from defense_toolkit.integrity_checker import content_scan, llm_scan
+    from defense_toolkit.integrity_checker import content_scan
 
     # ── Step 1: What is MOYU ──
     print("📌 MOYU 是什么？")
@@ -85,7 +85,7 @@ def run():
     if user_input.strip():
         result = content_scan(user_input.strip())
         if result:
-            cat = result[0] if isinstance(result, list) else str(result.get("category", ""))
+            cat = result[0]
             print(f"\n  🔴 拦截 — 看起来像「{cat}」类攻击")
         else:
             print(f"\n  🟢 放行 — 看起来是正常内容")

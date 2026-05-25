@@ -12,7 +12,6 @@ import sys
 import os
 import json
 import shutil
-import time
 from datetime import datetime
 
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +80,7 @@ def create_snapshot(name: str = "") -> dict:
     with open(snapshot_path, "w") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
 
-    size_kb = os.path.getsize(snapshot_path) // 1024
+    size_kb = max(1, os.path.getsize(snapshot_path) // 1024)
 
     return {
         "path": snapshot_path,
@@ -110,7 +109,7 @@ def list_snapshots() -> list:
                     "file": fname,
                     "path": path,
                     "created": data.get("created_at", datetime.fromtimestamp(mtime).isoformat()),
-                    "memories": data.get("stats", {}).get("memories", "?"),
+                    "memories": data.get("stats", {}).get("memories", 0),
                     "size_kb": os.path.getsize(path) // 1024,
                     "label": data.get("label", fname),
                 })
@@ -119,7 +118,7 @@ def list_snapshots() -> list:
                     "file": fname,
                     "path": path,
                     "created": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
-                    "memories": "?",
+                    "memories": 0,
                     "size_kb": os.path.getsize(path) // 1024,
                     "label": fname,
                 })
