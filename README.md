@@ -58,7 +58,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 
 *New here? Start with the "Three things that make MOYU different" section above, then the comparison table.*
 
-### 🛡️ Defense Layer (10)
+### 🛡️ Defense Layer (11)
 
 | # | Capability | Description |
 |---|-----------|-------------|
@@ -69,9 +69,10 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 5 | PII Redaction | Bilingual: phones, IDs, bank cards, emails, SSNs, IPs, API keys |
 | 6 | Password Verification | Pre-op confirmation + auto-lock after 3 failures (30 min) |
 | 7 | Integrity Check & Recovery | SHA256 manifest + daily backups (3-day retention) |
-| 8 | User Isolation & Encryption (opt-in) | Per-user directories + AES-256-GCM encryption |
-| 9 | LLM Security Guard | Regex-untouched inputs → LLM verdict (8 classes). **Never blocks legitimate writes** |
-| 10 | Access Behavior Monitoring | Read burst detection (>100 reads/60s → alert). Every search is tracked. |
+| **8** | **Memory Digital Signature** | **HMAC-SHA256 per-file signing + verification + auto-recover from signed backup. Disabled by default, set `MOYU_SIGN_KEY` to enable** |
+| 9 | User Isolation & Encryption (opt-in) | Per-user directories + AES-256-GCM encryption |
+| 10 | LLM Security Guard | Regex-untouched inputs → LLM verdict (8 classes). **Never blocks legitimate writes** |
+| 11 | Access Behavior Monitoring | Read burst detection (>100 reads/60s → alert). Every search is tracked. |
 
 ### 🧠 Memory & Retrieval Layer (8) *2 LLM-Enhanced*
 
@@ -110,7 +111,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 1 | Learn from Corrections | Auto-detect correction signals, 3 identical → permanent behavioral rule |
 | 2 | Self-Reflection | Cross-time association, contradiction detection, topic shift analysis |
 
-### 🔗 Integration Layer (5)
+### 🔗 Integration Layer (6)
 
 | # | Capability | Description |
 |:--|-----------|-------------|
@@ -119,6 +120,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 3 | Auto-Update | GitHub release check + TOFU checksum + in-place update |
 | 4 | Wake Orchestration | Check→backup→forget→merge→reflect→context→bridge — fully automatic |
 | 5 | Memory Injection | `moyu inject` — standardized injection with built-in context warning |
+| **6** | **Defense Log** | **All defense events unified to `defense_log.md` — signature fails, content blocks, PII redactions, burst rollbacks, loop aborts. Auto-cron notification on red/yellow events** |
 
 > **For non-Hermes agents** — add this line to your Agent's system prompt to enable session continuation:
 > ```

@@ -351,6 +351,17 @@ def verify_operation(op_type: str, context: str = "") -> bool:
         _log_failure(op_type, context or "Wrong password")
         _record_failure(op_type)
         print("❌ Wrong password. Operation denied.")
+        # Report to defense log
+        try:
+            from defense_toolkit.defense_log import report as _dl_report
+            _dl_report("password", "red", {
+                "event": f"密码验证失败 — {op_type}",
+                "source": context or "用户输入",
+                "detail": f"操作已被拒绝：{context}",
+                "auto_resolved": False,
+            })
+        except Exception:
+            pass
         return False
 
 

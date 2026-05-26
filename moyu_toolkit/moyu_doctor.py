@@ -409,7 +409,18 @@ def print_report(checks: dict, score: int, grade: str):
     else:
         print(f"  🛡️  Integrity:          ⚠️  {integ.get('note', 'Not set up')}")
     print()
-    
+
+    # 4b. Signatures (optional)
+    sig = checks.get("signatures", {})
+    if sig.get("enabled"):
+        if sig.get("failed", 0) == 0:
+            print(f"  ✍️  Signatures:         ✅ All {sig['ok']}/{sig['total']} files OK")
+        else:
+            print(f"  ✍️  Signatures:         ⚠️  {sig['failed']}/{sig['total']} files FAILED — {sig.get('message', '')}")
+    else:
+        print(f"  ✍️  Signatures:         ℹ️  Disabled (set MOYU_SIGN_KEY to enable)")
+    print()
+
     # 5. Security events
     sec = checks.get("security", {})
     print(f"  🔔 Security Events:    {sec.get('events', 0)} events in 7 days")
@@ -453,25 +464,74 @@ def diagnose(quick: bool = False) -> dict:
     checks["knowledge_graph"] = check_knowledge_graph()
     checks["references"] = check_references()
     checks["integrity"] = check_integrity()
+    checks["signatures"] = _check_signatures()
     checks["security"] = check_security_events()
     checks["storage"] = check_storage()
     return checks
+
+
+def _check_signatures() -> dict:
+    """Check memory digital signatures (optional)."""
+    try:
+        from defense_toolkit.signature import verify_memory_files, is_enabled
+        if not is_enabled():
+            return {"enabled": False, "message": "Signing disabled (set MOYU_SIGN_KEY)"}
+        result = verify_memory_files()
+        return {
+            "enabled": True,
+            "ok": result["ok"],
+            "failed": result["failed"],
+            "total": result["checked"],
+            "message": "All signatures OK" if result["failed"] == 0 else f"{result['failed']}/{result['checked']} files have mismatched signatures",
+        }
+    except Exception as e:
+        return {"enabled": False, "message": f"Signatures unavailable: {e}"}
 
 
 def main(*args):
     flags = set(sys.argv[1:])
     quick = "--quick" in flags
     json_mode = "--json" in flags
-    
+    fix_mode = "--fix" in flags
+
+    if fix_mode:
+        _run_fix()
+        return
+
     checks = diagnose(quick)
     score, grade = compute_health_score(checks)
-    
+
     if json_mode:
         report = {"score": score, "grade": grade, "checks": checks}
         json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
         print()
     else:
         print_report(checks, score, grade)
+
+
+def _run_fix():
+    """Run signature verification and auto-recovery."""
+    print()
+    print("=" * 56)
+    print("  🔧  Memory Integrity — Verify & Auto-Recovery")
+    print("=" * 56)
+    try:
+        from defense_toolkit.signature import verify_and_recover, is_enabled
+        if not is_enabled():
+            print("  ℹ️  Signatures disabled. Set MOYU_SIGN_KEY to enable.")
+            return
+        result = verify_and_recover()
+        print(f"  Checked: {result['checked']} files")
+        print(f"  Recovered: {result['recovered']} files")
+        if result['unrecoverable'] > 0:
+            print(f"  ⚠️  Unrecoverable: {result['unrecoverable']} files — manual attention needed")
+            print(f"  Status: {result['status']}")
+        else:
+            print(f"  ✅ All files healthy")
+        print()
+    except Exception as e:
+        print(f"  ❌ Error: {e}")
+        print()
 
 
 if __name__ == "__main__":

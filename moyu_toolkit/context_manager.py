@@ -1018,6 +1018,52 @@ def demo() -> dict:
 build_context_prompt = build_injection
 
 
+def build_task_map(memories: list) -> str:
+    """从近期的记忆摘要生成 Mermaid 任务流程图。
+
+    Args:
+        memories: 按时间排序的记忆列表，每条含 summary 和 timestamp。
+
+    Returns:
+        Mermaid graph LR 格式的字符串，或空字符串（输入不足时）。
+    """
+    if not memories or len(memories) < 3:
+        return ""
+
+    # 取最近 8 条，按时间顺序
+    recent = memories[-8:]
+    try:
+        recent = sorted(recent, key=lambda m: m.get("timestamp", ""))
+    except Exception:
+        pass
+
+    # 从摘要中提炼简短的任务标签（取前 20 字，去重）
+    seen = set()
+    nodes = []
+    for m in recent:
+        summary = m.get("summary", "")[:20].strip()
+        if not summary or summary in seen:
+            continue
+        seen.add(summary)
+        # 确保 summary 适合做 Mermaid 节点标签（不含特殊字符）
+        label = summary
+        for ch in ['"', "'", "{", "}", "[", "]", "(", ")", "<", ">", "|"]:
+            label = label.replace(ch, "")
+        if label:
+            nodes.append(label)
+
+    if len(nodes) < 2:
+        return ""
+
+    # 生成 Mermaid graph LR
+    lines = ["graph LR"]
+    for i in range(len(nodes) - 1):
+        nid = f"N{i}"
+        lines.append(f"    {nid}[\"{nodes[i][:15]}\"] --> {f'N{i+1}'}[\"{nodes[i+1][:15]}\"]")
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     import sys
     args = sys.argv[1:]

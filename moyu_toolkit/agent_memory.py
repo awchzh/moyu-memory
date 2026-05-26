@@ -521,6 +521,14 @@ def _save_index(index: dict):
         with open(tmp, 'w') as f:
             json.dump(index, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+        # Sign after write
+        try:
+            from defense_toolkit.signature import sign
+            with open(path, 'r') as f:
+                content = f.read()
+            sign(path, content)
+        except Exception:
+            pass
     except Exception:
         if os.path.exists(tmp):
             os.remove(tmp)
@@ -575,6 +583,12 @@ def _save_memories(memories: list):
             with open(tmp, 'wb') as f:
                 f.write(encrypted)
             os.replace(tmp, path)
+            # Sign after write
+            try:
+                from defense_toolkit.signature import sign
+                sign(path, data)
+            except Exception:
+                pass
             return
         except Exception:
             if os.path.exists(tmp):
@@ -586,6 +600,14 @@ def _save_memories(memories: list):
         with open(tmp, 'w') as f:
             json.dump(memories, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+        # Sign after write
+        try:
+            from defense_toolkit.signature import sign
+            with open(path, 'r') as f:
+                content = f.read()
+            sign(path, content)
+        except Exception:
+            pass
     except Exception:
         if os.path.exists(tmp):
             os.remove(tmp)
@@ -615,6 +637,17 @@ def add_memory(summary: str, source: str = "user",
         if pii_types:
             print(f"🔏 PII redacted: {', '.join(pii_types)}")
             summary = redacted  # Replace summary with redacted version
+            # Report to defense log
+            try:
+                from defense_toolkit.defense_log import report as _dl_report
+                _dl_report("pii", "green", {
+                    "event": f"PII 脱敏 — {', '.join(pii_types)}",
+                    "source": "写入前扫描",
+                    "detail": f"检测到敏感信息，已脱敏后写入: {summary[:60]}",
+                    "auto_resolved": True,
+                })
+            except Exception:
+                pass
     except ImportError:
         pass
     except Exception:
@@ -627,6 +660,17 @@ def add_memory(summary: str, source: str = "user",
         result = llm_scan(summary)
         if result.get("verdict") == "suspect":
             print(f"🔴 LLM Security Guard: memory blocked — {result.get('reason', '')}")
+            # Report to defense log
+            try:
+                from defense_toolkit.defense_log import report as _dl_report
+                _dl_report("llm_guard", "yellow", {
+                    "event": "LLM 安检层 — 语义绕过检测",
+                    "source": result.get("reason", "未知")[:60],
+                    "detail": f"正则层未拦截，LLM 判定为可疑: {summary[:60]}",
+                    "auto_resolved": True,
+                })
+            except Exception:
+                pass
             return None
     except ImportError:
         pass

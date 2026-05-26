@@ -153,6 +153,17 @@ def content_scan(text: str) -> list:
         from moyu_toolkit.custom_rules import check_custom
         custom_matches = check_custom(text)
         if custom_matches:
+            # Report to defense log
+            try:
+                from defense_toolkit.defense_log import report as _dl_report
+                _dl_report("content_scan", "yellow", {
+                    "event": f"已拦截 — {', '.join(custom_matches)}",
+                    "source": "内容安检闸（自定义规则）",
+                    "detail": text[:120],
+                    "auto_resolved": True,
+                })
+            except Exception:
+                pass
             return [f"custom: {m}" for m in custom_matches]
     except Exception:
         pass
@@ -168,6 +179,17 @@ def content_scan(text: str) -> list:
         else:
             if pattern in lower and label not in detected:
                 detected.append(label)
+    if detected:
+        try:
+            from defense_toolkit.defense_log import report as _dl_report
+            _dl_report("content_scan", "yellow", {
+                "event": f"已拦截 — {', '.join(detected)}",
+                "source": "内容安检闸（规则库）",
+                "detail": text[:120],
+                "auto_resolved": True,
+            })
+        except Exception:
+            pass
     return detected
 
 
@@ -371,6 +393,15 @@ def daily_backup():
         bak_name = f"daily_{today}_{name}_{ts}.json"
         try:
             shutil.copy2(src, os.path.join(BACKUP_DIR, bak_name))
+            # Sign the backup file for future recovery verification
+            try:
+                from defense_toolkit.signature import sign
+                bak_path = os.path.join(BACKUP_DIR, bak_name)
+                with open(bak_path, "r") as _f:
+                    _content = _f.read()
+                sign(bak_path, _content)
+            except Exception:
+                pass
             backed_up += 1
         except Exception:
             pass
@@ -559,6 +590,17 @@ def verify():
             log(f"File missing: {entry['path']}", "CRITICAL")
             all_ok = False
             critical_changes += 1
+            # Report to defense log
+            try:
+                from defense_toolkit.defense_log import report as _dl_report
+                _dl_report("forensic", "red", {
+                    "event": f"文件缺失 — {entry['path']}",
+                    "source": "完整性校验",
+                    "detail": f"manifest 中记录的文件 {entry['path']} 不存在",
+                    "auto_resolved": False,
+                })
+            except Exception:
+                pass
         elif actual != expected:
             if entry["path"] in _DATA_FILES:
                 # Data files: track change, don't alarm
@@ -578,6 +620,17 @@ def verify():
                 critical_changes += 1
                 needs_reinit = True
                 _auto_recover(entry["path"], manifest)
+                # Report to defense log
+                try:
+                    from defense_toolkit.defense_log import report as _dl_report
+                    _dl_report("forensic", "red", {
+                        "event": f"文件被篡改 — {entry['path']}",
+                        "source": "完整性校验",
+                        "detail": f"SHA256 不匹配，已尝试从备份自动恢复",
+                        "auto_resolved": True,
+                    })
+                except Exception:
+                    pass
         else:
             log(f"✓ {entry['path']}", "PASS")
 

@@ -27,6 +27,9 @@ MODULES = [
     "defense_toolkit.integrity_checker",
     "security",
     "auto_extractor",
+    "defense_toolkit.signature",
+    "defense_toolkit.defense_log",
+    "defense_toolkit.loop_detect",
 ]
 
 

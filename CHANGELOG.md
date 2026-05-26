@@ -1,5 +1,28 @@
 # MOYU — Development Log
 
+## v2.7.6 — Memory Signature + Defense Log (2026-05-26)
+
+### ✍️ Memory Digital Signature
+
+- **HMAC-SHA256 per-file signing** — `signature.py` signs `conversation_memory.json` and `vector_index.json` on every write.
+- **Auto-verify & recover** — `moyu doctor --fix` checks all signatures and auto-restores from signed backups.
+- **Backup signing** — daily backups are also signed, forming a trust chain: write → backup → verify → recover.
+- **Default off** — set `MOYU_SIGN_KEY` to enable. Zero-config priority preserved.
+- Defense layer expanded from 10 to 11: added **Memory Digital Signature**.
+
+### 📋 Defense Log
+
+- **Unified event reporting** — `defense_log.md` in MOYU storage dir records all defense events.
+- **8 defense layers wired in**: content gate, PII, LLM guard, burst rollback, signature, password, forensic, loop detection.
+- **Event dedup** — same event type within 10 min is silently merged.
+- **Auto-cron notification** — red/yellow events trigger a one-shot cron message to the chat.
+- Integration layer expanded from 5 to 6: added **Defense Log**.
+
+### 🔧 Bug Fixes & Completion
+
+- **Tool Call Loop Detection**: SHA256 fingerprint + exhaustive cycle scan + hard abort (was documented-only, now real code).
+- **Task Map**: `build_task_map()` generates Mermaid graph from recent memory summaries (was documented-only, now real code).
+
 ## v2.7.4 — Frequency Guard + Read Monitoring (2026-05-24)
 
 ### 🧱 Frequency Guard V1.0
