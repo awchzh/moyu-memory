@@ -120,7 +120,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 3 | Auto-Update | GitHub release check + TOFU checksum + in-place update |
 | 4 | Wake Orchestration | Check→backup→forget→merge→reflect→context→bridge — fully automatic |
 | 5 | Memory Injection | `moyu inject` — standardized injection with built-in context warning |
-| **6** | **Defense Log** | **All defense events unified to `defense_log.md` — signature fails, content blocks, PII redactions, burst rollbacks, loop aborts. Auto-cron notification on red/yellow events** |
+| **6** | **Defense Log** | **All defense events unified to `defense_log.md` — signature fails, content blocks, PII redactions, burst rollbacks, loop aborts. Hermes users get auto chat notifications. Others: configure `defense_log.webhook` in config.yaml** |
 
 > **For non-Hermes agents** — add this line to your Agent's system prompt to enable session continuation:
 > ```
