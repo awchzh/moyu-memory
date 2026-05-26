@@ -35,7 +35,7 @@ def _get_isolation():
     global _ISOLATION
     if _ISOLATION is None:
         try:
-            from defense_toolkit.isolation import get_storage_path, get_user
+            from moyu_toolkit.defense_toolkit.isolation import get_storage_path, get_user
             _ISOLATION = {"get_storage_path": get_storage_path, "get_user": get_user}
         except Exception:
             _ISOLATION = False
@@ -47,7 +47,7 @@ def _get_encryption():
     global _ENCRYPTION
     if _ENCRYPTION is None:
         try:
-            from defense_toolkit.encrypt import encrypt_bytes, decrypt_bytes, is_encrypted
+            from moyu_toolkit.defense_toolkit.encrypt import encrypt_bytes, decrypt_bytes, is_encrypted
             _ENCRYPTION = {"encrypt": encrypt_bytes, "decrypt": decrypt_bytes, "is_encrypted": is_encrypted}
         except Exception:
             _ENCRYPTION = False
@@ -465,9 +465,9 @@ def get_embedding(text: str, is_query: bool = False) -> Optional[list]:
 
 # ==================== Frequency Guard (Burst Protection, unified) ====================
 
-from frequency_guard import record_write as _record_write
-from frequency_guard import is_write_locked as _check_write_lock
-from frequency_guard import record_read as _record_read
+from moyu_toolkit.frequency_guard import record_write as _record_write
+from moyu_toolkit.frequency_guard import is_write_locked as _check_write_lock
+from moyu_toolkit.frequency_guard import record_read as _record_read
 
 
 def _handle_write_burst(_burst_records=None):
@@ -622,7 +622,7 @@ def add_memory(summary: str, source: str = "user",
     """Add a memory entry with auto-dedup (MD5) + content security gate + index + entities."""
     # Content Security Gate: reject injection patterns before writing
     try:
-        from defense_toolkit.integrity_checker import content_scan
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
         hits = content_scan(summary)
         if hits:
             print(f"🔴 Content Security Gate: memory blocked — detected: {', '.join(hits)}")
@@ -635,14 +635,14 @@ def add_memory(summary: str, source: str = "user",
 
     # ── PII Redaction: detect and mask sensitive info before storage ──
     try:
-        from defense_toolkit.pii_redactor import redact as _redact_pii
+        from moyu_toolkit.defense_toolkit.pii_redactor import redact as _redact_pii
         redacted, pii_types = _redact_pii(summary)
         if pii_types:
             print(f"🔏 PII redacted: {', '.join(pii_types)}")
             summary = redacted  # Replace summary with redacted version
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("pii", "green", {
                     "event": f"PII 脱敏 — {', '.join(pii_types)}",
                     "source": "写入前扫描",
@@ -659,13 +659,13 @@ def add_memory(summary: str, source: str = "user",
 
     # ── LLM Security Guard (optional second layer) ──
     try:
-        from defense_toolkit.integrity_checker import llm_scan
+        from moyu_toolkit.defense_toolkit.integrity_checker import llm_scan
         result = llm_scan(summary)
         if result.get("verdict") == "suspect":
             print(f"🔴 LLM Security Guard: memory blocked — {result.get('reason', '')}")
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("llm_guard", "yellow", {
                     "event": "LLM 安检层 — 语义绕过检测",
                     "source": result.get("reason", "未知")[:60],
@@ -716,7 +716,7 @@ def add_memory(summary: str, source: str = "user",
     # Cross-scene tunnel maintenance: detect entity overlaps across scenes
     # Runs best-effort — silently skips if scenes are not assigned yet
     try:
-        from knowledge_graph import add_cross_scene_tunnels
+        from moyu_toolkit.knowledge_graph import add_cross_scene_tunnels
         add_cross_scene_tunnels()
     except Exception:
         pass
@@ -862,7 +862,7 @@ def _call_llm_rerank(system_prompt: str, user_prompt: str) -> str:
     if _LLM_RERANK_FAILURES >= 3:
         return ""
 
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_RERANK_NO_KEY_WARNED
@@ -975,7 +975,7 @@ def _call_llm_summary(system_prompt: str, user_prompt: str) -> str:
     if _LLM_SUMMARY_FAILURES >= 3:
         return ""
 
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_SUMMARY_NO_KEY_WARNED

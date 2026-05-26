@@ -372,7 +372,7 @@ def _sync_to_prefill(data: dict):
 
     # Scan all user and assistant messages for injection patterns before writing
     try:
-        from defense_toolkit.integrity_checker import content_scan
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
         clean_rounds = []
         for r in rounds:
             user_text = r.get("user", "")

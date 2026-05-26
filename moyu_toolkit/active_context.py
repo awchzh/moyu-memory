@@ -23,6 +23,20 @@ from moyu_toolkit._moyu_paths import get_default_storage
 STORAGE_PATH = get_default_storage()
 
 
+def _scan(text: str) -> bool:
+    """Run content security scan. Returns True if blocked (injection detected)."""
+    try:
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+        hits = content_scan(text)
+        if hits:
+            print(f"🔴 active_context: write blocked — detected: {', '.join(hits)}",
+                  file=__import__('sys').stderr)
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _path() -> str:
     os.makedirs(STORAGE_PATH, exist_ok=True)
     return os.path.join(STORAGE_PATH, "active_context.json")
@@ -60,6 +74,8 @@ def start_session():
 
 
 def set_task(task: str):
+    if _scan(task):
+        return
     ctx = _load()
     ctx["task"] = task
     ctx["last_updated"] = datetime.now().isoformat()
@@ -68,6 +84,8 @@ def set_task(task: str):
 
 
 def add_context(text: str):
+    if _scan(text):
+        return
     ctx = _load()
     ctx["contexts"].append({"text": text[:200], "timestamp": datetime.now().isoformat()})
     if len(ctx["contexts"]) > 5:
@@ -80,6 +98,8 @@ def add_context(text: str):
 class Todo:
     @staticmethod
     def add(text: str):
+        if _scan(text):
+            return
         ctx = _load()
         ctx["todos"].append({"id": len(ctx["todos"]) + 1, "text": text[:200], "done": False,
                              "created": datetime.now().isoformat()})

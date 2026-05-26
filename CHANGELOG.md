@@ -1,5 +1,19 @@
 # MOYU — Development Log
 
+## v2.7.7 — Import Path Security + Write-Path Hardening (2026-05-26)
+
+### 🛡️ Security
+
+- **Cross-module import hardening** — All internal imports now use fully-qualified package paths (`moyu_toolkit.xxx`), ensuring the content security gate, PII redaction, and LLM guard activate consistently regardless of installation method (`pip install`, `python -m`, or direct CLI).
+- **Write-path coverage expanded** — Active context (`active_context.py`), knowledge graph (`knowledge_graph.py`), and knowledge base (`knowledge_base.py`) now all pass through the content security gate before writing user-provided text.
+- Defense layer count unchanged (11). These are hardening fixes to existing layers, not new capabilities.
+
+### 🔧 Bug Fixes
+
+- **LLM features** — `_llm_client` imports in `agent_memory`, `learner`, `auto_extractor`, and `knowledge_graph` fixed for pip-installed environments.
+- **SQLite FTS** — Import paths in `agent_memory_sqlite.py` fixed for package-mode execution.
+- **Python 3.9 compatibility** — `feedback.py` type annotation fixed (`dict | None` → `Optional[dict]`).
+
 ## v2.7.6 — Memory Signature + Defense Log (2026-05-26)
 
 ### ✍️ Memory Digital Signature

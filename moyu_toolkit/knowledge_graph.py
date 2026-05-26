@@ -104,7 +104,7 @@ def _call_llm(prompt: str) -> str:
     if _LLM_EXTRACT_FAILURES >= 3:
         return ""
 
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_EXTRACT_NO_KEY_WARNED
@@ -295,6 +295,17 @@ def add_triples(text: str, valid_from: str = None) -> int:
     
     Returns: Number of new relations added (not duplicates or reactivations)
     """
+    # Content Security Gate
+    try:
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+        hits = content_scan(text)
+        if hits:
+            print(f"🔴 knowledge_graph: write blocked — detected: {', '.join(hits)}",
+                  file=__import__('sys').stderr)
+            return 0
+    except Exception:
+        pass
+
     triples = extract_entities(text)
     if not triples:
         return 0

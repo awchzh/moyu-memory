@@ -20,7 +20,7 @@ def _get_db():
     if _DB is not None:
         return _DB
 
-    from agent_memory import _storage_path
+    from moyu_toolkit.agent_memory import _storage_path
     db_path = _storage_path("memory_search.db")
     _DB = __import__("sqlite3").connect(db_path, check_same_thread=False)
     _DB.execute("PRAGMA journal_mode=WAL")
@@ -75,7 +75,7 @@ def _get_db():
 def _ensure_fts_indexed():
     """Sync all memories from JSON to SQLite FTS (called once on first use)."""
     db = _get_db()
-    from agent_memory import _load_memories
+    from moyu_toolkit.agent_memory import _load_memories
     memories = _load_memories()
     if not memories:
         return

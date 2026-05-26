@@ -1261,7 +1261,7 @@ def _handle_session(args):
         print(f"✅ Pending added")
 
     elif cmd == "clear":
-        from session_bridge import _load, _sync_all
+        from moyu_toolkit.session_bridge import _load, _sync_all
         data = sb._load()
         data["decisions"] = []
         data["pending"] = []

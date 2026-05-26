@@ -337,7 +337,7 @@ class FrequencyGuard:
 
         if removed_count:
             try:
-                from defense_toolkit.integrity_checker import log
+                from moyu_toolkit.defense_toolkit.integrity_checker import log
                 log(f"Frequency Guard: removed {removed_count} entries after burst", "CRITICAL")
             except Exception:
                 pass
@@ -347,7 +347,7 @@ class FrequencyGuard:
     def _send_alert(self, rule_name: str, rule: dict, result: dict):
         """Send alert for burst event."""
         try:
-            from defense_toolkit.integrity_checker import _send_alert
+            from moyu_toolkit.defense_toolkit.integrity_checker import _send_alert
             action = result.get("action", "alert")
             count = result.get("count", 0)
             window = result.get("window", 60)

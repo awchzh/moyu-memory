@@ -239,7 +239,7 @@ def run(dry_run: bool = False) -> dict:
 
         # Create merged entry with security check
         try:
-            from defense_toolkit.integrity_checker import content_scan
+            from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
             hits = content_scan(merged_summary)
             if hits:
                 print(f"⚠️ memory_merge: skipped — merged content blocked by security gate: {', '.join(hits)}")

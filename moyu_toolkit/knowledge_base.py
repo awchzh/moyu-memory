@@ -274,6 +274,17 @@ def record(title: str, triggers: list, body: str) -> str:
     
     Returns the filename created.
     """
+    # Content Security Gate: scan body for injection patterns
+    try:
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+        hits = content_scan(body)
+        if hits:
+            print(f"🔴 knowledge_base: write blocked — detected: {', '.join(hits)}",
+                  file=__import__('sys').stderr)
+            return ""
+    except Exception:
+        pass
+
     kdir = _ensure_knowledge_dir()
     # Sanitize title to filename
     safe_name = re.sub(r'[^\u4e00-\u9fff\w\-]', '_', title)[:30].strip('_').lower() or "workflow"

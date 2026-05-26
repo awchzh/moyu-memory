@@ -76,7 +76,7 @@ def _get_add_memory():
         try:
             import sys
             # This works when called from the tool via sys.path
-            from agent_memory import add_memory
+            from moyu_toolkit.agent_memory import add_memory
             return add_memory
         except ImportError:
             return None
@@ -89,7 +89,7 @@ def _get_embedding_fn():
         return am.get_embedding
     except ImportError:
         try:
-            from agent_memory import get_embedding
+            from moyu_toolkit.agent_memory import get_embedding
             return get_embedding
         except ImportError:
             return None
@@ -262,7 +262,7 @@ def _llm_extract(text: str, already_found: List[Dict]) -> List[Dict]:
         {summary: str, type: str, confidence: float, source: str}
     """
     try:
-        from _llm_client import resolve_llm_config, call_llm_api
+        from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     except ImportError:
         return []
 
@@ -393,7 +393,7 @@ def _semantic_dedup(summary: str) -> bool:
         _load_memories = am._load_memories
     except ImportError:
         try:
-            from agent_memory import _load_index, _load_memories
+            from moyu_toolkit.agent_memory import _load_index, _load_memories
         except ImportError:
             return False
 

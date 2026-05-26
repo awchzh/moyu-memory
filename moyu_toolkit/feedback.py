@@ -10,6 +10,9 @@ Storage: memory_data/search_feedback_YYYY-MM.jsonl (monthly rotation).
 import json
 import os
 from datetime import datetime
+from typing import Optional
+
+
 def _storage_path() -> str:
     """Get the feedback log directory (same as main storage)."""
     base = os.environ.get("MOYU_STORAGE", "")
@@ -26,7 +29,7 @@ def _feedback_path() -> str:
 
 
 def record(kind: str, query: str, memory_id: str, detail: str = "",
-           metadata: dict | None = None) -> None:
+           metadata: Optional[dict] = None) -> None:
     """Record a search feedback event.
 
     Args:

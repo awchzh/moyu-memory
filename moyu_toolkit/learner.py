@@ -135,7 +135,7 @@ def _register_new_signal(text: str):
 # ==================== API Calls ====================
 
 def _call_llm(prompt: str) -> str:
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key:
         return ""

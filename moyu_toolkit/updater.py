@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 # ── Version (also importable) ──
-VERSION = "2.7.6"
+VERSION = "2.7.7"
 
 # Known SHA256 checksums for release zips, keyed by version tag.
 # Verified before extracting updates.
@@ -30,7 +30,8 @@ VERSION = "2.7.6"
 # their own checksum empty; it gets filled in the NEXT release.
 # TOFU: first successful update auto-caches checksum locally.
 _CHECKSUMS = {
-    "2.5.1": "fd52c48f11de9f985789f1f3e353e885975643cda3ee57f7e723eeb6f97879d7",  # Current release
+    "2.7.7": "ba6f03aaca34db7989a97f639b5cfe5b952d82153376530d22c4362c27cffca5",  # Current release
+    "2.5.1": "fd52c48f11de9f985789f1f3e353e885975643cda3ee57f7e723eeb6f97879d7",
     "2.5.0": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",  # TOFU fallback
     "2.4.8": "736c050ce043305dd833c01247b62f56432d9821ad1407fdf89206cb7b181e7e",
     "2.4.7": "05159d27d96f23faaa1064d01e0000d8c3c16a077dbf972b7eb32f235e5cb5c1",
