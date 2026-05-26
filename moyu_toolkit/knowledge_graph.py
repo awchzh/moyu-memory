@@ -315,6 +315,9 @@ def add_triples(text: str, valid_from: str = None) -> int:
             else:
                 kg["entities"][name]["last_seen"] = now
                 kg["entities"][name]["mention_count"] += 1
+                # Reactivate entity if it was previously invalidated
+                if kg["entities"][name].get("valid_until") is not None:
+                    kg["entities"][name]["valid_until"] = None
         # Only add if no *active* record of this relation exists
         # Invalidated relations CAN be re-added (reactivation)
         exists_active = any(

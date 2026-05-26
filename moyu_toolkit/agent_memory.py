@@ -1109,9 +1109,14 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     
     q_vec = get_embedding(query, is_query=True)
     
-    # Dimension mismatch guard: if query vec dim differs from indexed vecs, fall back to n-gram
+    # Dimension mismatch guard: if query vec dim differs from indexed vecs, drop semantic scoring
+    # n-gram fallback (256-dim) still won't match stored vectors from a different model (e.g. 384/512)
+    _dim_mismatch = False
     if q_vec and vectors and len(q_vec) != len(vectors[0].get("vector", [])):
-        q_vec = _get_ngram_embedding(query)
+        _dim_mismatch = True
+        q_vec = None
+        print("⚠️  Vector dimension mismatch between query and index — "
+              "semantic scoring disabled. Run 'moyu index' to rebuild vector index.", file=__import__("sys").stderr)
     
     q_words = re.findall(r'[\u4e00-\u9fff]|[a-zA-Z0-9]+', query.lower())
     
