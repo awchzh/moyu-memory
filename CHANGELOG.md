@@ -18,11 +18,6 @@
 - **Auto-cron notification** — red/yellow events trigger a one-shot cron message to the chat.
 - Integration layer expanded from 5 to 6: added **Defense Log**.
 
-### 🔧 Bug Fixes & Completion
-
-- **Tool Call Loop Detection**: SHA256 fingerprint + exhaustive cycle scan + hard abort (was documented-only, now real code).
-- **Task Map**: `build_task_map()` generates Mermaid graph from recent memory summaries (was documented-only, now real code).
-
 ## v2.7.4 — Frequency Guard + Read Monitoring (2026-05-24)
 
 ### 🧱 Frequency Guard V1.0
