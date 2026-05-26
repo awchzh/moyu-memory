@@ -206,13 +206,16 @@ class InjectionPayload:
 
     def level(self) -> str:
         """Return current compression level: over > auto > mild > warn > ok."""
-        pct = self.usage_pct()
-        if pct >= 1.0:
+        pct = self.usage_pct()  # 0-100 percentage
+        if pct >= 100.0:
             return "over"
-        if pct >= self.auto_at:
+        if pct >= self.auto_at * 100:
             return "auto"
-        if pct >= self.mild_at:
+        if pct >= self.mild_at * 100:
             return "mild"
+        warn = getattr(self, 'warn_threshold', None)
+        if warn and pct >= warn * 100:
+            return "warn"
         return "ok"
 
     def compress(self) -> list[dict]:

@@ -557,7 +557,10 @@ def _load_memories() -> list:
             if raw.startswith(b'ENCv1:'):
                 print(f"🔐 {os.path.basename(path)} is encrypted — configure encryption password to read")
                 return []
-            return json.loads(raw.decode())
+            data = json.loads(raw.decode())
+            if not isinstance(data, list):
+                return []  # Valid JSON but not a list — treat as corrupted
+            return data
         except (json.JSONDecodeError, UnicodeDecodeError):
             return []  # Corrupted or empty file
     return []

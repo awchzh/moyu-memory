@@ -37,7 +37,7 @@ def _call_llm_merge(system_prompt: str, user_prompt: str) -> str:
     if _LLM_MERGE_FAILURES >= 3:
         return ""
 
-    from _llm_client import resolve_llm_config, call_llm_api
+    from moyu_toolkit._llm_client import resolve_llm_config, call_llm_api
     api_key, base_url, model = resolve_llm_config()
     if not api_key or api_key == "your-api-key-here":
         global _LLM_MERGE_NO_KEY_WARNED
