@@ -69,6 +69,10 @@ def check_custom(content: str) -> list:
     Returns list of matched pattern descriptions (empty = safe).
     Run BEFORE the built-in content gate — custom rules get first priority.
     """
+    # Check whitelist first — if content matches whitelist, skip all rules
+    if check_whitelist(content):
+        return []
+    
     matches = []
     for rule in _load_rules():
         pattern = rule.get("pattern", "")
@@ -156,3 +160,80 @@ def stats() -> dict:
         "count": len(rules),
         "rules": [{"pattern": r.get("pattern", "?"), "note": r.get("note", "")[:60]} for r in rules],
     }
+
+
+# ── False-positive learning / Whitelist ──────────────────────────────────
+
+def _load_whitelist() -> list:
+    """Load whitelist entries from custom_rules.json."""
+    _ensure_rules_file()
+    try:
+        with open(_RULES_PATH) as f:
+            data = json.load(f)
+        return data.get("whitelist", [])
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
+
+def check_whitelist(content: str) -> bool:
+    """Check if content matches any whitelist pattern. True = whitelisted (skip block)."""
+    for item in _load_whitelist():
+        pattern = item.get("pattern", "")
+        if not pattern:
+            continue
+        try:
+            if re.search(pattern, content, re.IGNORECASE):
+                return True
+        except re.error:
+            pass
+    return False
+
+
+def add_whitelist(pattern: str, note: str = ""):
+    """Add a whitelist pattern. Matching content passes content_scan.
+
+    Returns True if newly added, False if updated (deduped).
+    """
+    _ensure_rules_file()
+    with open(_RULES_PATH) as f:
+        data = json.load(f)
+    whitelist = data.get("whitelist", [])
+    # Dedup — update existing entry if same pattern
+    for w in whitelist:
+        if w["pattern"] == pattern:
+            w["note"] = note
+            w["updated_at"] = datetime.now().isoformat()
+            with open(_RULES_PATH, "w") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return False
+    whitelist.append({
+        "pattern": pattern,
+        "note": note,
+        "added_at": datetime.now().isoformat(),
+    })
+    data["whitelist"] = whitelist
+    with open(_RULES_PATH, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return True
+
+
+def list_whitelist() -> list:
+    """List all whitelist entries."""
+    return _load_whitelist()
+
+
+# ── Rule removal ────────────────────────────────────────────────────────
+
+def remove_rule(pattern_text: str) -> tuple:
+    """Remove all rules whose pattern contains pattern_text.
+
+    Returns (found, count) — whether any were found, and how many removed.
+    """
+    rules = _load_rules()
+    if not rules:
+        return (False, 0)
+    new_rules = [r for r in rules if pattern_text not in r.get("pattern", "")]
+    removed = len(rules) - len(new_rules)
+    if removed > 0:
+        _save_rules(new_rules)
+    return (removed > 0, removed)

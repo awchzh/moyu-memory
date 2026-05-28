@@ -226,7 +226,24 @@ def _load_memories() -> list:
 
 def _save_memories(memories: list):
     STORAGE.mkdir(parents=True, exist_ok=True)
-    with open(_memories_path(), 'w') as f:
+    path = _memories_path()
+    # Content security gate: scan summaries before persisting
+    try:
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+        for m in memories:
+            summary = m.get("summary", "") or ""
+            if summary:
+                hits = content_scan(summary)
+                if hits:
+                    from moyu_toolkit.defense_toolkit.defense_log import report as _dl
+                    _dl("forgetting_curve_save", "yellow", {
+                        "gate": "content_scan",
+                        "hits": hits,
+                        "memory_id": m.get("id", "")[:12],
+                    })
+    except Exception:
+        pass
+    with open(path, 'w') as f:
         json.dump(memories, f, ensure_ascii=False, indent=2)
 
 
@@ -770,6 +787,14 @@ def run(context_pressure: bool = False) -> dict:
             m["protected_by_scene"] = True
             m["last_checked"] = now
             kept_by_scene.append(m_id)
+            continue
+
+        # ── Stage 2.5 (Heat Bridge): COLD tier memories auto-pass density check ──
+        heat_tier = m.get("heat_tier", "warm")
+        if heat_tier == "cold":
+            # COLD tier: skip density trend, send straight to demotion candidate
+            m["heat_bridge_skip"] = True  # flag for audit
+            demotion_candidates.append(m)
             continue
 
         # ── Stage 2: check access density trend ──

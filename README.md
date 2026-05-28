@@ -78,7 +78,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 
 | # | Capability | Description |
 |---|-----------|-------------|
-| 1 | TEMPR Multi-Strategy Retrieval | Semantic + BM25 + time-weighted + entity, configurable weights |
+| 1 | TEMPR Multi-Strategy Retrieval | Semantic + BM25 + time-weighted + entity + progressive content (summary→overview→full) + semantic dedup, configurable weights |
 | 2 | Search Rerank *LLM* | LLM re-ranks candidates by semantic relevance (on by default, degrades without key) |
 | 3 | Smart Summary *LLM* | Writes auto-refined by LLM — filler out, facts in |
 | 4 | FastEmbed Local Embedding | Local ONNX vectorization, no API needed, auto-degrades to n-gram |
@@ -91,11 +91,11 @@ moyu quickstart    # 5-minute interactive demo, zero config
 
 | # | Capability | Description |
 |---|-----------|-------------|
-| 1 | Knowledge Graph *LLM* | Entity extraction + time-travel + relation invalidation + distillation |
+| 1 | Knowledge Graph *LLM* | Entity extraction + time-travel + relation invalidation + entity timeline + conflict auto-invalidation + distillation |
 | 2 | Workflow Knowledge Base | Markdown indexing + keyword search |
 | 3 | User Profile | Auto-extract preferences, habits, facts from conversation |
 
-### ⏳ Lifecycle Layer (4) *3 LLM-Enhanced*
+### ⏳ Lifecycle Layer (5) *3 LLM-Enhanced*
 
 | # | Capability | Description |
 |---|-----------|-------------|
@@ -103,6 +103,7 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | 2 | Task Map | Auto-generated Mermaid task graph on wake |
 | 3 | Forgetting Curve *LLM* | Four gates (safety/access/scene/LLM semantic review) + LLM scene classification |
 | 4 | Memory Merge *LLM* | Related memories auto-merged with LLM summary, originals preserved |
+| 5 | Access Heat Tracking & Decay | Per-memory heat tracking (HOT/WARM/COLD) with 5%/day time decay + auto-decay on search, drives retrieval priority |
 
 ### 🔄 Learning & Reflection (2)
 
@@ -180,27 +181,28 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 ## 📋 Command Reference
 
 ### Defense & Security
-`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu init` `moyu rules` `moyu protect`
-`moyu benchmark` `moyu demo-attack` `moyu doctor` `moyu mutate`
+`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu init` `moyu rules list` `moyu rules remove <pattern>` `moyu rules whitelist <pattern>` `moyu protect`
+`moyu benchmark` `moyu demo-attack` `moyu doctor` `moyu mutate` `moyu frequency stats` `moyu frequency unlock <name>`
 
 ### Memory & Retrieval
 `moyu search <query>` `moyu search --vote <id> good|bad` `moyu search --ns <ns>`
 `moyu inject <query>` `moyu config show` `moyu config set retrieval.weights.<dim> <val>`
 `moyu tune` / `--dry-run` / `--reset` `moyu stats` `moyu status`
-`moyu extract <text>` `moyu extract stats`
+`moyu extract <text>` `moyu extract stats` `moyu memory detail <id>` `moyu memory heat-recalc`
 
 ### Knowledge Layer
 `moyu kg search <entity>` `moyu kg history <entity>` `moyu kb search <keyword>`
 
 ### Lifecycle & Context
-`moyu compress` `moyu context` `moyu forget` `moyu ref <name>` `moyu snapshot`
+`moyu compress` `moyu context` `moyu forget` `moyu lifecycle` `moyu ref <name>` `moyu snapshot`
 
 ### Learning & Maintenance
-`moyu learn <text>` `moyu quickstart` `moyu reflect` `moyu setup agents` `moyu update`
+`moyu learn <text>` `moyu detect <text>` `moyu signals` `moyu quickstart` `moyu demo` `moyu reflect` `moyu setup agents` `moyu update`
 
 ### Session & Bridge
 `moyu session state` `moyu session prompt`
 `moyu session decision <text>` `moyu session pending <text>` `moyu session clear`
+`moyu bridge`
 
 ---
 

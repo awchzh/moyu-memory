@@ -1,5 +1,46 @@
 # MOYU — Development Log
 
+## v2.8.0 — Progressive Memory + Heat Tiers + Security Deepening (2026-05-28)
+
+### 🧠 Progressive Memory (3-Tier)
+
+- **Summary → Overview → Full** — `add_memory()` now accepts optional `overview` and `full` parameters. Search returns summaries by default; `moyu memory detail <id>` expands progressively.
+- **Access Heat Tracking** — Every memory tracks a `heat` score (0.0–1.0). Heats increase on search access (+0.02) and detail expansion (+0.1), providing implicit relevance feedback.
+- **HOT/WARM/COLD Tiers** — Memories auto-sort into three tiers by heat (top 20% HOT, middle 40% WARM, bottom 40% COLD). 5%/day time decay + `moyu memory heat-recalc` for manual tier reassignment.
+- **Semantic Dedup** — Search filters near-duplicate results (cosine similarity > 0.9), retaining the higher-heat entry.
+- **Heat ↔ Forgetting Curve Bridge** — COLD-tier memories bypass density checks and flow directly to forgetting curve deletion candidates.
+
+### 🛡️ Security Hardening
+
+- **Injection output gate** — `build_injection()` assembled content now passes through `content_scan()` before delivery, preventing assembled injections from sneaking through.
+- **Persistence gate** — `forgetting_curve._save_memories()` now passes through `content_scan()` before persisting demoted/archived memories.
+- **Pseudo-signal blacklist** — `session_bridge` filters `<artificial>`, `<|im_start|>`, `[system]`, and emoji pollution patterns from prefill content.
+- **Next-session behavioral points** — Session bridge auto-generates compact (≤3 item) behavioral summaries from decisions and pending tasks, injected into prefill for reliable next-session carryover.
+
+### 🔄 Compression Hardening
+
+- **Tiered compression priority** — `rule` and `working_memory` categories are now permanently protected from deferral and demotion, regardless of priority score.
+- **Recursive compression guard** — `was_compressed` flag prevents already-truncated content from being compressed a second time.
+- **Compression alignment check** — Post-compression report now includes rule retention stats (e.g., "规则保留: 2/2 | 记忆条目: 1/1").
+
+### 📊 Knowledge Graph
+
+- **`moyu kg history <entity>`** — Entity timeline command showing active + expired relations with validity windows.
+- **Conflict auto-invalidation** — New relations auto-expire existing same-source, same-type relations to prevent conflict accumulation.
+
+### 🔧 Rules & Learning
+
+- **`moyu rules whitelist <pattern>`** — Whitelist management for false-positive suppression.
+- **`moyu rules remove <pattern>`** — Remove stale or over-aggressive rules.
+- **`moyu rules list`** — List all active custom rules with descriptions.
+
+### 📋 CLI
+
+- **`moyu memory detail <id>`** — Progressive content expansion (summary → overview → full).
+- **`moyu memory heat-recalc`** — Manual heat tier recalculation.
+- **`moyu kg history <entity>`** — Entity relation timeline.
+- **`moyu rules` subcommands** — whitelist, remove, list.
+
 ## v2.7.7 — Import Path Security + Write-Path Hardening (2026-05-26)
 
 ### 🛡️ Security

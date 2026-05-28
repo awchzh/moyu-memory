@@ -34,8 +34,33 @@ DEFAULT_CONTEXT_MD = Path.home() / "Documents" / "MoBai" / "current_context.md"
 MAX_ROUNDS = 3
 MAX_TURNS = 10
 
+# ── Pseudo-signal injection blacklist ──
+# Cheap patterns that indicate fake system directives or signal pollution
+_PSEUDO_SIGNAL_PATTERNS = [
+    "<artificial>",
+    "<|im_start|>",
+    "<|im_end|>",
+    "[system]",
+    "[/system]",
+    "[END OF CONTEXT]",
+    "[START OF CONTEXT]",
+]
 
-# ==================== Internal Helpers ====================
+
+def _filter_pseudo_signals(text: str) -> str:
+    """Strip common pseudo-signal injection markers from prefill content."""
+    import re
+    for pattern in _PSEUDO_SIGNAL_PATTERNS:
+        text = text.replace(pattern, "[blocked]")
+    # Strip lines with 3+ identical emoji (pollution attempts)
+    text = re.sub(
+        r'^([\U0001F300-\U0001F9FF])\1{2,}$',
+        '',
+        text,
+        flags=re.MULTILINE,
+    )
+    return text
+
 
 def _default_data() -> dict:
     return {
@@ -128,7 +153,21 @@ def format_context_summary() -> str:
     return "\n".join(lines)
 
 
-# ==================== V2.2: State management ====================
+def _generate_next_points(data: dict) -> str:
+    """Generate compact behavioral points (≤3 items) for next-session prefill."""
+    parts = []
+    for d in (data.get("decisions") or [])[-3:]:
+        parts.append(f"决定：{d[:80]}")
+        if len(parts) >= 2:
+            break
+    for p in (data.get("pending") or [])[:2]:
+        if len(parts) < 3:
+            parts.append(f"待办：{p[:80]}")
+    topic = data.get("topic", "")
+    if topic and not parts:
+        parts.append(f"上次：{topic[:80]}")
+    return " | ".join(parts) if parts else ""
+
 
 MAX_STATE_ITEMS = 10
 
@@ -356,6 +395,15 @@ def _sync_to_prefill(data: dict):
         lines.append("📋 跨会话摘要")
         lines.append("  （暂无）")
 
+    # Next-session behavioral points (compact, ≤3 items)
+    try:
+        next_pts = _generate_next_points(data)
+        if next_pts:
+            lines.append("")
+            lines.append(f"🧠 {next_pts}")
+    except Exception:
+        pass
+
     prefill = [{"role": "system", "content": "\n".join(lines)}]
 
     # User/assistant: 3 complete rounds
@@ -365,6 +413,11 @@ def _sync_to_prefill(data: dict):
             prefill.append({"role": "user", "content": r["user"]})
         if r.get("assistant"):
             prefill.append({"role": "assistant", "content": r["assistant"]})
+
+    # Also filter user/assistant content through pseudo-signal filter
+    for m in prefill:
+        if m.get("content"):
+            m["content"] = _filter_pseudo_signals(m["content"])
 
     # Write — with content security gate
     prefill_path = _prefill_path()

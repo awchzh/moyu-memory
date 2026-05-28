@@ -329,6 +329,13 @@ def add_triples(text: str, valid_from: str = None) -> int:
                 # Reactivate entity if it was previously invalidated
                 if kg["entities"][name].get("valid_until") is not None:
                     kg["entities"][name]["valid_until"] = None
+        # ── Conflict detection: same (source, relation) with different target → invalidate old ──
+        for r in kg["relations"]:
+            if (r["source"] == sn and r["relation"] == t["relation"]
+                    and r["target"] != tn and r.get("valid_until") is None):
+                r["valid_until"] = now
+                r["invalid_reason"] = f"superseded: new target '{t['target']}' ({now[:10]})"
+
         # Only add if no *active* record of this relation exists
         # Invalidated relations CAN be re-added (reactivation)
         exists_active = any(
@@ -606,6 +613,13 @@ def distill_from_memory(summary: str, timestamp: str = None) -> int:
                     "first_seen": now, "last_seen": now, "mention_count": 1,
                     "valid_from": now, "valid_until": None,
                 }
+        # ── Conflict detection ──
+        for r in kg["relations"]:
+            if (r["source"] == sn and r["relation"] == t["relation"]
+                    and r["target"] != tn and r.get("valid_until") is None):
+                r["valid_until"] = now
+                r["invalid_reason"] = f"superseded: new target '{t['target']}' ({now[:10]})"
+
         # Only add if this exact triple doesn't exist anywhere in KG
         exists = any(
             r["source"] == sn and r["target"] == tn and r["relation"] == t["relation"]

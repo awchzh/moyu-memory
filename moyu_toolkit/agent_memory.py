@@ -618,8 +618,18 @@ def _save_memories(memories: list):
 
 
 def add_memory(summary: str, source: str = "user",
-               metadata: dict = None) -> Optional[dict]:
-    """Add a memory entry with auto-dedup (MD5) + content security gate + index + entities."""
+               metadata: dict = None,
+               overview: str = None,
+               full: str = None) -> Optional[dict]:
+    """Add a memory entry with auto-dedup (MD5) + content security gate + index + entities.
+
+    Args:
+        summary: One-line summary (shown in search results).
+        source: Source label.
+        metadata: Optional metadata dict.
+        overview: 2-3 sentence overview (shown when expanded).
+        full: Complete content (loaded on demand).
+    """
     # Content Security Gate: reject injection patterns before writing
     try:
         from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
@@ -705,7 +715,12 @@ def add_memory(summary: str, source: str = "user",
         "source": source,
         "namespace": namespace,
         "summary": summary[:500],
+        "overview": overview[:1000] if overview else None,
+        "full": full if full else None,
         "content_hash": content_hash,
+        "heat": 0.5,
+        "heat_tier": "warm",
+        "last_accessed": datetime.now().isoformat(),
         "entities": entities,
         "metadata": metadata or {}
     }
@@ -1060,6 +1075,81 @@ def _should_llm_rerank() -> bool:
         return False
 
 
+def get_memory(memory_id: str) -> Optional[dict]:
+    """Retrieve a single memory by ID, including overview/full if available."""
+    memories = _load_memories()
+    for m in memories:
+        if m.get("id") == memory_id:
+            # Bump heat more for explicit detail view
+            try:
+                _bump_heat(memory_id, 0.1)
+            except Exception:
+                pass
+            return m
+    return None
+
+
+def _bump_heat(memory_id: str, amount: float = 0.05):
+    """Increment heat for a memory (called on access). Auto-persists."""
+    memories = _load_memories()
+    for m in memories:
+        if m.get("id") == memory_id:
+            old = m.get("heat", 0.5)
+            m["heat"] = min(old + amount, 1.0)
+            m["last_accessed"] = datetime.now().isoformat()
+            _save_memories(memories)
+            return True
+    return False
+
+
+def _recalc_heat_tiers() -> dict:
+    """
+    Recalculate heat tiers: decay, sort, reassign HOT/WARM/COLD.
+    
+    Decay all heats by 5% per day since last access.
+    Top 20% → HOT, middle 40% → WARM, bottom 40% → COLD.
+    
+    Returns summary dict.
+    """
+    memories = _load_memories()
+    if not memories:
+        return {"total": 0, "hot": 0, "warm": 0, "cold": 0}
+    
+    now = datetime.now()
+    for m in memories:
+        heat = m.get("heat", 0.5)
+        last = m.get("last_accessed", m.get("timestamp", ""))
+        try:
+            days_since = (now - datetime.fromisoformat(last)).total_seconds() / 86400
+        except Exception:
+            days_since = 0
+        # Decay 5% per day
+        decay = heat - 0.05 * days_since
+        m["heat"] = max(min(decay, 1.0), 0.1)  # clamp [0.1, 1.0]
+    
+    # Sort by heat descending
+    memories.sort(key=lambda m: m.get("heat", 0), reverse=True)
+    total = len(memories)
+    hot_count = max(1, total // 5)
+    warm_count = max(1, total * 2 // 5)
+    
+    for i, m in enumerate(memories):
+        if i < hot_count:
+            m["heat_tier"] = "hot"
+        elif i < hot_count + warm_count:
+            m["heat_tier"] = "warm"
+        else:
+            m["heat_tier"] = "cold"
+    
+    _save_memories(memories)
+    
+    hot = sum(1 for m in memories if m.get("heat_tier") == "hot")
+    warm = sum(1 for m in memories if m.get("heat_tier") == "warm")
+    cold = sum(1 for m in memories if m.get("heat_tier") == "cold")
+    return {"total": total, "hot": hot, "warm": warm, "cold": cold}
+
+_last_decay_monotonic = None
+
 def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     """TEMPR multi-strategy retrieval with score_and_rank hybrid fusion.
     
@@ -1092,6 +1182,20 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
         return []
     memories = _load_memories()
     mem_map = {m["id"]: m for m in memories}
+    
+    # ── Auto-decay: lightweight heat decay on search (throttled to once per 30 min) ──
+    global _last_decay_monotonic
+    now_ts = time.monotonic()
+    if _last_decay_monotonic is None or (now_ts - _last_decay_monotonic) > 1800:
+        for m in memories:
+            heat = m.get("heat", 0.5)
+            last = m.get("last_accessed", m.get("timestamp", ""))
+            try:
+                days_since = (datetime.now() - datetime.fromisoformat(last)).total_seconds() / 86400
+            except Exception:
+                days_since = 0
+            m["heat"] = max(min(heat - 0.05 * days_since, 1.0), 0.1)
+        _last_decay_monotonic = now_ts
     
     # Detect temporal signal in query (Mem0-inspired temporal reasoning)
     temporal_signal = _detect_temporal_signal(query)
@@ -1224,6 +1328,72 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
         reranked = _llm_rerank(query, results)
         if reranked:
             results = reranked
+
+    # Bump heat for returned results (search access drives heat) — reuse loaded memories
+    try:
+        updated = 0
+        for r in results:
+            mid = r.get("memory_id")
+            if not mid:
+                continue
+            for m in memories:
+                if m.get("id") == mid:
+                    old = m.get("heat", 0.5)
+                    m["heat"] = min(old + 0.02, 1.0)
+                    m["last_accessed"] = datetime.now().isoformat()
+                    updated += 1
+                    break
+        if updated:
+            _save_memories(memories)
+    except Exception:
+        pass
+
+    # ── Semantic dedup: remove results too similar to higher-ranked ones ──
+    if len(results) > 1:
+        # Build vector lookup from the vectors we already have
+        vec_lookup = {}
+        for v in vectors:
+            vid = v.get("memory_id")
+            vvec = v.get("vector")
+            if vid and vvec:
+                vec_lookup[vid] = vvec
+        
+        keep = []
+        for r in results:
+            mid = r.get("memory_id")
+            rvec = vec_lookup.get(mid)
+            if not rvec:
+                keep.append(r)
+                continue
+            is_dup = False
+            for k in keep:
+                kvec = vec_lookup.get(k.get("memory_id"))
+                if not kvec:
+                    continue
+                try:
+                    sim = cosine_similarity(rvec, kvec)
+                    if sim > 0.9:
+                        # Keep the one with higher heat
+                        r_heat = 0.5
+                        k_heat = 0.5
+                        for m in memories:
+                            if m.get("id") == mid:
+                                r_heat = m.get("heat", 0.5)
+                            if m.get("id") == k.get("memory_id"):
+                                k_heat = m.get("heat", 0.5)
+                        if r_heat <= k_heat:
+                            is_dup = True
+                        else:
+                            # Replace k with r (r is hotter)
+                            keep.remove(k)
+                            keep.append(r)
+                            is_dup = True
+                        break
+                except Exception:
+                    pass
+            if not is_dup:
+                keep.append(r)
+        results = keep
 
     return results[:top_k]
 

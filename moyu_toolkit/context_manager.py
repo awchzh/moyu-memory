@@ -32,6 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
 STORAGE = Path(get_default_storage())
 REFS_DIR = STORAGE / "refs"           # Truncated original content, for drill-down
 COMPRESS_LOG = STORAGE / "compression_log.json"
@@ -193,6 +194,7 @@ class InjectionPayload:
             "tokens": token_est,
             "priority": priority,
             "category": category,
+            "was_compressed": False,
         })
 
     def total_chars(self) -> int:
@@ -236,8 +238,11 @@ class InjectionPayload:
         # ── Mild compression ──
         self.sections.sort(key=lambda s: s["priority"])
 
-        deferrable = [s for s in self.sections if s["priority"] >= 9]
-        kept = [s for s in self.sections if s["priority"] < 9]
+        # Protect critical categories from deferral
+        deferrable = [s for s in self.sections
+                      if s["priority"] >= 9
+                      and s["category"] not in ("rule", "working_memory")]
+        kept = [s for s in self.sections if s not in deferrable]
 
         for d in deferrable:
             if sum(s["chars"] for s in kept) <= self.hard_limit:
@@ -254,8 +259,11 @@ class InjectionPayload:
         self.sections = kept
         total = sum(s["chars"] for s in self.sections)
 
+        # ── Mild: truncate long memory entries ──
         for s in self.sections:
             if s["category"] != "memory" or s["priority"] < 5:
+                continue
+            if s["was_compressed"]:
                 continue
             if total <= self.mild_limit:
                 break
@@ -266,6 +274,7 @@ class InjectionPayload:
                 # Save ref before truncating
                 ref_path = _save_ref(s["name"], original_text)
                 s["content"] = original_text[:max_len] + f"… [↩ ref:{s['name']}]"
+                s["was_compressed"] = True
                 saved = original - len(s["content"])
                 total -= saved
                 actions.append({
@@ -281,8 +290,10 @@ class InjectionPayload:
             return actions
 
         # ── Aggressive compression ──
-        deferrable2 = [s for s in self.sections if s["priority"] >= 7]
-        kept2 = [s for s in self.sections if s["priority"] < 7]
+        deferrable2 = [s for s in self.sections
+                       if s["priority"] >= 7
+                       and s["category"] not in ("rule", "working_memory")]
+        kept2 = [s for s in self.sections if s not in deferrable2]
 
         for d in deferrable2:
             if sum(s["chars"] for s in kept2) <= self.hard_limit:
@@ -302,6 +313,8 @@ class InjectionPayload:
         for s in self.sections:
             if s["category"] != "memory":
                 continue
+            if s["was_compressed"]:
+                continue
             if total <= self.hard_limit:
                 break
             original_text = s["content"]
@@ -311,6 +324,7 @@ class InjectionPayload:
                 # Save ref before truncating (if not already saved by mild tier)
                 ref_path = _save_ref(s["name"], original_text)
                 s["content"] = original_text[:max_len] + f"… [↩ ref:{s['name']}]"
+                s["was_compressed"] = True
                 saved = original - len(s["content"])
                 total -= saved
                 actions.append({
@@ -384,6 +398,45 @@ def prepare_injection(
         "sections_injected": len(payload.sections),
         "sections_total": len(sections) + len(actions),
     }
+
+    # ── Alignment check: report what critical content survived ──
+    try:
+        rule_sections = [s for s in sections if s[3] in ("rule", "working_memory")]
+        surviving_rules = [s for s in payload.sections
+                           if s["category"] in ("rule", "working_memory")]
+        rule_count = len(rule_sections)
+        rule_survived = len(surviving_rules)
+        alignment_lines = []
+        if rule_count > 0:
+            alignment_lines.append(
+                f"规则保留: {rule_survived}/{rule_count}"
+            )
+        # Count how many memory entries survived truncation vs total
+        mem_in = len([s for s in sections if s[3] == "memory"])
+        mem_out = len([s for s in payload.sections if s["category"] == "memory"])
+        if mem_in > 0:
+            alignment_lines.append(
+                f"记忆条目: {mem_out}/{mem_in}"
+            )
+        if alignment_lines:
+            alignment_summary = "【压缩对齐】" + " | ".join(alignment_lines)
+            report["alignment"] = alignment_summary
+    except Exception:
+        pass
+
+    # Output security gate: scan assembled injection content
+    try:
+        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+        hits = content_scan(result)
+        if hits:
+            report["output_gate_hits"] = hits
+            _dl_report("context_manager_output", "yellow", {
+                "gate": "output_content_scan",
+                "hits": hits,
+                "result_len": len(result),
+            })
+    except Exception:
+        pass
 
     return result, report
 

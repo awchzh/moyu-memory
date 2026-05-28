@@ -293,7 +293,6 @@ CMD_TABLE = {
     "status":     lambda args: cmd_status(),
     "learn":      lambda args: _handle_learn_with_ns(args),
     "detect":     lambda args: _call_func("learner", "detect_corrections", [" ".join(args)]),
-    "context":     lambda args: print(_import("learner").format_behavior_rules()),
     "signals":    lambda args: _call_func("learner", "signals", args),
     "setup":      lambda args: _handle_setup(args),
     "verify":     lambda args: _verify_op(args),
@@ -326,6 +325,7 @@ CMD_TABLE = {
     "extract":    lambda args: _handle_extract(args),
     "session":    lambda args: _handle_session(args),
     "frequency":  lambda args: _handle_frequency(args),
+    "memory":     lambda args: _handle_memory(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -334,7 +334,6 @@ HELP_DESCRIPTIONS = {
     "status": "Show system status with defense chain visualization",
     "learn": "Learn from a user correction",
     "detect": "Detect correction signals in text",
-    "context": "Get behavioral rules (for agent context)",
     "signals": "View active trigger words (learner)",
     "setup": "Set a security password",
     "verify": "Verify a dangerous operation",
@@ -342,7 +341,7 @@ HELP_DESCRIPTIONS = {
     "check": "Check memory file integrity (SHA256)",
     "init": "Initialize integrity verification manifest",
     "audit": "Full security audit (all 3 defense layers)",
-    "rules": "List and manage custom security rules",
+    "rules": "Manage custom rules: {list|remove <pat>|whitelist <pat>|whitelist-list}",
     "benchmark": "Run security capability benchmark (--quick, --full for RTPB2026)",
     "mutate": "Run injection pattern mutation scan to find blind spots",
     "doctor": "Run memory health check (redudancy, refs, integrity, security)",
@@ -355,7 +354,7 @@ HELP_DESCRIPTIONS = {
     "update": "Check for MOYU updates on GitHub",
     "demo": "Show all capabilities with examples",
     "kb": "Knowledge base: {index|search|list|read}",
-    "kg": "Knowledge graph: {search <entity>}",
+    "kg": "Knowledge graph: {search|history <entity>}",
     "bridge": "Show session bridge status",
  "lifecycle":  "Alias for forget (memory lifecycle)",
     "context":    "Show context usage percentage in one line",
@@ -367,6 +366,7 @@ HELP_DESCRIPTIONS = {
     "extract":    "Auto-extract memories from conversation text (moyu extract <text> / stats)",
     "session":    "Session state — state, prompt, decisions, pending (moyu session <state|prompt|decision|pending>)",
     "frequency":  "Frequency guard — stats, unlock (moyu frequency stats / unlock <name>)",
+    "memory":     "Memory management: {detail <id>|heat-recalc}",
     "help": "Show this help message",
 }
 
@@ -453,29 +453,100 @@ def _handle_learn(text):
 
 
 def _handle_rules(args):
-    """Handle 'moyu rules' — list/delete custom security rules."""
+    """Handle 'moyu rules' — list/remove/manage custom security rules and whitelist."""
     cr = _import("custom_rules")
-    
-    if args and args[0] == "delete":
+
+    if not args:
+        # Default: list all rules
+        _rules_list(cr)
+        return
+
+    subcmd = args[0]
+
+    if subcmd == "list":
+        _rules_list(cr)
+
+    elif subcmd == "remove":
+        if len(args) < 2:
+            print("Usage: moyu rules remove <pattern>")
+            print("  Removes all rules whose pattern contains the given text.")
+            return
+        pattern_text = " ".join(args[1:])
+        found, count = cr.remove_rule(pattern_text)
+        if found:
+            print(f"🗑️  Removed {count} rule(s) matching '{pattern_text}'")
+        else:
+            print(f"🔍 No rules found matching '{pattern_text}'")
+
+    elif subcmd == "whitelist":
+        if len(args) < 2:
+            print("Usage: moyu rules whitelist <pattern>")
+            print("  Adds a whitelist pattern so matching content passes content_scan.")
+            print("  Use 'moyu rules whitelist-list' to see all whitelist entries.")
+            return
+        pattern = " ".join(args[1:])
+        is_new = cr.add_whitelist(pattern, f"Whitelist: {pattern}")
+        if is_new:
+            print(f"✅ Whitelist added: {pattern}")
+        else:
+            print(f"🔄 Whitelist updated (already existed): {pattern}")
+
+    elif subcmd == "whitelist-list":
+        entries = cr.list_whitelist()
+        if not entries:
+            print("📭 No whitelist entries yet.")
+            print("Add one with: moyu rules whitelist <pattern>")
+            return
+        print(f"\n📋 Whitelist Entries ({len(entries)})")
+        print("=" * 50)
+        for w in entries:
+            added = w.get("added_at", "?")[:19]
+            note = w.get("note", "") or w.get("pattern", "")
+            print(f"  • {w['pattern']}")
+            print(f"    {note}  ({added})")
+        print()
+
+    elif subcmd == "delete":
         cr._ensure_rules_file()
-        rules_path = os.path.join(__import__("moyu_toolkit._moyu_paths", fromlist=["get_default_storage"]).get_default_storage(), "custom_rules.json")
+        rules_path = os.path.join(
+            __import__("moyu_toolkit._moyu_paths", fromlist=["get_default_storage"]).get_default_storage(),
+            "custom_rules.json",
+        )
         if os.path.exists(rules_path):
             os.remove(rules_path)
         print("🗑️  All custom rules deleted")
-        return
-    
+
+    else:
+        print(f"Unknown subcommand: {subcmd}")
+        _rules_help()
+
+
+def _rules_list(cr):
+    """Display all custom rules."""
     stats = cr.stats()
     if stats["count"] == 0:
-        print("📭 No custom rules yet. Teach me with: moyu learn \"\\\"some pattern\\\" should be blocked\"")
+        print('📭 No custom rules yet. Teach me with: moyu learn "some pattern" should be blocked')
         return
-    
+
     print(f"\n📋 Custom Security Rules ({stats['count']})")
     print("=" * 50)
     for r in stats["rules"]:
         print(f"  • {r['note'][:70]}")
     print()
-    print("Teach me a new rule: moyu learn \"\\\"pattern\\\" should be blocked\"")
-    print("Delete all rules:     moyu rules delete")
+    print("Commands:")
+    print("  moyu rules list             — list all rules")
+    print("  moyu rules remove <pat>     — remove rules matching pattern")
+    print("  moyu rules whitelist <pat>  — add whitelist entry (false-positive learning)")
+    print("  moyu rules whitelist-list   — list whitelist entries")
+
+
+def _rules_help():
+    """Show help for rules subcommands."""
+    print("moyu rules <subcommand>:")
+    print("  list             — list all custom rules")
+    print("  remove <pat>     — remove rules whose pattern contains <pat>")
+    print("  whitelist <pat>  — add a whitelist entry (content matching this skips blocking)")
+    print("  whitelist-list   — list all whitelist entries")
 
 
 def _handle_search(args):
@@ -886,11 +957,12 @@ def _kb_handler(args):
 
 
 def _kg_handler(args):
-    """Handle knowledge graph commands: search"""
+    """Handle knowledge graph commands: search, history"""
     kg = _import("knowledge_graph")
     if not args or args[0] in ("help", "--help"):
         print("moyu kg commands:")
-        print("  moyu kg search <entity>    Search knowledge graph for an entity")
+        print("  moyu kg search <entity>      Search knowledge graph for an entity")
+        print("  moyu kg history <entity>     Show entity timeline (active + expired relations)")
         return
     subcmd = args[0]
     subargs = args[1:]
@@ -910,9 +982,42 @@ def _kg_handler(args):
                 print()
         else:
             print(f"No knowledge graph entries found for '{query}'")
+    elif subcmd == "history":
+        name = " ".join(subargs)
+        if not name:
+            print("Usage: moyu kg history <entity>")
+            return
+        result = kg.get_entity_history(name)
+        entity = result.get("entity")
+        if not entity:
+            print(f"Entity '{name}' not found in knowledge graph")
+            return
+        from datetime import datetime as _dt
+        print(f"\n📜 Entity Timeline: {entity.get('name', name)}")
+        print("=" * 50)
+        print(f"  First seen:  {entity.get('first_seen', '?')[:19]}")
+        print(f"  Last seen:   {entity.get('last_seen', '?')[:19]}")
+        mentioned = entity.get('mention_count', 0)
+        print(f"  Mentions:    {mentioned}")
+        print(f"  Valid from:  {entity.get('valid_from', '?')[:19]}")
+        vu = entity.get('valid_until')
+        print(f"  Valid until: {'current' if vu is None else vu[:19]}")
+        print()
+        timeline = result.get("timeline", [])
+        if timeline:
+            print("  Relations:")
+            for entry in timeline:
+                icon = "🔴" if entry["status"] == "expired" else "🟢"
+                print(f"    {icon} [{entry['valid_from'][:10]}] {entry['display']}")
+                if entry["status"] == "expired":
+                    print(f"        expired: {entry['valid_until'][:10]}")
+        else:
+            print("  No relations recorded.")
+        print()
     else:
         print(f"Unknown kg subcommand: {subcmd}")
-        print("Usage: moyu kg {search}")
+        print("Available: search, history")
+        print("Usage: moyu kg {search|history}")
 
 
 def _ref_handler(args):
@@ -1384,6 +1489,58 @@ def _config_help():
     print("    entity    — Entity boost weight (default 0.0)")
     print()
     print("  Example: moyu config set retrieval.weights.entity 0.3")
+
+
+def _handle_memory(args):
+    """Handle memory subcommands: detail, heat-recalc"""
+    if not args or args[0] == "help":
+        print("moyu memory commands:")
+        print("  moyu memory detail <id>       Show expanded content (overview/full) of a memory")
+        print("  moyu memory heat-recalc       Recalculate heat tiers (HOT/WARM/COLD)")
+        return
+    subcmd = args[0]
+    if subcmd == "detail":
+        if len(args) < 2:
+            print("Usage: moyu memory detail <id>")
+            return
+        mem = _import("agent_memory")
+        entry = mem.get_memory(args[1])
+        if not entry:
+            print(f"Memory '{args[1]}' not found")
+            return
+        print(f"\n📌 Memory: {entry.get('id', '?')}")
+        print(f"   Source: {entry.get('source', '?')}")
+        print(f"   Time:   {entry.get('timestamp', '?')[:19]}")
+        heat = entry.get("heat", 0.5)
+        tier = entry.get("heat_tier", "warm")
+        print(f"   Heat:   {heat:.2f} ({tier.upper()})")
+        print()
+        print(f"📝 Summary:")
+        print(f"   {entry.get('summary', '(empty)')}")
+        ov = entry.get("overview")
+        if ov:
+            print()
+            print(f"📖 Overview:")
+            for line in ov.split("\n"):
+                print(f"   {line}")
+        fl = entry.get("full")
+        if fl:
+            print()
+            print(f"📄 Full ({len(fl)} chars):")
+            for line in fl.split("\n"):
+                print(f"   {line}")
+        print()
+    elif subcmd == "heat-recalc":
+        mem = _import("agent_memory")
+        result = mem._recalc_heat_tiers()
+        print(f"🔥 Heat tiers recalculated:")
+        print(f"   Total: {result['total']} memories")
+        print(f"   🔥 HOT:  {result['hot']} ({result['hot']/max(result['total'],1)*100:.0f}%)")
+        print(f"   ⚡ WARM: {result['warm']} ({result['warm']/max(result['total'],1)*100:.0f}%)")
+        print(f"   ❄️ COLD: {result['cold']} ({result['cold']/max(result['total'],1)*100:.0f}%)")
+    else:
+        print(f"Unknown memory subcommand: {subcmd}")
+        print("Available: detail, heat-recalc")
 
 
 def _load_auto_extract_config() -> bool:
