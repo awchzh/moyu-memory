@@ -203,18 +203,7 @@ Then add this to your MCP client configuration:
 }
 ```
 
-Or use the Python entry point directly:
-
-```json
-{
-  "mcpServers": {
-    "moyu": {
-      "command": "python3",
-      "args": ["-m", "moyu_toolkit.mcp_server"]
-    }
-  }
-}
-```
+Or use the Python entry point directly: `python3 -m moyu_toolkit.mcp_server`
 
 ### Available Tools
 
