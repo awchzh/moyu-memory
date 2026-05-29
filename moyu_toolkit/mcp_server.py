@@ -19,6 +19,7 @@ import sys
 import traceback
 import io
 from contextlib import redirect_stdout
+from importlib.metadata import version as _pkg_version
 from typing import Any, Dict, List, Optional
 
 # ── MOYU imports ──────────────────────────────────────────────
@@ -192,7 +193,7 @@ def main():
     server_info = {
         "protocolVersion": "2025-03-26",
         "capabilities": {"tools": {}},
-        "serverInfo": {"name": "moyu-memory", "version": "2.8.0"},
+        "serverInfo": {"name": "moyu-memory", "version": _pkg_version("moyu-memory")},
     }
 
     initialized = False
