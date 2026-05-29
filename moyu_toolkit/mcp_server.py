@@ -6,7 +6,7 @@ Exposes MOYU memory/search/defense capabilities as MCP tools
 over stdin/stdout (Stdio transport).
 
 Usage:
-    uvx moyu-memory
+    uvx moyu-mcp
     # or
     python3 -m moyu_toolkit.mcp_server
 
@@ -137,8 +137,10 @@ def _handle_call(name: str, args: Dict) -> Dict:
     elif name == "add_memory":
         text = args["text"]
         source = args.get("source", "user")
-        memory_id = mem.add_memory(text, source=source)
-        return {"status": "ok", "memory_id": memory_id}
+        entry = mem.add_memory(text, source=source)
+        if entry is None:
+            return {"status": "duplicate_or_blocked", "memory_id": None}
+        return {"status": "ok", "memory_id": entry.get("id", "unknown")}
 
     elif name == "memory_stats":
         try:
