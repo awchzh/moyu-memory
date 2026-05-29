@@ -197,7 +197,7 @@ Then add this to your MCP client configuration:
   "mcpServers": {
     "moyu": {
       "command": "uvx",
-      "args": ["moyu-mcp@latest"]
+      "args": ["--from", "moyu-memory@latest", "moyu-mcp"]
     }
   }
 }
