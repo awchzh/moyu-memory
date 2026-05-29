@@ -44,6 +44,7 @@ Repository = "https://github.com/awchzh/moyu-memory"
 
 [project.scripts]
 moyu = "moyu_toolkit.moyu:main_cli"
+moyu-mcp = "moyu_toolkit.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["moyu_toolkit*", "moyu*"]

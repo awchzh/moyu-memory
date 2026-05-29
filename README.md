@@ -178,6 +178,56 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 
 ---
 
+## 🔌 MCP Integration
+
+MOYU can be used as a **Model Context Protocol (MCP) server**, exposing its memory, search, and defense capabilities as tools for any MCP-compatible client — Hermes Agent, Claude Desktop, Cherry Studio, Kimi, and more.
+
+**How it works:** MOYU runs as a local stdio subprocess. Client starts it on demand; no daemon, no network port.
+
+### Setup
+
+```bash
+pip install moyu-memory
+```
+
+Then add this to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "moyu": {
+      "command": "uvx",
+      "args": ["moyu-mcp"]
+    }
+  }
+}
+```
+
+Or use the Python entry point directly:
+
+```json
+{
+  "mcpServers": {
+    "moyu": {
+      "command": "python3",
+      "args": ["-m", "moyu_toolkit.mcp_server"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `search_memory` | TEMPR semantic + keyword hybrid search. Returns top-k with relevance scores. |
+| `add_memory` | Store a new memory with auto-deduplication. Returns memory ID. |
+| `memory_stats` | Memory statistics: count, storage size, embedding status. |
+| `defense_scan` | Security scan — injection detection, PII, prompt leaks. |
+| `memory_doctor` | Full health check: integrity, redundancy, security events, storage. |
+
+---
+
 ## 📋 Command Reference
 
 ### Defense & Security
