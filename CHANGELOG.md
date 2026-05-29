@@ -1,5 +1,22 @@
 # MOYU — Development Log
 
+## v2.8.2 — Full MCP Capability Exposure (2026-05-29)
+
+### 🔌 MCP Expansion (5 → 29 tools)
+Exposing all MOYU capabilities as MCP tools — memory, search, defense, knowledge graph, knowledge base, lifecycle, reflection, learning, diagnostics.
+
+### 🪲 Fix
+Fix `uvx` args — `moyu-mcp@latest` → `--from moyu-memory@latest moyu-mcp` (PyPI package name ≠ entry point name).
+
+## v2.8.1 — MCP Server Adapter (2026-05-29)
+
+### 🔌 MCP stdio server
+Added `mcp_server.py` — exposed `search_memory`, `add_memory`, `memory_stats`, `defense_scan`, `memory_doctor`.
+
+### 🔧 Internal
+- Server version dynamically read from package metadata.
+- `@latest` suffix per ModelScope recommendation.
+
 ## v2.8.0 — Progressive Memory + Heat Tiers + Security Deepening (2026-05-28)
 
 ### 🧠 Progressive Memory (3-Tier)
