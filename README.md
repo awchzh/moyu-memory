@@ -180,7 +180,7 @@ Copy the `moyu_toolkit/` folder into your project, run `python3 moyu.py`.
 
 ## 🔌 MCP Integration
 
-MOYU can be used as a **Model Context Protocol (MCP) server**, exposing its memory, search, and defense capabilities as tools for any MCP-compatible client — Hermes Agent, Claude Desktop, Cherry Studio, Kimi, and more.
+MOYU can be used as a **Model Context Protocol (MCP) server**, exposing 29 tools across memory, search, defense, knowledge graph, knowledge base, lifecycle, reflection, learning, and diagnostics — for any MCP-compatible client: Hermes Agent, Claude Desktop, Cherry Studio, Kimi, Cursor, and more.
 
 **How it works:** MOYU runs as a local stdio subprocess. Client starts it on demand; no daemon, no network port.
 
@@ -209,11 +209,35 @@ Or use the Python entry point directly: `python3 -m moyu_toolkit.mcp_server`
 
 | Tool | Description |
 |------|-------------|
-| `search_memory` | TEMPR semantic + keyword hybrid search. Returns top-k with relevance scores. |
-| `add_memory` | Store a new memory with auto-deduplication. Returns memory ID. |
-| `memory_stats` | Memory statistics: count, storage size, embedding status. |
-| `defense_scan` | Security scan — injection detection, PII, prompt leaks. |
-| `memory_doctor` | Full health check: integrity, redundancy, security events, storage. |
+| `search_memory` | TEMPR semantic + keyword + recency + entity hybrid search |
+| `add_memory` | Store memory with auto-deduplication and content security gate |
+| `get_memory` | Retrieve a single memory by ID with full content |
+| `list_memories` | Paginated list of all memories (newest first) |
+| `memory_stats` | Memory statistics: count, storage size, embedding status |
+| `heat_rank` | Heat rankings — which memories are HOT, WARM, or COLD |
+| `defense_scan` | Content security scan — injection detection |
+| `forensic_scan` | Forensic analysis — injection patterns, JSON corruption, tampering |
+| `integrity_check` | Verify SHA256 checksums of all managed files |
+| `pii_redact` | Redact PII — phone, ID, bank card, email, IP, API key |
+| `guard_status` | Write burst protection status and lock state |
+| `defense_log` | Recent security events — blocks, redactions, rollbacks |
+| `signature_status` | HMAC-SHA256 memory signature status and verification |
+| `kg_search` | Knowledge graph search — entities and relationships |
+| `kg_entity_history` | Full timeline history of a specific entity |
+| `kg_stats` | Knowledge graph statistics — entities, relations, scenes |
+| `kb_search` | Knowledge base search — indexed Markdown files |
+| `kb_list` | List all files in the knowledge base |
+| `kb_read` | Read a knowledge base file by name |
+| `forget_run` | Run forgetting curve demotion cycle |
+| `forget_protect` | Protect a memory from being forgotten |
+| `forget_unprotect` | Remove protection from a memory |
+| `forget_stats` | Forgetting curve — protected count, tier distribution |
+| `merge_run` | Run memory merge cycle (dry-run supported) |
+| `reflect` | Self-reflection — contradictions, connections, topic shifts |
+| `detect_signals` | Detect user correction signals in text |
+| `learner_status` | Learned behavior rules and correction statistics |
+| `active_context` | Active context — current task, working memory state |
+| `memory_doctor` | Full health check — integrity, redundancy, security, storage |
 
 ---
 
