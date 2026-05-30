@@ -735,7 +735,16 @@ def add_memory(summary: str, source: str = "user",
         add_cross_scene_tunnels()
     except Exception:
         pass
-    
+
+    # ── Skill-level memory injection ──
+    try:
+        from moyu_toolkit import skill_memory
+        exp = skill_memory.load("add_memory")
+        if exp and entry is not None:
+            entry["_experience"] = exp
+    except Exception:
+        pass
+
     return entry
 
 
@@ -1394,6 +1403,16 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
             if not is_dup:
                 keep.append(r)
         results = keep
+
+    # ── Skill-level memory injection: attach accumulated experience ──
+    try:
+        from moyu_toolkit import skill_memory
+        exp = skill_memory.load("search_memory")
+        if exp:
+            for r in results[:top_k]:
+                r["_experience"] = exp
+    except Exception:
+        pass
 
     return results[:top_k]
 

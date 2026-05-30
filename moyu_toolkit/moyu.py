@@ -326,6 +326,7 @@ CMD_TABLE = {
     "session":    lambda args: _handle_session(args),
     "frequency":  lambda args: _handle_frequency(args),
     "memory":     lambda args: _handle_memory(args),
+    "skill-note": lambda args: _handle_skill_note(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -367,6 +368,7 @@ HELP_DESCRIPTIONS = {
     "session":    "Session state — state, prompt, decisions, pending (moyu session <state|prompt|decision|pending>)",
     "frequency":  "Frequency guard — stats, unlock (moyu frequency stats / unlock <name>)",
     "memory":     "Memory management: {detail <id>|heat-recalc}",
+    "skill-note": "Manage skill-level memory: {list|show <name>|add <name> <note>}",
     "help": "Show this help message",
 }
 
@@ -1543,6 +1545,47 @@ def _handle_memory(args):
         print("Available: detail, heat-recalc")
 
 
+def _handle_skill_note(args):
+    """Manage skill-level memory entries."""
+    sm = _import("skill_memory")
+    if not args:
+        print("Usage: moyu skill-note {list|show <name>|add <name> <note>}")
+        return
+    subcmd = args[0]
+    if subcmd == "list":
+        skills = sm.list_skills()
+        if not skills:
+            print("No skill-level memory entries yet.")
+            return
+        print()
+        print(f"📚 Skill-level memory ({len(skills)} skills)")
+        print("=" * 40)
+        for s in skills:
+            print(f"  {s['name']}: {s['entries']} entries")
+    elif subcmd == "show":
+        if len(args) < 2:
+            print("Usage: moyu skill-note show <skill_name>")
+            return
+        content = sm.load(args[1], max_chars=4000)
+        if not content:
+            print(f"No memory entries for '{args[1]}' yet.")
+            return
+        print()
+        print(f"📝 Skill: {args[1]}")
+        print("=" * 40)
+        print(content)
+    elif subcmd == "add":
+        if len(args) < 3:
+            print("Usage: moyu skill-note add <skill_name> <note>")
+            return
+        note = " ".join(args[2:])
+        sm.append(args[1], note)
+        print(f"✅ Note appended to '{args[1]}'")
+    else:
+        print(f"Unknown subcommand: {subcmd}")
+        print("Available: list, show, add")
+
+
 def _load_auto_extract_config() -> bool:
     """Load auto_extract enabled flag from config.yaml. Returns True by default."""
     try:
@@ -1624,6 +1667,26 @@ def main():
                 try:
                     fb = _import("feedback")
                     fb.record_correction(user_text, hits)
+                except Exception:
+                    pass
+                # Phase 3: auto-write to skill-level memory
+                try:
+                    sm = _import("skill_memory")
+                    # Map moyu command to skill name
+                    skill_map = {
+                        "search": "search_memory",
+                        "inject": "search_memory",
+                        "learn": "add_memory",
+                        "extract": "add_memory",
+                        "forget": "forget_run",
+                        "merge": "merge_run",
+                        "reflect": "reflect",
+                        "detect": "detect_signals",
+                        "tune": "tune",
+                    }
+                    skill_name = skill_map.get(cmd)
+                    if skill_name:
+                        sm.record_from_correction(skill_name, user_text)
                 except Exception:
                     pass
         except Exception:
