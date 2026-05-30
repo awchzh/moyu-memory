@@ -24,8 +24,8 @@ import re
 from datetime import datetime
 from typing import List, Dict, Optional
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
-STORAGE_PATH = get_default_storage()
+from moyu_toolkit._moyu_paths import get_config_path
+from moyu_toolkit._storage import storage
 
 RELATION_TYPES = {
     "works_at": "works at", "uses": "uses", "lives_in": "lives in",
@@ -41,22 +41,9 @@ RELATION_TYPES = {
 # 底层 IO
 # ═══════════════════════════════════════════════════════════
 
-def _kg_path() -> str:
-    os.makedirs(STORAGE_PATH, exist_ok=True)
-    return os.path.join(STORAGE_PATH, "knowledge_graph.json")
-
-
-def _load() -> dict:
-    p = _kg_path()
-    if os.path.exists(p):
-        with open(p) as f:
-            return json.load(f)
-    return {"entities": {}, "relations": []}
-
-
-def _save(kg: dict):
-    with open(_kg_path(), 'w') as f:
-        json.dump(kg, f, ensure_ascii=False, indent=2)
+def _load_kg() -> dict:
+    """Load knowledge graph from storage."""
+    return storage.read_or_default("knowledge_graph.json", {"entities": {}, "relations": []})
 
 
 def _normalize(name: str) -> str:
@@ -309,7 +296,7 @@ def add_triples(text: str, valid_from: str = None) -> int:
     triples = extract_entities(text)
     if not triples:
         return 0
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     now = valid_from or _now()
     added = 0
@@ -351,7 +338,7 @@ def add_triples(text: str, valid_from: str = None) -> int:
             })
             added += 1
     if added:
-        _save(kg)
+        storage.write("knowledge_graph.json", kg)
     return added
 
 
@@ -371,7 +358,7 @@ def invalidate(source: str, target: str, relation: str,
     
     Returns: True if any relation was invalidated
     """
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     sn, tn = _normalize(source), _normalize(target)
     until = valid_until or _now()
@@ -383,7 +370,7 @@ def invalidate(source: str, target: str, relation: str,
             r["invalid_reason"] = reason or ""
             found = True
     if found:
-        _save(kg)
+        storage.write("knowledge_graph.json", kg)
     return found
 
 
@@ -400,7 +387,7 @@ def invalidate_entity(entity_name: str, valid_until: str = None, reason: str = "
     
     Returns: Number of items invalidated (entity + relations)
     """
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     en = _normalize(entity_name)
     until = valid_until or _now()
@@ -419,7 +406,7 @@ def invalidate_entity(entity_name: str, valid_until: str = None, reason: str = "
         count += 1
     
     if count:
-        _save(kg)
+        storage.write("knowledge_graph.json", kg)
     return count
 
 
@@ -439,7 +426,7 @@ def search(query: str, snapshot_at: str = None) -> list:
     
     Returns: [{entity: name, relations: [str, ...]}, ...]
     """
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     if not kg["entities"]:
         return []
@@ -490,7 +477,7 @@ def get_entity_history(entity_name: str) -> dict:
         "timeline": [{"relation": ..., "valid_from": ..., "valid_until": ..., "status": "active"|"expired"}, ...]
     }
     """
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     en = _normalize(entity_name)
     entity = kg["entities"].get(en)
@@ -546,7 +533,7 @@ def add_cross_scene_tunnels() -> int:
                 entity_scenes[key] = set()
             entity_scenes[key].add(scene)
     
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     existing_edges = {(r["source"], r["target"]) for r in kg["relations"] if r.get("relation") == "cross_scene"}
     added = 0
@@ -569,7 +556,7 @@ def add_cross_scene_tunnels() -> int:
                     existing_edges.add(edge)
                     added += 1
     if added:
-        _save(kg)
+        storage.write("knowledge_graph.json", kg)
     return added
 
 
@@ -598,7 +585,7 @@ def distill_from_memory(summary: str, timestamp: str = None) -> int:
     if not triples:
         return 0
     
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     now = timestamp or _now()
     added = 0
@@ -634,7 +621,7 @@ def distill_from_memory(summary: str, timestamp: str = None) -> int:
             added += 1
     
     if added:
-        _save(kg)
+        storage.write("knowledge_graph.json", kg)
     return added
 
 
@@ -643,7 +630,7 @@ def distill_from_memory(summary: str, timestamp: str = None) -> int:
 # ═══════════════════════════════════════════════════════════
 
 def stats():
-    kg = _load()
+    kg = _load_kg()
     _backfill_temporal(kg)
     active_relations = [r for r in kg["relations"] if r.get("valid_until") is None]
     expired_relations = [r for r in kg["relations"] if r.get("valid_until") is not None]

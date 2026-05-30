@@ -19,9 +19,7 @@ import re
 from datetime import datetime
 from typing import List, Dict
 
-from moyu_toolkit._moyu_paths import get_default_storage
-STORAGE_PATH = get_default_storage()
-MEMORY_FILE = os.path.join(STORAGE_PATH, "conversation_memory.json")
+from moyu_toolkit._storage import storage
 
 # Positive signal words (excluding those negated by 不/没)
 _POSITIVE_WORDS = [
@@ -98,14 +96,10 @@ _DATE_WORDS = {"周一", "周二", "周三", "周四", "周五", "周六", "周�
 
 def _load_memories() -> List[Dict]:
     """Load all memories from JSON file."""
-    if not os.path.exists(MEMORY_FILE):
-        return []
-    try:
-        with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data if isinstance(data, list) else []
-    except (json.JSONDecodeError, FileNotFoundError):
-        return []
+    data = storage.read("conversation_memory.json")
+    if data and isinstance(data, list):
+        return data
+    return []
 
 
 def _extract_entities(text: str) -> List[str]:

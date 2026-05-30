@@ -31,11 +31,12 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
+from moyu_toolkit._moyu_paths import get_config_path
 from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
-STORAGE = Path(get_default_storage())
-REFS_DIR = STORAGE / "refs"           # Truncated original content, for drill-down
-COMPRESS_LOG = STORAGE / "compression_log.json"
+from moyu_toolkit._storage import storage
+
+# Delete refs older than this many days
+DELETE_REF_DAYS = 7
 
 # ── Defaults (overridable via config) ──
 
@@ -51,81 +52,61 @@ ALLOWED_KEYS = {"mild_threshold", "auto_threshold", "budget_chars", "enabled", "
 # ── Refs (compression→traceability drill-down) ──
 
 
-DELETE_REF_DAYS = 7  # Auto-clean refs older than this
 
 
 def _save_ref(name: str, content: str):
     """Save original content before truncation, so agent can drill down.
     Uses content hash as filename to prevent path traversal."""
     safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
-    path = REFS_DIR / f"{safe_name}.ref"
-    with open(path, "w") as f:
-        f.write(content)
-    return str(path)
+    storage.write_raw(f"ref_{safe_name}.ref", content, scan=False)
+    return safe_name
 
 
 def _list_refs() -> list[str]:
     """List available ref files."""
-    if not REFS_DIR.exists():
-        return []
-    return sorted(f.name for f in REFS_DIR.iterdir() if f.suffix == ".ref")
+    return [f for f in storage.list_files(".ref") if f.startswith("ref_")]
 
 
 def read_ref(name: str):
-    """Read a ref file by name (with or without .ref suffix). Returns content or None."""
+    """Read a ref file by name (with or without .ref suffix / ref_ prefix). Returns content or None."""
     safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
-    path = REFS_DIR / f"{safe_name}.ref"
-    if path.exists():
-        return path.read_text()
-    return None
+    return storage.read_raw(f"ref_{safe_name}.ref")
 
 
 def delete_ref(name: str):
     """Delete a ref file."""
     safe_name = hashlib.sha256(name.encode()).hexdigest()[:16]
-    path = REFS_DIR / f"{safe_name}.ref"
-    if path.exists():
-        path.unlink()
+    storage.delete(f"ref_{safe_name}.ref")
 
 
 def _cleanup_old_refs():
     """Remove ref files older than DELETE_REF_DAYS to prevent unbounded growth."""
-    if not REFS_DIR.exists():
-        return
     now = datetime.now()
-    for f in REFS_DIR.iterdir():
-        if f.suffix != ".ref":
+    for f in storage.list_files(".ref"):
+        if not f.startswith("ref_"):
             continue
         try:
-            mtime = datetime.fromtimestamp(f.stat().st_mtime)
+            mtime = datetime.fromtimestamp(os.path.getmtime(storage.path(f)))
             if (now - mtime).days >= DELETE_REF_DAYS:
-                f.unlink()
+                storage.delete(f)
         except Exception:
             continue
 
 
 def _load_compress_log() -> dict:
     """Load compression history / session stats"""
-    if COMPRESS_LOG.exists():
-        try:
-            with open(COMPRESS_LOG) as f:
-                return json.load(f)
-        except (json.JSONDecodeError, Exception):
-            pass
-    return {
+    default = {
         "session_start": datetime.now().isoformat(),
         "total_saved_chars": 0,
         "total_saved_tokens": 0,
         "compression_events": 0,
         "last_event": None,
     }
+    return storage.read_or_default("compression_log.json", default)
 
 
 def _save_compress_log(log: dict):
-    REFS_DIR.mkdir(parents=True, exist_ok=True)
-    COMPRESS_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with open(COMPRESS_LOG, 'w') as f:
-        json.dump(log, f, ensure_ascii=False, indent=2)
+    storage.write("compression_log.json", log)
 
 
 def _load_compression_config() -> dict:

@@ -16,8 +16,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
-STORAGE = Path(get_default_storage())
+from moyu_toolkit._moyu_paths import get_config_path
+from moyu_toolkit._storage import storage
 
 # ── Config ──
 SIMILARITY_THRESHOLD = 0.25   # Keyword overlap ratio to consider "related"
@@ -112,20 +112,12 @@ def _should_llm_merge() -> bool:
 
 
 def _load_memories() -> list:
-    p = STORAGE / "conversation_memory.json"
-    if p.exists():
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return []
+    data = storage.read("conversation_memory.json")
+    return data if isinstance(data, list) else []
 
 
 def _save_memories(memories: list):
-    STORAGE.mkdir(parents=True, exist_ok=True)
-    with open(STORAGE / "conversation_memory.json", 'w') as f:
-        json.dump(memories, f, ensure_ascii=False, indent=2)
+    storage.write("conversation_memory.json", memories)
 
 
 def _tokenize(text: str) -> set:
@@ -270,15 +262,7 @@ def run(dry_run: bool = False) -> dict:
     if merged_count > 0:
         from datetime import datetime as _dt
         _ts = _dt.now().isoformat()
-        # Load existing audit log
-        _audit_path = STORAGE / "audit_log.json"
-        _audit_entries = []
-        if _audit_path.exists():
-            try:
-                with open(_audit_path) as f:
-                    _audit_entries = json.load(f)
-            except Exception:
-                _audit_entries = []
+        _audit_entries = storage.read_or_default("audit_log.json", [])
         for group in groups:
             items = [candidates[i] for i in group[:MAX_MERGE_GROUP]]
             if len(items) >= 2:
@@ -289,15 +273,7 @@ def run(dry_run: bool = False) -> dict:
                     "topics": list(_tokenize(" ".join(m.get("summary", "") for m in items)))[:3],
                 })
         _audit_entries = _audit_entries[-500:]
-        _tmp = str(_audit_path) + ".tmp"
-        try:
-            with open(_tmp, 'w') as f:
-                json.dump(_audit_entries, f, ensure_ascii=False, indent=2)
-            import os as _os
-            _os.replace(_tmp, _audit_path)
-        except Exception:
-            if _os.path.exists(_tmp):
-                _os.remove(_tmp)
+        storage.write("audit_log.json", _audit_entries)
         _save_memories(memories)
 
     return {

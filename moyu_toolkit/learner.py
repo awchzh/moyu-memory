@@ -19,23 +19,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
-STORAGE_PATH = get_default_storage()
-
-# Path traversal guard — same pattern as integrity_checker
-_DEFAULT_STORAGE = str(Path(__file__).parent / "memory_data")
-_custom = os.environ.get("MOYU_STORAGE")
-if _custom:
-    _resolved = Path(_custom).resolve()
-    _default_p = Path(_DEFAULT_STORAGE).resolve()
-    try:
-        _resolved.relative_to(_default_p)
-        STORAGE_PATH = str(_resolved)
-    except ValueError:
-        print(f"⚠️ MOYU_STORAGE 路径不在允许范围内，使用默认路径 {_DEFAULT_STORAGE}", file=__import__("sys").stderr)
-        STORAGE_PATH = _DEFAULT_STORAGE
-else:
-    STORAGE_PATH = _DEFAULT_STORAGE
+from moyu_toolkit._moyu_paths import get_config_path
+from moyu_toolkit._storage import storage
 
 # Seed trigger words — built-in, covering most common correction patterns
 DEFAULT_SIGNALS = [
@@ -67,24 +52,13 @@ def _load_config() -> dict:
 
 # ==================== Adaptive Trigger Words ====================
 
-def _learned_signals_path() -> str:
-    os.makedirs(STORAGE_PATH, exist_ok=True)
-    return os.path.join(STORAGE_PATH, "learned_signals.json")
-
-
 def _load_learned_signals() -> list:
-    p = _learned_signals_path()
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return []
+    data = storage.read("learned_signals.json")
+    return data if isinstance(data, list) else []
 
 
 def _save_learned_signals(signals: list):
-    _atomic_write_json(_learned_signals_path(), signals)
+    storage.write("learned_signals.json", signals)
 
 
 def _all_signals() -> list:
@@ -266,60 +240,25 @@ def _similar(a: str, b: str) -> bool:
 
 # ==================== Persistence ====================
 
-def _path(kind: str) -> str:
-    os.makedirs(STORAGE_PATH, exist_ok=True)
-    return os.path.join(STORAGE_PATH, kind)
-
-
-def _atomic_write_json(path, data):
-    """Atomic JSON write: temp file → os.replace. No partial file on crash."""
-    tmp = path + ".tmp"
-    try:
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-    except Exception:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise
-
-
 def _load_lessons() -> dict:
-    p = _path("lessons.json")
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"lessons": []}
+    return storage.read_or_default("lessons.json", {"lessons": []})
 
 
 def _save_lessons(d):
-    _atomic_write_json(_path("lessons.json"), d)
+    storage.write("lessons.json", d)
 
 
 def _load_corrections() -> list:
-    p = _path("corrections.md")
-    if os.path.exists(p):
-        with open(p) as f:
-            return [e.strip() for e in f.read().split("---") if e.strip()]
+    text = storage.read_raw("corrections.md")
+    if text:
+        return [e.strip() for e in text.split("---") if e.strip()]
     return []
 
 
 def _save_corrections(entries):
     lines = ["# Correction Log", "---"] + [e + "\n---" for e in entries[-50:]]
     content = "\n".join(lines)
-    path = _path("corrections.md")
-    tmp = path + ".tmp"
-    try:
-        with open(tmp, 'w', encoding='utf-8') as f:
-            f.write(content)
-        os.replace(tmp, path)
-    except Exception:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise
+    storage.write_raw("corrections.md", content)
 
 
 def format_behavior_rules() -> str:
@@ -361,24 +300,12 @@ _PROFILE_PATTERNS = [
 ]
 
 
-def _profile_path() -> str:
-    os.makedirs(STORAGE_PATH, exist_ok=True)
-    return os.path.join(STORAGE_PATH, "user_profile.json")
-
-
 def _load_profile() -> dict:
-    p = _profile_path()
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+    return storage.read_or_default("user_profile.json", {})
 
 
 def _save_profile(profile: dict):
-    _atomic_write_json(_profile_path(), profile)
+    storage.write("user_profile.json", profile)
 
 
 def extract_profile(text: str) -> dict:

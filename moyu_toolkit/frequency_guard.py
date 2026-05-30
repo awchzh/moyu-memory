@@ -25,10 +25,8 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-STORAGE_PATH = os.environ.get(
-    "MOYU_STORAGE",
-    os.path.join(os.path.dirname(__file__), "memory_data")
-)
+from moyu_toolkit._storage import storage
+STORAGE_PATH = os.path.dirname(storage.path("."))
 
 # ── Default rules ──
 # Each rule: name, threshold (events within window), window (seconds), action, lock_minutes (if rollback)
@@ -303,37 +301,25 @@ class FrequencyGuard:
         min_unix = min(burst_records)
         removed_count = 0
 
-        # conversation_memory.json — direct file ops, no cross-module import
-        mem_path = os.path.join(STORAGE_PATH, "conversation_memory.json")
-        if os.path.exists(mem_path):
-            try:
-                with open(mem_path) as f:
-                    memories = json.load(f)
-                before = len(memories)
-                memories = [m for m in memories if _ts_to_unix(m.get("timestamp", "")) < min_unix]
-                removed = before - len(memories)
-                if removed:
-                    with open(mem_path, 'w') as f:
-                        json.dump(memories, f, ensure_ascii=False, indent=2)
-                    removed_count += removed
-            except Exception:
-                pass
+        # conversation_memory.json
+        memories = storage.read("conversation_memory.json")
+        if memories and isinstance(memories, list):
+            before = len(memories)
+            memories = [m for m in memories if _ts_to_unix(m.get("timestamp", "")) < min_unix]
+            removed = before - len(memories)
+            if removed:
+                storage.write("conversation_memory.json", memories, scan=False)
+                removed_count += removed
 
-        # vector_index.json — direct file ops
-        vec_path = os.path.join(STORAGE_PATH, "vector_index.json")
-        if os.path.exists(vec_path):
-            try:
-                with open(vec_path) as f:
-                    idx = json.load(f)
-                before = len(idx.get("vectors", []))
-                idx["vectors"] = [v for v in idx.get("vectors", []) if _ts_to_unix(v.get("timestamp", "")) < min_unix]
-                removed = before - len(idx["vectors"])
-                if removed:
-                    with open(vec_path, 'w') as f:
-                        json.dump(idx, f, ensure_ascii=False, indent=2)
-                    removed_count += removed
-            except Exception:
-                pass
+        # vector_index.json
+        idx = storage.read("vector_index.json")
+        if idx:
+            before = len(idx.get("vectors", []))
+            idx["vectors"] = [v for v in idx.get("vectors", []) if _ts_to_unix(v.get("timestamp", "")) < min_unix]
+            removed = before - len(idx["vectors"])
+            if removed:
+                storage.write("vector_index.json", idx, scan=False)
+                removed_count += removed
 
         if removed_count:
             try:

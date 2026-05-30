@@ -18,44 +18,7 @@ Usage:
 import json
 import os
 from datetime import datetime
-
-from moyu_toolkit._moyu_paths import get_default_storage
-STORAGE_PATH = get_default_storage()
-
-
-def _scan(text: str) -> bool:
-    """Run content security scan. Returns True if blocked (injection detected)."""
-    try:
-        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
-        hits = content_scan(text)
-        if hits:
-            print(f"🔴 active_context: write blocked — detected: {', '.join(hits)}",
-                  file=__import__('sys').stderr)
-            return True
-    except Exception:
-        pass
-    return False
-
-
-def _path() -> str:
-    os.makedirs(STORAGE_PATH, exist_ok=True)
-    return os.path.join(STORAGE_PATH, "active_context.json")
-
-
-def _load() -> dict:
-    p = _path()
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return _default()
-
-
-def _save(ctx: dict):
-    with open(_path(), 'w') as f:
-        json.dump(ctx, f, ensure_ascii=False, indent=2)
+from moyu_toolkit._storage import storage
 
 
 def _default() -> dict:
@@ -69,42 +32,36 @@ def _default() -> dict:
 
 
 def start_session():
-    _save(_default())
+    storage.write("active_context.json", _default())
     print("✅ New session started")
 
 
 def set_task(task: str):
-    if _scan(task):
-        return
-    ctx = _load()
+    ctx = storage.read_or_default("active_context.json", _default())
     ctx["task"] = task
     ctx["last_updated"] = datetime.now().isoformat()
-    _save(ctx)
+    storage.write("active_context.json", ctx)
     print(f"✅ Task: {task}")
 
 
 def add_context(text: str):
-    if _scan(text):
-        return
-    ctx = _load()
+    ctx = storage.read_or_default("active_context.json", _default())
     ctx["contexts"].append({"text": text[:200], "timestamp": datetime.now().isoformat()})
     if len(ctx["contexts"]) > 5:
         ctx["contexts"] = ctx["contexts"][-5:]
     ctx["last_updated"] = datetime.now().isoformat()
-    _save(ctx)
+    storage.write("active_context.json", ctx)
     print(f"✅ Context recorded")
 
 
 class Todo:
     @staticmethod
     def add(text: str):
-        if _scan(text):
-            return
-        ctx = _load()
+        ctx = storage.read_or_default("active_context.json", _default())
         ctx["todos"].append({"id": len(ctx["todos"]) + 1, "text": text[:200], "done": False,
                              "created": datetime.now().isoformat()})
         ctx["last_updated"] = datetime.now().isoformat()
-        _save(ctx)
+        storage.write("active_context.json", ctx)
         print(f"✅ Todo: {text[:60]}")
 
     @staticmethod
@@ -112,7 +69,7 @@ class Todo:
         if not tid:
             print("⚠️  Error: empty todo id")
             return
-        ctx = _load()
+        ctx = storage.read_or_default("active_context.json", _default())
         found = False
         for t in ctx["todos"]:
             if str(t["id"]) == tid or t["text"].startswith(tid):
@@ -120,7 +77,7 @@ class Todo:
                 t["completed_at"] = datetime.now().isoformat()
                 found = True
         ctx["last_updated"] = datetime.now().isoformat()
-        _save(ctx)
+        storage.write("active_context.json", ctx)
         if found:
             print(f"✅ Completed: {tid}")
         else:
@@ -128,7 +85,7 @@ class Todo:
 
 
 def format_context() -> str:
-    ctx = _load()
+    ctx = storage.read_or_default("active_context.json", _default())
     lines = ["## [Working Memory — Current Session Context]\n"]
     if ctx["task"]:
         lines.append(f"**Current Task:** {ctx['task']}\n")
@@ -149,7 +106,7 @@ def format_context() -> str:
 
 
 def status():
-    ctx = _load()
+    ctx = storage.read_or_default("active_context.json", _default())
     print(f"\n📋 Working Memory")
     print("=" * 50)
     print(f"Session: {ctx['session_start'][:19]}")

@@ -23,9 +23,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from moyu_toolkit._moyu_paths import get_default_storage
-STORAGE = Path(get_default_storage())
-BRIDGE_PATH = STORAGE / "session_bridge.json"
+from moyu_toolkit._storage import storage
 
 # ── Sync targets ──
 DEFAULT_PREFILL = Path.home() / ".hermes" / "prefill.json"
@@ -79,37 +77,18 @@ def _default_data() -> dict:
 
 
 def _load() -> dict:
-    if BRIDGE_PATH.exists():
-        try:
-            with open(BRIDGE_PATH) as f:
-                data = json.load(f)
-            # Ensure new keys exist
-            if "rounds" not in data:
-                data["rounds"] = []
-            if "turns" not in data:
-                data["turns"] = []
-            if "decisions" not in data:
-                data["decisions"] = []
-            if "pending" not in data:
-                data["pending"] = []
-            return data
-        except (json.JSONDecodeError, Exception):
-            pass
+    data = storage.read("session_bridge.json")
+    if data:
+        data.setdefault("rounds", [])
+        data.setdefault("turns", [])
+        data.setdefault("decisions", [])
+        data.setdefault("pending", [])
+        return data
     return _default_data()
 
 
 def _save(data: dict):
-    STORAGE.mkdir(parents=True, exist_ok=True)
-    # 原子写入：先写临时文件，再替换
-    tmp_path = BRIDGE_PATH.with_suffix('.json.tmp')
-    try:
-        with open(tmp_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, BRIDGE_PATH)
-    except Exception:
-        if tmp_path.exists():
-            tmp_path.unlink()
-        raise
+    storage.write("session_bridge.json", data)
 
 
 # ==================== Core API (backward compat) ====================

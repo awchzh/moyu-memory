@@ -94,9 +94,9 @@ def _check_spacy():
 
 # ==================== Configuration ====================
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
-
-STORAGE_PATH = get_default_storage()
+from moyu_toolkit._moyu_paths import get_config_path
+from moyu_toolkit._storage import storage
+STORAGE_PATH = os.path.dirname(storage.path("."))
 
 # Frequency guard — imported from frequency_guard.py
 

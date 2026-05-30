@@ -35,31 +35,17 @@ try:
 except Exception:
     _KG_AVAILABLE = False
 
-from moyu_toolkit._moyu_paths import get_default_storage, get_config_path
-STORAGE = Path(get_default_storage())
-AUDIT_LOG_PATH = STORAGE / "audit_log.json"
+from moyu_toolkit._moyu_paths import get_config_path
+from moyu_toolkit._storage import storage
 
 
 def _audit_log(event_type: str, details: dict):
-    """Append an audit event to audit_log.json. Thread-safe via atomic append."""
+    """Append an audit event to audit_log.json."""
     entry = {"ts": datetime.now().isoformat(), "event": event_type, **details}
-    entries = []
-    if AUDIT_LOG_PATH.exists():
-        try:
-            with open(AUDIT_LOG_PATH) as f:
-                entries = json.load(f)
-        except Exception:
-            entries = []
+    entries = storage.read_or_default("audit_log.json", [])
     entries.append(entry)
-    entries = entries[-500:]  # Keep last 500
-    tmp = str(AUDIT_LOG_PATH) + ".tmp"
-    try:
-        with open(tmp, 'w') as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, AUDIT_LOG_PATH)
-    except Exception:
-        if os.path.exists(tmp):
-            os.remove(tmp)
+    entries = entries[-500:]
+    storage.write("audit_log.json", entries)
 
 # ── Dynamic scene extraction (from memory summaries) ──
 # Scenes are extracted from high-frequency keywords that appear across
@@ -209,42 +195,13 @@ def _ensure_scene(memories: list):
     return changed
 
 
-def _memories_path() -> str:
-    return str(STORAGE / "conversation_memory.json")
-
-
 def _load_memories() -> list:
-    p = _memories_path()
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except (json.JSONDecodeError, Exception):
-            pass
-    return []
+    data = storage.read("conversation_memory.json")
+    return data if isinstance(data, list) else []
 
 
 def _save_memories(memories: list):
-    STORAGE.mkdir(parents=True, exist_ok=True)
-    path = _memories_path()
-    # Content security gate: scan summaries before persisting
-    try:
-        from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
-        for m in memories:
-            summary = m.get("summary", "") or ""
-            if summary:
-                hits = content_scan(summary)
-                if hits:
-                    from moyu_toolkit.defense_toolkit.defense_log import report as _dl
-                    _dl("forgetting_curve_save", "yellow", {
-                        "gate": "content_scan",
-                        "hits": hits,
-                        "memory_id": m.get("id", "")[:12],
-                    })
-    except Exception:
-        pass
-    with open(path, 'w') as f:
-        json.dump(memories, f, ensure_ascii=False, indent=2)
+    storage.write("conversation_memory.json", memories)
 
 
 def _load_config() -> dict:
@@ -286,24 +243,17 @@ def _days_between(ts_a: str, ts_b: str) -> float:
 
 # ── Checkpoint (incremental processing) ──
 
-CHECKPOINT_PATH = STORAGE / "scene_checkpoint.json"
+CHECKPOINT_PATH = storage.path("scene_checkpoint.json")
 
 
 def _load_checkpoint() -> dict:
     """Load incremental processing checkpoint."""
-    if CHECKPOINT_PATH.exists():
-        try:
-            with open(CHECKPOINT_PATH) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"last_processed": _now(), "total_processed": 0}
+    return storage.read_or_default("scene_checkpoint.json",
+        {"last_processed": _now(), "total_processed": 0})
 
 
 def _save_checkpoint(cp: dict):
-    CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(CHECKPOINT_PATH, "w") as f:
-        json.dump(cp, f, ensure_ascii=False, indent=2)
+    storage.write("scene_checkpoint.json", cp)
 
 
 # ── LLM Utilities (shared pattern with learner/integrity_checker) ──
@@ -831,10 +781,10 @@ def run(context_pressure: bool = False) -> dict:
             else:
                 # LLM agrees with demotion (or unavailable → fall through)
                 # ── 蒸馏：降级前将结构化知识写入知识图谱 ──
-                old_len = len(kg._load().get("relations", [])) if _KG_AVAILABLE else 0
+                old_len = len(kg._load_kg().get("relations", [])) if _KG_AVAILABLE else 0
                 _distill_to_kg(m)
                 if _KG_AVAILABLE:
-                    new_len = len(kg._load().get("relations", []))
+                    new_len = len(kg._load_kg().get("relations", []))
                     distilled_count += max(0, new_len - old_len)
                     if new_len > old_len:
                         _audit_log("distill", {

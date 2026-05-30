@@ -24,8 +24,9 @@ sys.path.insert(0, TOOLKIT_DIR)
 
 # 用 agent_memory 自己的路径，确保与运行时一致
 try:
-    from _moyu_paths import get_default_storage
-    STORAGE = get_default_storage()
+    from _storage import storage
+    STORAGE = storage.path(".")
+    STORAGE = os.path.dirname(STORAGE)
 except Exception:
     STORAGE = os.path.join(TOOLKIT_DIR, "memory_data")
 BACKUP = os.path.join(STORAGE, "backups")
@@ -344,16 +345,16 @@ def test_kg_03_invalidate_entity():
 def test_kg_04_backfill():
     import knowledge_graph as kg
     # 直接 load 会触发 _backfill_temporal，检查字段完整性
-    kg_io = kg._load()
+    kg_io = kg._load_kg()
     kg_io["entities"]["__test_entity__"] = {"name": "Test", "type": "entity",
                                              "first_seen": "2026-01-01", "last_seen": "2026-01-01",
                                              "mention_count": 1}
     kg_io["relations"].append({"source": "__test_entity__", "target": "__test_entity__",
                                 "relation": "knows", "weight": 1, "created": "2026-01-01"})
     import knowledge_graph as kg
-    kg._save(kg_io)
+    storage.write("knowledge_graph.json", kg_io)
     # 重新加载，应该触发 backfill
-    kg_io2 = kg._load()
+    kg_io2 = kg._load_kg()
     kg._backfill_temporal(kg_io2)
     for r in kg_io2["relations"]:
         assert "valid_from" in r, f"所有关系应有 valid_from，缺少：{r}"
@@ -362,11 +363,11 @@ def test_kg_04_backfill():
         assert "valid_from" in e, f"所有实体应有 valid_from，缺少：{e}"
         assert "valid_until" in e, f"所有实体应有 valid_until，缺少：{e}"
     # 清理测试残留
-    kg_io3 = kg._load()
+    kg_io3 = kg._load_kg()
     kg_io3["entities"].pop("__test_entity__", None)
     kg_io3["relations"] = [r for r in kg_io3["relations"]
                            if r.get("source") != "__test_entity__"]
-    kg._save(kg_io3)
+    storage.write("knowledge_graph.json", kg_io3)
 
 
 @t("session_bridge：load/status 不崩溃")
