@@ -188,6 +188,56 @@ def remove_pending(text: str):
     _sync_to_state_file(data)
 
 
+def auto_update_from_memories(recent_memories: list):
+    """Auto-update session state from recent conversation memories.
+
+    Called during wake routine. Keeps session_state.json current without
+    requiring explicit `moyu session decision` calls.
+
+    Only updates if the state file is stale (>30 min without update)
+    or has no topic set. Updates topic from the most recent memory summary.
+
+    Args:
+        recent_memories: List of memory dicts from agent_memory,
+            sorted newest-first (top 5).
+    """
+    if not recent_memories:
+        return
+
+    data = _load()
+    now = datetime.now()
+
+    # Check if update is needed: no topic, or stale (>30 min)
+    last_up = data.get("last_updated")
+    needs_update = False
+    if not data.get("topic"):
+        needs_update = True
+    elif last_up:
+        try:
+            last_dt = datetime.fromisoformat(last_up)
+            if (now - last_dt).total_seconds() > 1800:  # 30 min
+                needs_update = True
+        except Exception:
+            needs_update = True
+    else:
+        needs_update = True
+
+    if not needs_update:
+        return
+
+    # Extract topic from newest memory
+    latest = recent_memories[0]
+    summary = latest.get("summary", "")
+    if summary:
+        # Use first meaningful sentence as topic
+        topic = summary[:80] + "…" if len(summary) > 80 else summary
+        data["topic"] = topic
+
+    data["last_updated"] = now.isoformat()
+    _save(data)
+    _sync_to_state_file(data)
+
+
 def format_state_summary() -> str:
     """Return a one-line state summary: topic, decisions, pending.
     Self-contained, reads from bridge data only."""

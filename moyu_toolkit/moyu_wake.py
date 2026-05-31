@@ -171,6 +171,11 @@ def wake(dry_run: bool = False) -> str:
                     summary = m.get("summary", "")
                     lines.append(f"[{ts}] {summary[:120]}")
                 recent_memories = "\n".join(lines)
+            # Auto-update session state from recent memories
+            try:
+                sb.auto_update_from_memories(sorted_mem)
+            except Exception:
+                pass
     except Exception:
         recent_memories = ""
 
