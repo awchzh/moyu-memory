@@ -1,6 +1,22 @@
 # MOYU — Development Log
 
-## v2.8.2 — Full MCP Capability Exposure (2026-05-29)
+## v2.9.0 — Skill Memory + Unified File I/O (2026-05-31)
+
+### 🧠 Skill Memory
+- **Per-function experience accumulation** — `search()` and `add_memory()` now accumulate usage experience into independent `.memory.md` files. Each call injects relevant past learnings into results automatically.
+- **`moyu skill-note` CLI** — `list`, `show <name>`, `add <name> <note>` for manual experience management.
+- **Learner auto-integration** — When the learner detects a correction that maps to a skill function, it automatically writes the lesson to the matching `.memory.md`.
+- **Cross-session carryover** — Experiences survive agent restarts. Next session wakes up with accumulated wisdom.
+
+### 🗄️ Unified File I/O Layer
+- **`_storage.py`** — Single entry point for all memory data reads/writes. Atomic write (tmp → rename), content security scanning, HMAC signature, manifest update — all in one call.
+- **11 modules migrated** — `active_context`, `self_reflection`, `knowledge_graph`, `memory_merge`, `context_manager`, `frequency_guard`, `learner`, `forgetting_curve`, `agent_memory`, `session_bridge`, `test_all` now use `storage.read()`/`storage.write()`.
+- **Net code change** — +427/−391 lines. All existing JSON files, signatures, and manifest entries remain untouched. Fully backward compatible.
+
+### 🔧 Internal
+- `storage.write()` automatically runs content security gate on every write.
+- `storage.delete()` cleans up both the file and its manifest entry.
+- Python 3.9+ compatible (no walrus operators, no `str.removeprefix`).
 
 ### 🔌 MCP Expansion (5 → 29 tools)
 Exposing all MOYU capabilities as MCP tools — memory, search, defense, knowledge graph, knowledge base, lifecycle, reflection, learning, diagnostics.

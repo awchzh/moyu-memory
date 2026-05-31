@@ -1,60 +1,65 @@
 # MOYU Roadmap
 
-> **Current version:** v2.6.0
-> **Last updated:** 2026-05-22
+> **Current version:** v2.8.2
+> **Last updated:** 2026-05-31
 
-MOYU is built around a simple philosophy: **make every feature reliable before adding more.** These priorities reflect that.
+MOYU 是一个本地优先的 AI Agent 记忆工具包。路线图反映的是实际要做的事，不是愿望清单。
 
-## What's been delivered
+---
 
-MOYU's last two release cycles shipped:
+## 已交付（自 v2.6.0 以来）
 
-- **v2.5.x** — 6 LLM-enhanced capabilities (smart summary, search rerank, memory merge, scene classification, KG extraction, forgetting review), security guard overhaul (+38% interception), 513 pattern library, circuit breaker with auto-recovery, CI integration, public benchmark validation (RTPB2026 + Safety-Prompts), pip packaging
-- **v2.6.0** — Namespace memory layering (`--ns` search, SQLite sync, auto-tagging), self-evolving security rules (`moyu learn` / `moyu rules`), reproducible security benchmark (`moyu benchmark`), `moyu doctor` / `moyu snapshot` / `moyu demo-attack`, lazy init (install-and-run, no setup), injection mutator (`moyu mutate`)
+| 版本 | 日期 | 核心内容 |
+|------|------|---------|
+| v2.8.2 | 05-29 | **MCP 全暴露**：5 → 29 工具，全覆盖所有能力 |
+| v2.8.1 | 05-29 | MCP stdio Server 适配器 |
+| v2.8.0 | 05-28 | **渐进式记忆**：三层展开（摘要→概览→全文）+ 热度分档（HOT/WARM/COLD）+ 安全加固（注入输出门/Persistence门/伪信号黑名单）+ 压缩加固 + 知识图谱时间线 + 自学习规则管理 |
+| v2.7.7 | 05-26 | 跨模块导入安全加固 + 写入路径全覆盖 |
+| v2.7.6 | 05-26 | **记忆数字签名**（HMAC-SHA256）+ 统一防御日志 |
+| v2.7.4 | 05-24 | 频率监控（读/写）+ 访问行为监测 |
+| v2.7.2 | 05-24 | **自动记忆提取**（正则+LLM双通道）+ Session Bridge V2.2 |
+| v2.7.1 | 05-23 | 交互式 Quickstart + 构建卫生 |
+| v2.7.0 | 05-23 | 统一 LLM 客户端 + 检索权重全链路 + 安全加固 |
 
-## Short-term (v2.7.x)
+## 已提交代码未发版（v2.9.0 预备）
 
-| Priority | Item | Why |
-|----------|------|-----|
-| 🔴 | **Adaptive retrieval weighting** — Tune BM25/semantic/time weights via weak user feedback signals (click, skip, re-query) | Gets smarter with use instead of staying static. Pure logic, no LLM cost. |
-| 🟠 | **Public security benchmarks** — Publish reproducible scores on Gandalf, HackAPrompt, and community injection datasets | Third-party validation builds trust. Current 74.8% needs a public leaderboard. |
-| 🟠 | **API reference docs + architecture diagram** — Standalone documentation beyond README | Current README is dense. New users need a structured entry point. |
-| 🟡 | **3 ready-to-run integration examples** — LangChain Tool, HTTP server, OpenAI Assistant | Lower the barrier for trying MOYU in different stacks. |
+| 功能 | 说明 |
+|------|------|
+| **Skill Memory 技能记忆** | 按函数粒度的使用经验积累和自动注入。search()/add_memory() 每次执行后记录心得体会到独立文件，下次调用时自动注入参考。附带 `moyu skill-note` CLI 和 learner 自动写经验 |
+| **_storage.py 统一 I/O** | 所有模块的文件读写统一走 _storage.py：原子写（临时文件 → rename）、内容安检、HMAC 签名、manifest 更新 一站式完成。迁移了 11 个模块，+427/-391 行 |
 
-## Medium-term (v2.8.x)
+---
 
-| Priority | Item | Why |
-|----------|------|-----|
-| 🟠 | **Hot-reloadable pattern library** — Load injection patterns from external files without code changes | Reduces maintenance burden for the 500+ forensic rule set. |
-| 🟠 | **Multi-instance memory reconciliation** — Native merge/compare between two MOYU instances | Unique differentiator — no other memory toolkit does peer-to-peer sync. |
-| 🟡 | **Prompt-as-memory entry** — `moyu listen <fact>` extracts structured memory from natural language | "Say it and it's saved" — paradigm shift from API-call to conversation. |
-| 🟡 | **Performance benchmarks** — Provide benchmark data for different memory scales | Help users understand MOYU's performance profile before deploying. |
+## 下次发版（v2.9.0）
 
-## Long-term (v3.0+)
+### 确定包含
+1. **Skill Memory** — 按函数攒经验，跨会话复用
+2. **_storage 统一 I/O** — 所有模块的文件操作统一走总管
 
-| Priority | Item | Why |
-|----------|------|-----|
-| 🟠 | **Plugin architecture** — Pluggable storage backends (SQLite, Redis), retrieval strategies | Keep the core lightweight while allowing customization. |
-| 🟡 | **Versioned memory** — Optional Git-like version history for critical memories | Enable precise rollback on memory poisoning. |
-| 🟡 | **LLM ecosystem native adapters** — LangChain Tool, MCP Server | Let mainstream AI frameworks discover MOYU natively. |
+### 可能一起打包
+3. **更新 ROADMAP** ✅ 本次已做
+4. **CHANGELOG 补齐** — 确认两个 commit 的 changelog 条目已在 CHANGELOG.md 中
 
-## What we explicitly won't do
+---
 
-These features are out of scope for MOYU's design:
+## 近期（v2.9.x）
 
-- **Multi-tenant / multi-user** — MOYU is a single-agent tool. Multi-user is a different product.
-- **Distributed / clustered deployment** — Requires infrastructure, contradicts zero-infrastructure design.
-- **Event sourcing** — Letta-level versioning would make MOYU too heavy.
-- **Full semantic injection defense** — Would require LLM-level content moderation, breaking zero-config.
+| 优先级 | 项目 | 说明 |
+|--------|------|------|
+| 🟡 | **热重载规则库** | forensic_patterns.json 支持运行时加载，不用等发版更新规则 |
+| 🟡 | **ROADMAP 持续维护** | 每次发版同步更新，不让它再过期 |
 
-## Prior art & thanks
+## 中期（v3.0+）
 
-MOYU's design draws inspiration from:
+| 优先级 | 项目 | 说明 |
+|--------|------|------|
+| 🟠 | **多实例记忆协商** | 两个 MOYU 实例之间 merge/compare 记忆（Mac ↔ NAS） |
+| 🟡 | **Prompt 即记忆** | `moyu listen <事实>` — 自然语言直接存记忆，不用构造 API 调用 |
+| 🟡 | **性能基准测试** | 不同规模下的检索/写入延迟数据 |
 
-- [Mem0](https://github.com/mem0ai/mem0) — Enterprise memory layer
-- [Letta](https://github.com/letta-ai/letta) — Agent operating system with memory
-- [Kioku Lite](https://github.com/kioku-labs/kioku-lite) — Local-first tri-hybrid retrieval
-- [Tencent Agent Memory](https://github.com/tencent-ailab/agent-memory) — Task map visualization
-- [DeepLearning.AI](https://www.deeplearning.ai/) — Long-Term Agentic Memory with LangGraph course
+## 不做的
 
-MOYU differentiates by being the only purely local, zero-config, self-defending memory toolkit with built-in injection detection, PII redaction, and a full four-layer defense chain.
+- 多租户/多用户 — MOYU 是单 Agent 工具
+- 分布式部署 — 违背零基础设施设计
+- 事件溯源 — Letta 级别的版本化太重了
+- 全语义注入防御 — 需要 LLM 级审核，破坏零配置
