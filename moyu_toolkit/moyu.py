@@ -327,6 +327,7 @@ CMD_TABLE = {
     "frequency":  lambda args: _handle_frequency(args),
     "memory":     lambda args: _handle_memory(args),
     "skill-note": lambda args: _handle_skill_note(args),
+    "duanjie":    lambda args: _import("duanjie").main(args),
 }
 
 HELP_DESCRIPTIONS = {
@@ -369,6 +370,7 @@ HELP_DESCRIPTIONS = {
     "frequency":  "Frequency guard — stats, unlock (moyu frequency stats / unlock <name>)",
     "memory":     "Memory management: {detail <id>|heat-recalc}",
     "skill-note": "Manage skill-level memory: {list|show <name>|add <name> <note>}",
+    "duanjie":    "启动/关闭断界安全阀: {on [--duration N]|off|status}",
     "help": "Show this help message",
 }
 
