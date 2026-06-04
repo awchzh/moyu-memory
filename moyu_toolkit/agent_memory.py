@@ -101,7 +101,7 @@ STORAGE_PATH = os.path.dirname(storage.path("."))
 # Frequency guard — imported from frequency_guard.py
 
 # Default retrieval weights — overridden by config.yaml memory.weights
-DEFAULT_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2, "entity": 0.0}
+DEFAULT_WEIGHTS = {"semantic": 0.5, "keyword": 0.3, "recency": 0.2, "entity": 0.05}
 
 
 def _get_retrieval_weights() -> dict:
@@ -845,31 +845,39 @@ def _build_entity_index(memories: list) -> dict:
 def _compute_entity_connectivity_boost(candidate_ids: set, entity_index: dict,
                                         all_ranked_ids: list) -> dict:
     """Compute connectivity bonus: memories sharing entities with other top candidates get boosted.
+    Uses pre-built reverse index (memory_id → entities) for O(1) entity lookup.
+    Falls back to no bonus when candidate pool exceeds size threshold (avoids O(n²) overhead).
     Returns {memory_id: bonus_score} (cap 0.3)."""
+    # Size guard: skip connectivity boost for large pools to prevent O(n²) cost
+    if len(candidate_ids) > 500 or len(all_ranked_ids) > 500:
+        return {}
+
+    # Build reverse index: memory_id → set(entity_names) — O(E) one-time cost
+    # replaces the old O(E) scan per memory
+    memory_to_entities = {}
+    for entity, mem_ids in entity_index.items():
+        for mid in mem_ids:
+            if mid not in memory_to_entities:
+                memory_to_entities[mid] = set()
+            memory_to_entities[mid].add(entity)
+
     bonuses = {}
+    candidate_set = set(candidate_ids) if isinstance(candidate_ids, list) else candidate_ids
     for mid in candidate_ids:
-        # Gather all entities mentioned in this memory (via entity index)
-        mem_entities = set()
-        for entity, mem_ids in entity_index.items():
-            if mid in mem_ids:
-                mem_entities.add(entity)
+        mem_entities = memory_to_entities.get(mid, set())
         if not mem_entities:
             continue
-        # Count how many OTHER top candidates share at least one entity with this memory
-        shared_count = 0
-        for other_id in all_ranked_ids:
-            if other_id == mid:
-                continue
-            for entity in mem_entities:
-                if other_id in entity_index.get(entity, []):
-                    shared_count += 1
-                    break
-        # Per-entry cap 0.3, total sum capped globally if passed via context
+        # 用 entity_index 直接找共现记忆，替代扫描全量 ranked IDs
+        connected_memories = set()
+        for entity in mem_entities:
+            connected = entity_index.get(entity, [])
+            for other_id in connected:
+                if other_id != mid and other_id in candidate_set:
+                    connected_memories.add(other_id)
+            if len(connected_memories) >= 6:  # 6 * 0.05 = 0.3，提前退出
+                break
+        shared_count = len(connected_memories)
         bonuses[mid] = min(shared_count * 0.05, 0.3)
-    # Global cap: no single memory should get more than 0.3 total connectivity bonus
-    # (prevents stacking across multiple entity overlaps from dominating results)
-    for mid in bonuses:
-        bonuses[mid] = min(bonuses[mid], 0.3)
     return bonuses
 
 
@@ -1257,6 +1265,21 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
         vectors = filtered_vectors
         if not vectors:
             return []
+
+    # ── BM25 + heat pre-filter: 降低 cosine 全量计算 ──
+    # 只保留 FTS5 命中的 + HOT 档的热门记忆，其它记忆跳过 cosine 计算
+    fts_candidates = set(fts_map.keys())
+    hot_candidates = set()
+    for m in memories:
+        if m.get("heat_tier") == "hot":
+            hot_candidates.add(m["id"])
+    candidate_ids = fts_candidates | hot_candidates
+    if candidate_ids:
+        filtered = [v for v in vectors if v["memory_id"] in candidate_ids]
+        if filtered:
+            vectors = filtered
+        # 如果 filter 后空了就全保留（保底不吞结果）
+    # else: 没有 FTS5 也没 HOT（空库），继续走原有逻辑
 
     for i, entry in enumerate(vectors):
         # Semantic score
