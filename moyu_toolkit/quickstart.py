@@ -42,6 +42,7 @@ def _cleanup():
 
 def _prepopulate():
     """Seed 4 sample memories so search demo has real data."""
+    print("   正在加载向量模型（首次运行需下载，仅此一次）...", flush=True)
     from moyu_toolkit import agent_memory as am
     samples = [
         "MOYU 内容安检闸有 516 条正则规则，支持 8 类 LLM 二次判定，写入前拦截注入攻击",
@@ -49,7 +50,8 @@ def _prepopulate():
         "FastEmbed 本地 ONNX 向量化，512 维，不需要任何外部 API，完全离线运行",
         "知识图谱从对话中自动提取实体和关系，支持时间回溯和关系失效追踪",
     ]
-    for s in samples:
+    for i, s in enumerate(samples):
+        print(f"  📦 预存示例记忆 {i+1}/{len(samples)}...", flush=True)
         am.add_memory(s, source="quickstart")
 
 
@@ -234,16 +236,16 @@ def _summary():
 def run():
     _setup()
     print()
-    print("╔══════════════════════════════════════════════╗")
-    print("║     MOYU — 五步上手                         ║")
-    print("║     5 分钟，亲手体验核心能力                  ║")
-    print("╚══════════════════════════════════════════════╝")
-    print()
+    print("╔══════════════════════════════════════════════╗", flush=True)
+    print("║     MOYU — 五步上手                         ║", flush=True)
+    print("║     5 分钟，亲手体验核心能力                  ║", flush=True)
+    print("╚══════════════════════════════════════════════╝", flush=True)
+    print(flush=True)
 
     # Pre-populate sample memories for the search demo
-    print("  🔄 初始化演示环境...")
+    print("  🔄 初始化演示环境...", flush=True)
     _prepopulate()
-    print("  ✅ 4 条示例记忆已就绪")
+    print("  ✅ 4 条示例记忆已就绪", flush=True)
     print()
 
     # Quickstart: 跳过 LLM rerank（避免 API 超时 30s 拖慢演示）
