@@ -117,11 +117,11 @@ moyu quickstart    # 5-minute interactive demo, zero config
 | # | Capability | Description |
 |:--|-----------|-------------|
 | 1 | Working Memory | Independent file, survives context compression |
-| 2 | Cross-Session Bridge | 10-turn summaries + 3-round conversations + state (topic, decisions, pending) auto-synced across sessions. **Hermes users**: zero-config via prefill. **Other agents**: add a line to system prompt (see below) |
+| 2 | Cross-Session Bridge | 10-turn summaries + 3-round conversations + state (topic, decisions, pending) auto-synced across sessions. **Hermes users**: zero-config via prefill. **Other agents**: add a line to system prompt (see below). State auto-updates from recent memories on wake — no manual `moyu session` calls needed. |
 | 3 | Auto-Update | GitHub release check + TOFU checksum + in-place update |
 | 4 | Wake Orchestration | Check→backup→forget→merge→reflect→context→bridge — fully automatic |
 | 5 | Memory Injection | `moyu inject` — standardized injection with built-in context warning |
-| **6** | **Defense Log** | **All defense events unified to `defense_log.md` — signature fails, content blocks, PII redactions, burst rollbacks, loop aborts. Hermes users get auto chat notifications. Others: configure `defense_log.webhook` in config.yaml** |
+| **6** | **Defense Log** | **All defense events unified to `defense_log.md` — signature fails, content blocks, PII redactions, burst rollbacks, loop aborts. Hermes users get auto chat notifications. `moyu doctor` shows a 24h summary right after the health score. Others: configure `defense_log.webhook` in config.yaml** |
 
 > **For non-Hermes agents** — add this line to your Agent's system prompt to enable session continuation:
 > ```
@@ -244,7 +244,7 @@ Or use the Python entry point directly: `python3 -m moyu_toolkit.mcp_server`
 ## 📋 Command Reference
 
 ### Defense & Security
-`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu init` `moyu rules list` `moyu rules remove <pattern>` `moyu rules whitelist <pattern>` `moyu protect`
+`moyu setup` `moyu verify` `moyu unlock` `moyu check` `moyu audit` `moyu rules list` `moyu rules remove <pattern>` `moyu rules whitelist <pattern>` `moyu protect`
 `moyu benchmark` `moyu demo-attack` `moyu doctor` `moyu mutate` `moyu frequency stats` `moyu frequency unlock <name>`
 
 ### Memory & Retrieval
