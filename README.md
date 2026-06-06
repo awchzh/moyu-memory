@@ -10,7 +10,7 @@ MOYU is a **security-first memory layer for AI Agents**. Pure Python, one folder
 **Install and go:**
 ```bash
 pip install moyu-memory
-moyu quickstart    # 中英双语选择器 → 5 步交互演示（记忆·防御·检索·统计·清理）
+moyu quickstart    # Chinese/English launcher → 5-step interactive demo
 ```
 
 [![Tests](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml/badge.svg)](https://github.com/awchzh/moyu-memory/actions/workflows/test.yml)
@@ -153,7 +153,7 @@ pip install moyu-memory
 **5-step interactive demo with Chinese/English switcher:**
 ```bash
 moyu quickstart
-# → Launcher prompts language (中文/English), then walks through
+# → Launcher prompts language selection, then walks through
 # → 5 real-data modules: memory → defense → retrieval → stats → cleanup.
 # → Zero config, no API key needed
 ```
@@ -293,7 +293,7 @@ moyu_toolkit/
 ├── security.py               # Password + lockout
 ├── feedback.py               # Search feedback collection
 ├── tune.py                   # Adaptive weight tuning
-├── quickstart.py             # 中英双语启动器 + 5 步交互演示
+├── quickstart.py             # Bilingual launcher + 5-step interactive demo
 ├── moyu.py                   # CLI entry point
 ├── moyu_wake.py              # Startup pipeline
 ├── defense_toolkit/
