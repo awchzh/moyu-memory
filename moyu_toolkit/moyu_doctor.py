@@ -230,34 +230,49 @@ def check_integrity() -> dict:
 # Check 5: Security Events
 # ═══════════════════════════════════════════════════════════════
 
-def check_security_events(days: int = 7) -> dict:
-    """Summarize recent security events."""
-    log = _load_json("security_log.json", [])
-    if not log:
-        return {"events": 0, "message": "No security events logged"}
-    
-    cutoff = time.time() - days * 86400
-    def _to_ts(v):
-        if isinstance(v, (int, float)):
-            return v
-        if isinstance(v, str):
-            try:
-                return float(v)
-            except (ValueError, TypeError):
-                return None
-        return None
+def check_security_events(hours: int = 24) -> dict:
+    """Summarize recent security events from defense_log.md."""
+    try:
+        from moyu_toolkit.defense_toolkit.defense_log import _read_existing, _log_path, LEVELS
+    except Exception:
+        return {"events": 0, "message": "defense_log unavailable"}
 
-    recent = [e for e in log if (ts := _to_ts(e.get("timestamp"))) is not None and ts >= cutoff]
-    
-    blocks = sum(1 for e in recent if "block" in str(e.get("event", "")).lower() or "拦截" in str(e.get("event", "")))
-    bursts = sum(1 for e in recent if "burst" in str(e.get("event", "")).lower() or "爆发" in str(e.get("event", "")))
-    
+    events = _read_existing()
+    log_path = _log_path()
+
+    if not events:
+        return {"events": 0, "red": 0, "yellow": 0, "green": 0, "message": "无安全事件", "path": log_path}
+
+    # Filter by recency — past N hours
+    cutoff = time.time() - hours * 3600
+    recent = []
+    for e in events:
+        raw = e.get("raw", "")
+        # Parse timestamp from raw text: [2026-06-06 15:59]
+        import re
+        m = re.search(r'^\[(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\]', raw)
+        if m:
+            try:
+                ts = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M").timestamp()
+                if ts >= cutoff:
+                    recent.append(raw)
+            except Exception:
+                recent.append(raw)  # can't parse → include anyway
+        else:
+            recent.append(raw)
+
+    red_count = sum(1 for r in recent if "🔴" in r)
+    yellow_count = sum(1 for r in recent if "🟡" in r)
+    green_count = sum(1 for r in recent if "🟢" in r)
+
     return {
         "events": len(recent),
-        "blocks": blocks,
-        "bursts": bursts,
-        "total_logged": len(log),
-        "note": "OK" if bursts == 0 else f"{bursts} burst trigger(s) in past {days} days",
+        "red": red_count,
+        "yellow": yellow_count,
+        "green": green_count,
+        "total_logged": len(events),
+        "path": log_path,
+        "message": "OK" if red_count == 0 else f"{red_count} red in {hours}h — review recommended",
     }
 
 
@@ -327,8 +342,10 @@ def compute_health_score(checks: dict) -> tuple:
         score -= 15
     
     sec = checks.get("security", {})
-    if sec.get("bursts", 0) > 0:
-        score -= 10 * min(sec["bursts"], 3)
+    if sec.get("red", 0) > 0:
+        score -= 15 * min(sec["red"], 3)
+    if sec.get("yellow", 0) > 0:
+        score -= 5 * min(sec["yellow"], 3)
     
     storage = checks.get("storage", {})
     if storage.get("issues"):
@@ -360,6 +377,24 @@ def print_report(checks: dict, score: int, grade: str):
     # Health score
     score_bar = "█" * int(score / 5) + "░" * (20 - int(score / 5))
     print(f"  Health:     {score_bar}  {score}/100  {grade}")
+    print()
+
+    # ── Defense log summary (first thing after score) ──
+    sec = checks.get("security", {})
+    if sec.get("events", 0) > 0:
+        parts = []
+        if sec.get("red", 0):
+            parts.append(f"🔴{sec['red']}")
+        if sec.get("yellow", 0):
+            parts.append(f"🟡{sec['yellow']}")
+        if sec.get("green", 0):
+            parts.append(f"🟢{sec['green']}")
+        counts = "  ".join(parts)
+        print(f"  🛡️  Defense Log:        {counts}  events in 24h  ({sec.get('total_logged', 0)} total)")
+        if sec.get("message") and sec["message"] != "OK":
+            print(f"       ⚠️  {sec['message']}")
+    else:
+        print(f"  🛡️  Defense Log:        ℹ️  24h clean")
     print()
     
     # 1. Redundancy
@@ -421,12 +456,13 @@ def print_report(checks: dict, score: int, grade: str):
         print(f"  ✍️  Signatures:         ℹ️  Disabled (set MOYU_SIGN_KEY to enable)")
     print()
 
-    # 5. Security events
-    sec = checks.get("security", {})
-    print(f"  🔔 Security Events:    {sec.get('events', 0)} events in 7 days")
-    print(f"       Blocks: {sec.get('blocks', 0)}  |  Burst triggers: {sec.get('bursts', 0)}")
-    if sec.get("bursts", 0) > 0:
-        print(f"       ⚠️  Write bursts detected — check your memory write patterns")
+    # 5. Security events (defense_log.md)
+    if sec.get("events", 0) > 0:
+        print(f"  🔔 Security Events:    {sec['events']} events in 24h (🔴{sec['red']} 🟡{sec['yellow']} 🟢{sec['green']})")
+        print(f"       Log: {sec.get('path', '')}")
+    else:
+        print(f"  🔔 Security Events:    ℹ️  24h clean")
+    print()
     print()
     
     # 6. Storage
