@@ -225,12 +225,19 @@ def auto_update_from_memories(recent_memories: list):
     if not needs_update:
         return
 
-    # Extract topic from newest memory
-    latest = recent_memories[0]
-    summary = latest.get("summary", "")
-    if summary:
-        # Use first meaningful sentence as topic
-        topic = summary[:80] + "…" if len(summary) > 80 else summary
+    # Extract topic from the most recent user/agent memory
+    # (skip auto-generated memories like compression logs)
+    HUMAN_SOURCES = {"user", "agent", "quickstart_user", "mcp"}
+    topic = ""
+    for latest in recent_memories:
+        src = latest.get("source", "")
+        if src in HUMAN_SOURCES:
+            summary = latest.get("summary", "")
+            if summary:
+                topic = summary[:80] + "…" if len(summary) > 80 else summary
+                break
+
+    if topic:
         data["topic"] = topic
 
     data["last_updated"] = now.isoformat()

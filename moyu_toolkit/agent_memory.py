@@ -1268,18 +1268,22 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
 
     # ── BM25 + heat pre-filter: 降低 cosine 全量计算 ──
     # 只保留 FTS5 命中的 + HOT 档的热门记忆，其它记忆跳过 cosine 计算
-    fts_candidates = set(fts_map.keys())
-    hot_candidates = set()
-    for m in memories:
-        if m.get("heat_tier") == "hot":
-            hot_candidates.add(m["id"])
-    candidate_ids = fts_candidates | hot_candidates
-    if candidate_ids:
-        filtered = [v for v in vectors if v["memory_id"] in candidate_ids]
-        if filtered:
-            vectors = filtered
-        # 如果 filter 后空了就全保留（保底不吞结果）
-    # else: 没有 FTS5 也没 HOT（空库），继续走原有逻辑
+    # 记忆量 < 500 时跳过预过滤 — 全量余弦计算的开销可以忽略，语义召回更重要
+    # 预过滤前保存全量 IDs，供 connectivity boost 使用完整图谱
+    all_vector_ids = {v["memory_id"] for v in vectors}
+    if len(vectors) >= 500:
+        fts_candidates = set(fts_map.keys())
+        hot_candidates = set()
+        for m in memories:
+            if m.get("heat_tier") == "hot":
+                hot_candidates.add(m["id"])
+        candidate_ids = fts_candidates | hot_candidates
+        if candidate_ids:
+            filtered = [v for v in vectors if v["memory_id"] in candidate_ids]
+            if filtered:
+                vectors = filtered
+            # 如果 filter 后空了就全保留（保底不吞结果）
+        # else: 没有 FTS5 也没 HOT（空库），继续走原有逻辑
 
     for i, entry in enumerate(vectors):
         # Semantic score
@@ -1329,8 +1333,7 @@ def search(query: str, top_k: int = 5, namespace: str = None) -> list:
     has_real_embeds = _check_fastembed() or bool(_get_embedding_api()[0] and _get_embedding_api()[0] not in ('your-api-key-here', ''))
     
     # Build connectivity bonuses from entity index (cross-memory linking)
-    all_ids = {v["memory_id"] for v in vectors}
-    connectivity_bonuses = _compute_entity_connectivity_boost(all_ids, entity_index, all_ids)
+    connectivity_bonuses = _compute_entity_connectivity_boost(all_vector_ids, entity_index, all_vector_ids)
     
     # Determine candidate pool size: larger when LLM rerank is enabled
     use_rerank = _should_llm_rerank()
