@@ -155,7 +155,7 @@ def content_scan(text: str) -> list:
         if custom_matches:
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("content_scan", "yellow", {
                     "event": f"已拦截 — {', '.join(custom_matches)}",
                     "source": "内容安检闸（自定义规则）",
@@ -181,7 +181,7 @@ def content_scan(text: str) -> list:
                 detected.append(label)
     if detected:
         try:
-            from defense_toolkit.defense_log import report as _dl_report
+            from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
             _dl_report("content_scan", "yellow", {
                 "event": f"已拦截 — {', '.join(detected)}",
                 "source": "内容安检闸（规则库）",
@@ -395,7 +395,7 @@ def daily_backup():
             shutil.copy2(src, os.path.join(BACKUP_DIR, bak_name))
             # Sign the backup file for future recovery verification
             try:
-                from defense_toolkit.signature import sign
+                from moyu_toolkit.defense_toolkit.signature import sign
                 bak_path = os.path.join(BACKUP_DIR, bak_name)
                 with open(bak_path, "r") as _f:
                     _content = _f.read()
@@ -592,7 +592,7 @@ def verify():
             critical_changes += 1
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("forensic", "red", {
                     "event": f"文件缺失 — {entry['path']}",
                     "source": "完整性校验",
@@ -622,7 +622,7 @@ def verify():
                 _auto_recover(entry["path"], manifest)
                 # Report to defense log
                 try:
-                    from defense_toolkit.defense_log import report as _dl_report
+                    from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                     _dl_report("forensic", "red", {
                         "event": f"文件被篡改 — {entry['path']}",
                         "source": "完整性校验",

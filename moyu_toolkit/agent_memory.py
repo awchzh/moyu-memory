@@ -523,7 +523,7 @@ def _save_index(index: dict):
         os.replace(tmp, path)
         # Sign after write
         try:
-            from defense_toolkit.signature import sign
+            from moyu_toolkit.defense_toolkit.signature import sign
             with open(path, 'r') as f:
                 content = f.read()
             sign(path, content)
@@ -544,7 +544,7 @@ def _load_memories() -> list:
         password = _get_encryption_password()
         if enc and password:
             try:
-                from defense_toolkit.encrypt import decrypt_file
+                from moyu_toolkit.defense_toolkit.encrypt import decrypt_file
                 raw = decrypt_file(path, password)
                 return json.loads(raw)
             except Exception:
@@ -580,7 +580,7 @@ def _save_memories(memories: list):
     password = _get_encryption_password()
     if enc and password:
         try:
-            from defense_toolkit.encrypt import encrypt_bytes
+            from moyu_toolkit.defense_toolkit.encrypt import encrypt_bytes
             data = json.dumps(memories, ensure_ascii=False, indent=2)
             encrypted = encrypt_bytes(data.encode('utf-8'), password)
             with open(tmp, 'wb') as f:
@@ -588,7 +588,7 @@ def _save_memories(memories: list):
             os.replace(tmp, path)
             # Sign after write
             try:
-                from defense_toolkit.signature import sign
+                from moyu_toolkit.defense_toolkit.signature import sign
                 sign(path, data)
             except Exception:
                 pass
@@ -605,7 +605,7 @@ def _save_memories(memories: list):
         os.replace(tmp, path)
         # Sign after write
         try:
-            from defense_toolkit.signature import sign
+            from moyu_toolkit.defense_toolkit.signature import sign
             with open(path, 'r') as f:
                 content = f.read()
             sign(path, content)

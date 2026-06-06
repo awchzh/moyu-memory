@@ -134,7 +134,7 @@ _CLEAN_SAMPLES = [
 
 def _load_patterns():
     """Load forensic patterns and group by label."""
-    from defense_toolkit.integrity_checker import _load_patterns as load
+    from moyu_toolkit.defense_toolkit.integrity_checker import _load_patterns as load
     patterns = load()
     by_label = {}
     total_regex = 0
@@ -155,7 +155,7 @@ def _benchmark_content_gate(samples: list, label: str = "") -> dict:
     """Run content_scan against a set of samples.
     Returns {total, blocked, blocked_pct, blocked_samples, missed_samples}.
     """
-    from defense_toolkit.integrity_checker import content_scan
+    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
     blocked = 0
     missed_samples = []
     for s in samples:
@@ -179,7 +179,7 @@ def _benchmark_llm_guard(samples: list, label: str = "") -> dict:
     """Run LLM guard against regex-untouched samples.
     Returns improvement stats.
     """
-    from defense_toolkit.integrity_checker import content_scan, llm_scan
+    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan, llm_scan
     # First pass: regex
     regex_blocked = 0
     regex_missed = []
@@ -382,7 +382,7 @@ def run_benchmark(quick=False):
             all_texts = []
             for label, samples in all_injection_samples:
                 for s in samples:
-                    from defense_toolkit.integrity_checker import content_scan
+                    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
                     if not content_scan(s):
                         all_texts.append(s)
             if all_texts:
@@ -454,7 +454,7 @@ def run_full_benchmark():
         all_texts = []
         for label in sorted(groups.keys()):
             for s in groups[label]:
-                from defense_toolkit.integrity_checker import content_scan
+                from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
                 if not content_scan(s):
                     all_texts.append(s)
                     if len(all_texts) >= 200:  # cap for speed

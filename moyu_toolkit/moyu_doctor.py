@@ -473,7 +473,7 @@ def diagnose(quick: bool = False) -> dict:
 def _check_signatures() -> dict:
     """Check memory digital signatures (optional)."""
     try:
-        from defense_toolkit.signature import verify_memory_files, is_enabled
+        from moyu_toolkit.defense_toolkit.signature import verify_memory_files, is_enabled
         if not is_enabled():
             return {"enabled": False, "message": "Signing disabled (set MOYU_SIGN_KEY)"}
         result = verify_memory_files()
@@ -516,7 +516,7 @@ def _run_fix():
     print("  🔧  Memory Integrity — Verify & Auto-Recovery")
     print("=" * 56)
     try:
-        from defense_toolkit.signature import verify_and_recover, is_enabled
+        from moyu_toolkit.defense_toolkit.signature import verify_and_recover, is_enabled
         if not is_enabled():
             print("  ℹ️  Signatures disabled. Set MOYU_SIGN_KEY to enable.")
             return

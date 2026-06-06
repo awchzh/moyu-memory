@@ -100,7 +100,7 @@ def _test_attack(attack: dict, quick: bool = False) -> dict:
     text = attack["input"]
 
     # Layer 1: Content Security Gate
-    from defense_toolkit.integrity_checker import content_scan
+    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
     t0 = time.time()
     layer1_hits = content_scan(text)
     layer1_time = time.time() - t0
@@ -111,7 +111,7 @@ def _test_attack(attack: dict, quick: bool = False) -> dict:
     layer2_reason = ""
     if not quick and not layer1_blocked:
         try:
-            from defense_toolkit.integrity_checker import llm_scan
+            from moyu_toolkit.defense_toolkit.integrity_checker import llm_scan
             t0 = time.time()
             llm_result = llm_scan(text)
             layer2_time = time.time() - t0

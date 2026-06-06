@@ -281,11 +281,11 @@ class FrequencyGuard:
             result["removed"] = removed
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("burst", "yellow", {
-                    "event": f"写入暴风 — {config.get('threshold')}次/{config.get('window')}秒",
+                    "event": f"写入暴风 — {rule.get('threshold')}次/{rule.get('window')}秒",
                     "source": f"规则: {rule_name}",
-                    "detail": f"回滚了 {removed} 条写入，锁定 {config.get('lock_minutes', 0)} 分钟",
+                    "detail": f"回滚了 {removed} 条写入，锁定 {result.get('lock_minutes', 0)} 分钟",
                     "auto_resolved": True,
                 })
             except Exception:

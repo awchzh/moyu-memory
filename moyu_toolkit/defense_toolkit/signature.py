@@ -193,7 +193,7 @@ def verify(data_file: str) -> dict:
             result["message"] = "Signature mismatch — content has changed since signing"
             # Report to defense log
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("signature", "red", {
                     "event": f"{os.path.basename(data_file)} 签名校验失败",
                     "source": "磁盘读取",
@@ -323,7 +323,7 @@ def verify_and_recover() -> dict:
                     recovered += 1
                     # Report recovery to defense log
                     try:
-                        from defense_toolkit.defense_log import report as _dl_report
+                        from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                         _dl_report("signature", "yellow", {
                             "event": f"{fname} 自动恢复成功",
                             "source": f"备份: {os.path.basename(best_backup)}",
@@ -339,7 +339,7 @@ def verify_and_recover() -> dict:
                 r["message"] += f"; backup {os.path.basename(best_backup)} also has invalid signature"
                 unrecoverable += 1
                 try:
-                    from defense_toolkit.defense_log import report as _dl_report
+                    from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                     _dl_report("signature", "red", {
                         "event": f"{fname} 恢复失败 — 备份也签名不匹配",
                         "source": f"备份: {os.path.basename(best_backup)}",
@@ -352,7 +352,7 @@ def verify_and_recover() -> dict:
             r["message"] += "; no backup found for recovery"
             unrecoverable += 1
             try:
-                from defense_toolkit.defense_log import report as _dl_report
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
                 _dl_report("signature", "red", {
                     "event": f"{fname} 恢复失败 — 无可用备份",
                     "source": "磁盘读取",

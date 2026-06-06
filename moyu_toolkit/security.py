@@ -353,7 +353,7 @@ def verify_operation(op_type: str, context: str = "") -> bool:
         print("❌ Wrong password. Operation denied.")
         # Report to defense log
         try:
-            from defense_toolkit.defense_log import report as _dl_report
+            from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
             _dl_report("password", "red", {
                 "event": f"密码验证失败 — {op_type}",
                 "source": context or "用户输入",

@@ -10,7 +10,7 @@ README 描述：SHA256 fingerprint + exhaustive cycle scan + hard abort
   3. Hard abort — 判定循环后主动阻断（返回 BLOCKED 状态，调用方必须响应）
 
 用法：
-    from defense_toolkit.loop_detect import record_operation, check_loop, get_status, is_blocked
+    from moyu_toolkit.defense_toolkit.loop_detect import record_operation, check_loop, get_status, is_blocked
     record_operation("search", "Python list comprehension", {"key": "val"})
     if is_blocked():
         print("🔴 操作已被阻断 — 检测到工具循环")
@@ -144,7 +144,7 @@ def check_loop() -> bool:
 
         # 记防御日志
         try:
-            from defense_toolkit.defense_log import report as _dl_report
+            from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
             _dl_report("loop_detect", "yellow", {
                 "event": f"工具循环阻断 — {reason[:60]}",
                 "source": "运行时监控",

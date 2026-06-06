@@ -31,7 +31,7 @@ def _setup():
         sys.path.insert(0, tgt)
     os.makedirs(os.path.join(TMP_DIR, "memory_data"), exist_ok=True)
     try:
-        from defense_toolkit.integrity_checker import init_manifest
+        from moyu_toolkit.defense_toolkit.integrity_checker import init_manifest
         init_manifest()
     except Exception:
         pass
@@ -91,8 +91,8 @@ def _prepopulate(am):
 # ═══════════════════════════════════════════════════
 
 def layer_defense():
-    from defense_toolkit.integrity_checker import content_scan
-    from defense_toolkit.pii_redactor import redact
+    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
+    from moyu_toolkit.defense_toolkit.pii_redactor import redact
 
     _enter()
     print("─" * 50, flush=True)
@@ -168,7 +168,7 @@ def layer_defense():
 
 def layer_memory():
     from moyu_toolkit import agent_memory as am
-    from defense_toolkit.integrity_checker import content_scan
+    from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
 
     _enter()
     print("─" * 50, flush=True)

@@ -24,7 +24,7 @@ import re
 TOOLKIT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, TOOLKIT_DIR)
 
-from defense_toolkit.integrity_checker import content_scan
+from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
 
 # ═══════════════════════════════════════════════════════════════
 # Mutation Strategies
