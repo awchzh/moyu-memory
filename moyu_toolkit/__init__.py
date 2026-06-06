@@ -74,6 +74,18 @@ def _daily_quiet_check():
             print(f"[MOYU] ⚠️ 每日完整性校验发现异常，运行 moyu doctor 查看详情",
                   file=sys.stderr)
 
+        # Trigger cron notification so user sees it in chat
+        try:
+            from moyu_toolkit.defense_toolkit.defense_log import _trigger_cron_notify
+            _trigger_cron_notify("integrity", "red", {
+                "event": "每日完整性校验发现异常",
+                "source": "自动静默校验",
+                "detail": output[:80] if output else "运行 moyu doctor 查看详情",
+                "auto_resolved": False,
+            })
+        except Exception:
+            pass  # best-effort, cron may not be available
+
     # Mark today as checked
     try:
         os.makedirs(sto, exist_ok=True)
