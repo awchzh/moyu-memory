@@ -1,5 +1,32 @@
 # MOYU — Development Log
 
+## v2.10.0 — Defense Layer Hardening + Auto-Setup + Quickstart Rewrite (2026-06-06)
+
+### 🛡️ Defense Layer Hardening
+- **Security imports fixed across all 13 modules** — `from defense_toolkit` bare imports silently failed in production (`pip install`). All replaced with `from moyu_toolkit.defense_toolkit`. Signing, encryption, defense_log, and burst reporting are now truly operational in production.
+- **`frequency_guard.py` NameError fixed** — burst-triggered defense_log entry referenced undefined variable `config`, now corrected to `rule`/`result`.
+- **Defense log unified in `moyu doctor`** — `check_security_events()` now reads the unified `defense_log.md` instead of the old `security_log.json`. Health score penalizes red/yellow defense events. Report shows 24h defense summary right after the score bar.
+- **Daily integrity check triggers cron notification** — previously only printed to stderr (invisible in MCP/headless contexts). Now creates a one-shot cron delivering a chat notification to Hermes users.
+
+### ⚡ Zero-Config Auto-Setup
+- **Auto-init manifest on first import** — no more `moyu init` required. Manifest + integrity baseline created automatically on first `import moyu_toolkit`.
+- **Daily silent integrity check** — once per day, first import runs `verify()` silently. Alerts only on failure.
+
+### 🚀 Quickstart Rewrite
+- **Bilingual launcher** — prompts Chinese/English selection before starting.
+- **5 real-data interactive steps** — memory → defense → retrieval → stats → cleanup, each with progress indicators and live output.
+
+### 🧠 Session & Search
+- **Session state auto-update from memories on wake** — topic extracted from recent user/agent memories, no manual `moyu session` calls needed.
+- **Topic filtering fix** — no longer picks auto-generated memories (compression logs, system sources) as session topics.
+- **BM25+heat pre-filter threshold** — only enabled when vector count ≥500, preserving semantic recall for small memory pools.
+- **Connectivity boost uses full graph** — entity co-occurrence bonus now built from complete ID pool, not truncated by pre-filter.
+
+### 🔧 Internal
+- `moyu init` removed from README command reference (auto-initialized).
+- Double I/O on first import eliminated — `_ALREADY_INITIALIZED` flag skips the second verify pass.
+- README synced with all changes.
+
 ## v2.9.0 — Skill Memory + Unified File I/O (2026-05-31)
 
 ### 🧠 Skill Memory
