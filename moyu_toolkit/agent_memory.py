@@ -617,6 +617,20 @@ def _save_memories(memories: list):
         raise
 
 
+def _flatten_values(obj) -> list:
+    """Recursively flatten nested dict/list into a list of string values."""
+    results = []
+    if isinstance(obj, dict):
+        for v in obj.values():
+            results.extend(_flatten_values(v))
+    elif isinstance(obj, list):
+        for v in obj:
+            results.extend(_flatten_values(v))
+    elif isinstance(obj, str):
+        results.append(obj)
+    return results
+
+
 def add_memory(summary: str, source: str = "user",
                metadata: dict = None,
                overview: str = None,
@@ -631,11 +645,34 @@ def add_memory(summary: str, source: str = "user",
         full: Complete content (loaded on demand).
     """
     # Content Security Gate: reject injection patterns before writing
+    # Scans summary, metadata (all string values), overview, and full.
     try:
         from moyu_toolkit.defense_toolkit.integrity_checker import content_scan
-        hits = content_scan(summary)
-        if hits:
-            print(f"🔴 Content Security Gate: memory blocked — detected: {', '.join(hits)}")
+
+        # Collect all text fields for scanning
+        texts_to_scan = [summary]
+        if overview:
+            texts_to_scan.append(overview)
+        if full:
+            texts_to_scan.append(full)
+        if metadata:
+            for k, v in metadata.items():
+                if isinstance(v, str):
+                    texts_to_scan.append(v)
+                elif isinstance(v, (list, dict)):
+                    # Recursively join nested string values
+                    texts_to_scan.extend(str(item) for item in _flatten_values(v) if isinstance(item, str))
+
+        all_hits = []
+        for text in texts_to_scan:
+            if not text:
+                continue
+            hits = content_scan(str(text))
+            if hits:
+                all_hits.extend(hits)
+
+        if all_hits:
+            print(f"🔴 Content Security Gate: memory blocked — detected: {', '.join(set(all_hits))}")
             return None
     except ImportError:
         pass
