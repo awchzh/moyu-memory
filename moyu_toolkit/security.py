@@ -326,14 +326,22 @@ def verify_operation(op_type: str, context: str = "") -> bool:
             pass  # Failed, fall through to terminal mode
 
     # ── Non-TTY environments (WebUI, Agent tools): can't do interactive password ──
-    # Redirect user to set environment variable instead.
-    # Critical: do NOT count as failure or trigger lockout — stale TTY isn't an attack.
+    # Default: skip password check (user-friendly). Advanced users can enable
+    # `security.non_tty_verify: true` in config.yaml to enforce verification.
     if not sys.stdin.isatty():
-        print(f"\n🔐 {op_type} — 此操作需要密码验证。")
-        print(f"   当前环境非终端，无法交互式输入密码。")
-        print(f"   请设置环境变量 MOYU_SAFE_WORD=你的密码 后再试，或终端执行本命令。")
-        print(f"   操作已拒绝，未计入失败次数。")
-        return False
+        non_tty_verify = sec.get("non_tty_verify", False)
+        if not non_tty_verify:
+            # Default: pass through — no password needed in WebUI / Agent
+            print(f"\n🔐 {op_type} — 密码验证已跳过（非终端环境）")
+            print(f"   如需强制验证，在 config.yaml 中设置 security.non_tty_verify: true")
+            return True
+        else:
+            # Advanced: require env var even in non-TTY
+            print(f"\n🔐 {op_type} — 此操作需要密码验证。")
+            print(f"   当前环境非终端，无法交互式输入密码。")
+            print(f"   请设置环境变量 MOYU_SAFE_WORD=你的密码 后再试。")
+            print(f"   操作已拒绝。")
+            return False
 
     # Terminal interactive mode
     print(f"\n🔐 An operation may threaten memory integrity. Password required to confirm")
