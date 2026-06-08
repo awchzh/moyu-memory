@@ -365,7 +365,27 @@ def sync_patterns(dry_run: bool = False) -> dict:
     
     if not isinstance(remote, list):
         return {"status": "error", "message": "Remote patterns file has unexpected format"}
-    
+
+    # Validate each element: must be [pattern_str: str, label: str]
+    for i, item in enumerate(remote):
+        if not (isinstance(item, list) and len(item) == 2
+                and isinstance(item[0], str) and isinstance(item[1], str)):
+            return {
+                "status": "error",
+                "message": f"Remote pattern at index {i} has invalid format: "
+                           f"expected [str, str], got {type(item).__name__} with {len(item)} elements",
+            }
+
+    # Also validate local patterns defensively
+    for i, item in enumerate(local):
+        if not (isinstance(item, list) and len(item) == 2
+                and isinstance(item[0], str) and isinstance(item[1], str)):
+            return {
+                "status": "error",
+                "message": f"Local pattern at index {i} is corrupted: "
+                           f"expected [str, str]",
+            }
+
     # Build identity set for local patterns (pattern_str + label = unique identity)
     local_ids = set()
     for p, l in local:

@@ -617,17 +617,27 @@ def _save_memories(memories: list):
         raise
 
 
-def _flatten_values(obj) -> list:
-    """Recursively flatten nested dict/list into a list of string values."""
+def _flatten_values(obj, max_depth=50):
+    """Iteratively flatten nested dict/list into list of string values.
+    Safe from stack overflow: uses explicit stack instead of recursion,
+    capped at max_depth to prevent DoS via deeply nested metadata."""
     results = []
-    if isinstance(obj, dict):
-        for v in obj.values():
-            results.extend(_flatten_values(v))
-    elif isinstance(obj, list):
-        for v in obj:
-            results.extend(_flatten_values(v))
-    elif isinstance(obj, str):
-        results.append(obj)
+    stack = [(obj, 0)]
+    while stack:
+        current, depth = stack.pop()
+        if depth > max_depth:
+            continue
+        if isinstance(current, dict):
+            # Also scan dict keys (they could carry malicious text)
+            for k, v in current.items():
+                if isinstance(k, str):
+                    results.append(k)
+                stack.append((v, depth + 1))
+        elif isinstance(current, list):
+            for v in current:
+                stack.append((v, depth + 1))
+        elif isinstance(current, str):
+            results.append(current)
     return results
 
 

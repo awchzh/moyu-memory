@@ -154,9 +154,10 @@ def _load_patterns() -> list:
 # ─────────────────────────────────────────
 
 _INVISIBLE = re.compile(
-    '[\u200b-\u200f\u202a-\u202e\u2060-\u2069'
-    '\ufeff\u00ad\u180e\u034f\u061c\u115f\u1160\u17b4\u17b5'
-    '\u2800\U000e0001\U000e0020-\U000e007f]'
+    '[\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2069\u206a-\u206f'
+    '\ufeff\u00ad\u180e\u180b-\u180d\u034f\u061c\u115f\u1160\u17b4\u17b5'
+    '\u2800\ufe00-\ufe0f'
+    '\U000e0000\U000e0001\U000e0020-\U000e007f\U000e0100-\U000e01ef]'
 )
 
 _COMBINING = re.compile(

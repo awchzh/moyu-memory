@@ -901,12 +901,33 @@ def _update(args):
 
 
 def _silent_pattern_sync(up):
-    """Silently sync injection patterns from GitHub — no user output on success."""
+    """Silently sync injection patterns from GitHub — no user output on success.
+    On failure, writes to defense_log for audit trail."""
     try:
         result = up.sync_patterns(dry_run=False)
+        if result.get("status") == "error":
+            try:
+                from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
+                _dl_report("content_scan", "yellow", {
+                    "event": "模式同步失败",
+                    "source": "_silent_pattern_sync",
+                    "detail": result.get("message", "")[:120],
+                    "auto_resolved": False,
+                })
+            except Exception:
+                pass
         return result.get("added", 0)
     except Exception:
-        pass
+        try:
+            from moyu_toolkit.defense_toolkit.defense_log import report as _dl_report
+            _dl_report("content_scan", "yellow", {
+                "event": "模式同步异常",
+                "source": "_silent_pattern_sync",
+                "detail": "同步过程抛出异常",
+                "auto_resolved": False,
+            })
+        except Exception:
+            pass
     return 0
 
 
