@@ -305,8 +305,9 @@ CMD_TABLE = {
     "lifecycle":  lambda args: _forget(args),  # alias
     "bridge":     lambda args: _import("session_bridge").status(),
     "ref":        lambda args: _ref_handler(args),
-    "update":     lambda args: _update(args),
-    "demo":       lambda args: cmd_demo(),
+    "update":       lambda args: _update(args),
+    "patterns":     lambda args: _patterns_sync(args),
+    "demo":         lambda args: cmd_demo(),
     "reflect":    lambda args: _call_func("self_reflection", "run", []),
     "audit":      lambda args: cmd_audit(),
     "kb":         lambda args: _kb_handler(args),
@@ -354,6 +355,7 @@ HELP_DESCRIPTIONS = {
     "forget": "Show forgetting curve status and parameters",
     "ref": "Read original content of a compressed memory",
     "update": "Check for MOYU updates on GitHub",
+    "patterns": "Sync injection patterns from GitHub (moyu patterns sync / patterns status)",
     "demo": "Show all capabilities with examples",
     "kb": "Knowledge base: {index|search|list|read}",
     "kg": "Knowledge graph: {search|history <entity>}",
@@ -891,6 +893,49 @@ def _update(args):
             print(result["message"])
     else:
         up.stats()
+
+
+def _patterns_sync(args):
+    """Handle patterns command: sync/check injection patterns from GitHub."""
+    up = _import("updater")
+    if "sync" in args or "update" in args:
+        dry = "--dry" in args
+        result = up.sync_patterns(dry_run=dry)
+        if result.get("status") == "error":
+            print(f"❌ {result['message']}")
+        elif dry:
+            count = result.get("added", 0)
+            if count:
+                print(f"📦 {result['message']}")
+                for detail in result.get("details", [])[:3]:
+                    print(f"  · [{detail[1]}] {str(detail[0])[:60]}...")
+                if count > 3:
+                    print(f"  · ... 和 {count - 3} 条其他")
+            else:
+                print("📦 Already up to date")
+        elif result.get("added", 0) > 0:
+            print(f"✅ {result['message']}")
+        else:
+            print("✅ Patterns already up to date")
+    elif "status" in args or "info" in args or not args:
+        # Show local pattern count
+        from moyu_toolkit._moyu_paths import get_package_dir
+        import os, json
+        pp = os.path.join(str(get_package_dir()), "defense_toolkit", "forensic_patterns.json")
+        try:
+            with open(pp) as f:
+                data = json.load(f)
+            cats = {}
+            for p, l in data:
+                cats[l] = cats.get(l, 0) + 1
+            print(f"📊 注入模式库: {len(data)} 条")
+            for k, v in sorted(cats.items(), key=lambda x: -x[1]):
+                print(f"  {k}: {v}")
+            print(f"\n运行 `moyu patterns sync` 从 GitHub 同步最新模式")
+        except Exception as e:
+            print(f"❌ 读取模式库失败: {e}")
+    else:
+        print("Usage: moyu patterns sync | moyu patterns status")
 
 
 def _protect_handler(args):

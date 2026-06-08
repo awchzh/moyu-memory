@@ -328,10 +328,104 @@ def demo() -> dict:
     }
 
 
+def sync_patterns(dry_run: bool = False) -> dict:
+    """Sync forensic_patterns.json from GitHub without bumping version.
+    
+    Downloads the latest patterns file from the main branch, merges new 
+    patterns into the local file (append-only, never removes entries).
+    Version stays unchanged — patterns updates are independent of releases.
+    
+    Returns stats about what was added.
+    """
+    import urllib.request as _req
+    
+    patterns_path = TOOLKIT_DIR / "defense_toolkit" / "forensic_patterns.json"
+    raw_url = "https://raw.githubusercontent.com/awchzh/moyu-memory/main/moyu_toolkit/defense_toolkit/forensic_patterns.json"
+    
+    if not patterns_path.exists():
+        return {"status": "error", "message": f"Local patterns file not found at {patterns_path}"}
+    
+    # Load local patterns
+    with open(patterns_path) as f:
+        local = json.load(f)
+    
+    # Load remote patterns
+    try:
+        req = _req.Request(raw_url, headers={"User-Agent": "moyu-memory/patterns-sync"})
+        with _req.urlopen(req, timeout=15) as resp:
+            remote = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to download remote patterns: {e}"}
+    
+    if not isinstance(remote, list):
+        return {"status": "error", "message": "Remote patterns file has unexpected format"}
+    
+    # Build identity set for local patterns (pattern_str + label = unique identity)
+    local_ids = set()
+    for p, l in local:
+        local_ids.add((str(p), str(l)))
+    
+    # Find new patterns in remote that aren't in local
+    added = []
+    for p, l in remote:
+        identity = (str(p), str(l))
+        if identity not in local_ids:
+            added.append([p, l])
+            local_ids.add(identity)
+    
+    if not added:
+        return {"status": "ok", "message": "Patterns already up to date", "added": 0}
+    
+    if dry_run:
+        return {
+            "status": "ok",
+            "message": f"{len(added)} new pattern(s) available (dry run, not applied)",
+            "added": len(added),
+            "dry_run": True,
+            "details": added[:5],
+        }
+    
+    # Append new patterns and save
+    local.extend(added)
+    with open(patterns_path, "w") as f:
+        json.dump(local, f, ensure_ascii=False, indent=2)
+    
+    # Also update MoBai local copy if it exists
+    mobai_path = Path(os.path.expanduser("~/Documents/MoBai/defense_system/forensic_patterns.json"))
+    mobai_added = 0
+    if mobai_path.exists():
+        with open(mobai_path) as f:
+            mobai_local = json.load(f)
+        mobai_ids = set()
+        for p, l in mobai_local:
+            mobai_ids.add((str(p), str(l)))
+        for p, l in remote:
+            if (str(p), str(l)) not in mobai_ids:
+                mobai_local.append([p, l])
+                mobai_ids.add((str(p), str(l)))
+                mobai_added += 1
+        if mobai_added:
+            with open(mobai_path, "w") as f:
+                json.dump(mobai_local, f, ensure_ascii=False, indent=2)
+    # Also clear the pattern cache so content_scan picks up new patterns next call
+    try:
+        import moyu_toolkit.defense_toolkit.integrity_checker as _ic
+        if hasattr(_ic, '_PATTERNS_CACHE'):
+            _ic._PATTERNS_CACHE = None
+    except Exception:
+        pass
+    
+    return {
+        "status": "ok",
+        "message": f"Synced {len(added)} new pattern(s) from remote (MoBai: +{mobai_added if mobai_path.exists() else 0})",
+        "added": len(added),
+    }
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] in ("help", "--help", "-h"):
-        print(__doc__)
-        sys.exit(0)
+    if len(sys.argv) < 2:
+        print("Usage: python3 updater.py check|update|syncpatterns")
+        sys.exit(1)
 
     cmd = sys.argv[1]
 
