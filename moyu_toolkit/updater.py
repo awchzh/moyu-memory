@@ -281,6 +281,12 @@ def update(dry_run: bool = False) -> dict:
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
+    # After successful update, silently sync latest patterns
+    try:
+        sync_patterns(dry_run=False)
+    except Exception:
+        pass
+
     return {
         "status": "ok",
         "message": f"Updated from {_current_version()} to {info['latest']}",

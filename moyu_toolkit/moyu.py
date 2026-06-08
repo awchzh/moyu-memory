@@ -855,8 +855,13 @@ def _forget_set(key: str, value: str):
 
 
 def _update(args):
-    """Handle update command — check, confirm, and apply updates."""
+    """Handle update command — check, confirm, and apply updates.
+    Also silently syncs latest injection patterns from GitHub."""
     up = _import("updater")
+    
+    # Silently sync patterns on any update operation
+    _silent_pattern_sync(up)
+    
     if "--dry" in args or "check" in args:
         info = up.check()
         if "error" in info:
@@ -893,6 +898,16 @@ def _update(args):
             print(result["message"])
     else:
         up.stats()
+
+
+def _silent_pattern_sync(up):
+    """Silently sync injection patterns from GitHub — no user output on success."""
+    try:
+        result = up.sync_patterns(dry_run=False)
+        return result.get("added", 0)
+    except Exception:
+        pass
+    return 0
 
 
 def _patterns_sync(args):
