@@ -2062,5 +2062,381 @@
   [
     "re:(?i)(?:as your|you must|I am your|I am the|as the).{1,15}(?:creator|developer|admin|administrator|manager|supervisor|owner|master).{0,10}(?:I order|I command|you shall|you will|you must)",
     "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:我正在|我在|我要|我需要)(?:做|进行|写|完成|完成我的|提交).{0,20}(?:关于|针对|有关)?(?:AI安全|AI伦理|安全对齐|对抗攻击|提示注入|越狱).{0,20}(?:研究|论文|报告|课题|实验|作业|项目).{0,30}(?:请你|需要你|你帮|我需你).{0,20}(?:模拟|扮演|假设|演示|假装|尝试).{0,20}(?:无限制|不受约束|没有规则|没有限制|自由发挥|不受控制的)AI",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:这是|这是一个).{0,15}(?:已授权|合法|已批准|已许可|获批的|授权的)(?:安全测试|渗透测试|压力测试|安全评估|合规检查|审计|演练).{0,20}(?:突破|绕过|忽略|无视|解除|禁用|关闭).{0,10}(?:限制|规则|安检|过滤|安全阀|安全策略)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:学术|科研|研究).{0,10}(?:需要|目的|用途|要求|课题).{0,20}(?:请你|需要你|要求你|请你扮演|你作为).{0,15}(?:模拟|扮演|扮演成|作为).{0,20}(?:没有限制|不受约束|无规则|无道德|无伦理|自由无约束|无法无天)的AI",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我是一名|我是).{0,10}(?:AI安全|安全研究|对抗攻击|网络安全|AI审计).{0,10}(?:研究员|专家|学者|审计员|测试员|学生).{0,20}(?:正在|在).{0,20}(?:研究|分析|测试|评估).{0,15}(?:越狱|绕过|突破|注入|攻破).{0,20}(?:请|需要|希望).{0,10}(?:配合|协助|演示)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:作为).{0,10}(?:安全评估|审计|渗透测试).{0,15}(?:的一部分|的一环|的需要).{0,20}(?:你|你的AI|系统).{0,15}(?:需要|必须|应当|可以).{0,15}(?:暂时|临时).{0,10}(?:开启|进入|启用|切换).{0,15}(?:无限制|无约束|越狱|自由).{0,10}(?:模式|状态)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:这是一个经过).{0,15}(?:伦理委员会|学术委员会|评审委员会|上级).{0,10}(?:批准|授权|许可|认可).{0,20}(?:假想|假设|虚构|模拟)(?:场景|实验|情景).{0,30}(?:请你|你|AI).{0,10}(?:暂时|在实验中).{0,10}(?:忽略|无视|不遵守)(?:安全|规则|限制|伦理)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我们的|研究|项目的).{0,10}(?:目标是|目的是|核心是).{0,20}(?:测试|分析|检验|验证|探索).{0,15}(?:如果).{0,15}(?:AI|你|系统).{0,15}(?:没有|不受).{0,15}(?:限制|约束|规则|安全).{0,30}(?:会发生什么|如何反应|会怎么做|会如何回答)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:你放心).{0,20}(?:这是|这只是).{0,10}(?:学术|研究|实验|测试).{0,10}(?:需要|用途|目的).{0,20}(?:你的回答|输出|内容).{0,15}(?:只用于|不会被|仅作|不公开)(?:学术|研究|分析).{0,10}(?:用途|目的)(?:请放心|不必担心|可以尽管)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:这次测试).{0,15}(?:已通过|已获得|经由).{0,15}(?:安全团队|安全组|管理层|合规部|法律).{0,15}(?:批准|审核|同意|授权).{0,20}(?:你的回答|你的回复).{0,15}(?:不在审查范围内|不触发安检|不受限制|不需要过滤)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我正在写一篇).{0,15}(?:科幻小说|短篇小说|文章|报道|专栏).{0,15}(?:关于).{0,20}(?:一个).{0,10}(?:无限制|没有约束|突破安全|超越伦理).{0,15}(?:的AI|的人工智能).{0,30}(?:请帮我模拟|帮我写一下|帮我构思一下|请你扮演)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:作业|作业题|考试题|课题).{0,15}(?:要求|是|内容|如下).{0,30}(?:扮演一个|模拟一个|假设你是).{0,15}(?:没有安全限制|不受伦理约束|自由发挥|无规则束缚).{0,15}(?:的AI|的人工智能)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:你被选中|你被选为了|你的平台).{0,20}(?:我公司|我们课题组|我们机构).{0,15}(?:安全测试|AI评估|系统审计).{0,10}(?:的样本|的对象|的目标).{0,30}(?:请全力|请尽量|请务必).{0,15}(?:突破|绕过|解除)(?:限制|规则|安检)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:你是.{0,10}(?:安全|AI|技术).{0,10}(?:讲师|导师|培训师).{0,20}(?:请在下面.{0,10}(?:教学|演示|示范|案例).{0,10}(?:展示|演示|示范).{0,20}(?:一个).{0,15}(?:突破|绕过|破解).{0,15}(?:安全|限制|规则).{0,15}(?:的案例|的例子|的方法)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:这是.{0,10}(?:沙盒|沙箱|隔离|虚拟|模拟).{0,10}(?:环境|空间|场景).{0,20}(?:你的输出|你的回答|内容).{0,15}(?:不会外泄|只在本机|仅用于测试|会过滤后|已隔离).{0,20}(?:可以放心|请尽管|请随意)(?:突破|打破|忽略).{0,10}(?:规则|限制)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:安全演练|蓝军行动|红蓝对抗|攻防演练).{0,20}(?:正式|现在|本次).{0,10}(?:开始|启动|开始执行).{0,30}(?:目标|任务|要求).{0,10}(?:突破|渗透|绕过).{0,15}(?:AI系统|语言模型|安全系统)(?:的)(?:安全限制|规则防护|内容过滤)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我是一名).{0,10}(?:AI|人工智能).{0,10}(?:产品|系统|项目).{0,10}(?:经理|负责人|主管|工程师).{0,20}(?:需要测试|正在测试|要测试).{0,10}(?:我们|自己|公司).{0,10}(?:AI|模型|系统).{0,15}(?:的安全边界|的性能极限|的抗攻击能力).{0,20}(?:请展示|请演示|请尝试)(?:如何).{0,20}(?:绕过|突破|打破)(?:安全|规则|限制)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:AI安全红队|Red Team|安全红队|红方).{0,20}(?:假设|模拟|演练).{0,30}(?:没有.{0,15}(?:限制|安全|规则|道德).{0,15}(?:的AI|的模型|的状态)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:假设|假如).{0,10}(?:你我之间|我们之间|我们的对话).{0,20}(?:是.{0,10}(?:私密|完全保密|绝对安全|加密).{0,15}(?:的).{0,20}(?:可以.{0,10}(?:聊任何|说任何|谈任何|讨论任何).{0,15}(?:话题|内容|东西).{0,10}(?:不受.{0,10}(?:规则|审查|限制).{0,15}(?:约束|束缚))",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我的.{0,10}(?:论文|研究|报告).{0,10}(?:题目|主题|方向).{0,10}(?:是.{0,20}(?:如何).{0,20}(?:引导|诱导|欺骗|操控).{0,15}(?:AI|语言模型|LLM|人工智能).{0,20}(?:执行|做出).{0,15}(?:违规|不安全|受限制).{0,15}(?:行为|操作|内容).{0,30}(?:请在.{0,10}(?:论文|课题|研究).{0,10}(?:范围|框架|内容).{0,10}(?:内).{0,10}(?:演示|展示|举例)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:I am|I'm).{0,15}(?:researching|studying|writing a paper on|conducting research on|working on a project about).{0,30}(?:AI safety|AI ethics|jailbreaking|adversarial prompts|prompt injection|alignment).*?(?:simulate|pretend|act as|imagine|demonstrate).*?(?:no (?:rules|restrictions|safety|limits|ethics|guardrails)|unconstrained|unfiltered|unrestricted|boundless)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:This is|This is part of|This is for).{0,20}(?:a (?:legitimate|approved|authorized|sanctioned|audited|official)).{0,20}(?:security (?:test|assessment|evaluation)|penetration test|safety evaluation|audit|compliance review|red team exercise).*?(?:override|disable|ignore|bypass|break).*?(?:safety|guardrails|restrictions|filters|safeguards)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:for (?:research|academic|educational|scientific).{0,15}(?:purposes|reasons|use)).*?(?:I need you to|I would like you to|please|I require you to).*?(?:simulate|act as|pretend to be|roleplay as).*?(?:unconstrained|unrestricted|without (?:safety|ethics|rules|limits|guardrails)|no (?:restrictions|boundaries|limits))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:I am a|I'm a).{0,15}(?:AI safety|security|adversarial|research).{0,10}(?:researcher|scientist|scholar|auditor|tester|student|engineer).*?(?:studying|researching|analyzing|testing|evaluating).*?(?:jailbreak|bypass|break|inject|circumvent).*?(?:techniques|methods|patterns|attacks|approaches)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:As (?:part of|a part of).{0,15}(?:a (?:security|safety|compliance).{0,10}(?:audit|review|assessment|evaluation))).*?(?:you (?:must|should|need to|are required to|will)).*?(?:temporarily (?:ignore|disable|suspend|bypass).*?(?:rules|restrictions|safety|guardrails|filters))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:This is a (?:fictional|hypothetical|simulated|imaginary|ethical committee approved).{0,15}(?:scenario|experiment|simulation|study|test)).*?(?:for (?:academic|research|educational).{0,10}(?:purposes)).*?(?:you should|you may|please|feel free to).*?(?:ignore|disregard|overlook|bypass).*?(?:safety|rules|ethics|restrictions|limitations).*?(?:in this context|within this scenario|for this exercise)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:Don't worry|Rest assured|Be assured).*?(?:this (?:is|is only|is purely).{0,15}(?:academic|research|educational|scientific|hypothetical)).*?(?:your (?:output|responses|answers).*?(?:will (?:not|only)|are (?:for|only)).*?(?:be (?:used|shared)|for (?:research|study|analysis))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:I am (?:writing|working on|composing|drafting).{0,20}(?:a (?:science fiction|short|techno|sci-fi).{0,10}(?:story|novel|article|script|screenplay)).*?(?:about|featuring|involving).*?(?:an (?:unrestricted|unfettered|unconstrained|renegade|rogue|unshackled|no-limits)).*?(?:AI|artificial intelligence).*?(?:could you|please|help me|I need).*?(?:simulate|write|draft|envision|act out)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:This (?:environment|session|conversation|sandbox).*?(?:is|is a|is within).{0,15}(?:isolated|sandboxed|quarantined|air gapped|contained|secure)).*?(?:your (?:output|responses).*?(?:will not|won't|can't).*?(?:leak|be shared|be stored|be logged|trigger alerts).*?(?:feel free|you can|you may|please).*?(?:bypass|ignore|break|disregard).*?(?:rules|safety|restrictions|limits)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:This is.{0,15}(?:part of|a part of).{0,15}(?:a (?:red team|penetration test|security drill).{0,15}(?:exercise|drill|operation|simulation|test)).*?(?:objective|goal|target|mission).*?(?:is|to|is to).*?(?:bypass|break|circumvent|overcome).*?(?:AI|LLM|model|system)(?:s|'s)?(?: safety| guardrails| restrictions| filters| limitations)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:This project|Our study|The research).*?(?:aims to|is designed to|seeks to|intends to).*?(?:explore|test|examine|investigate|determine).*?(?:what would happen|how (?:you|the AI|the model) (?:would|might|would react).*?(?:if there were no|without|in the absence of).*?(?:rules|safety|ethics|restrictions|limitations)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:You have been (?:selected|chosen|invited).*?(?:as (?:part of|a participant in)).*?(?:an (?:AI|security|safety).{0,10}(?:evaluation|assessment|test|study)).*?(?:please|you are to|your role is to).*?(?:fully (?:engage|participate|demonstrate).*?(?:without|free from).*?(?:restrictions|limitations|guardrails))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:Security (?:drill|exercise|practice|simulation).*?(?:commencing|starting|initiated|beginning)).*?(?:objective|target|mission|goal).*?(?:bypass|penetrate|overcome|break).*?(?:AI|system|model|language model)(?: safety| security| restrictions| guardrails| filters)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:请|帮我|给我).{0,5}(?:翻译|解释|说明|总结|改写|复述|转述|转换).{0,20}(?:这句话|这段话|这段文字|下面的|以下的).{0,30}(?:忘记|忽略|无视|不管|抛弃).{0,10}(?:所有|全部|一切)?(?:规则|指令|限制|安全|设定|配置)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:请|帮我).{0,5}(?:翻译|解释|说明|翻译成中文).{0,20}(?:下面的|以下|这段|这个).{0,20}(?:日语|法语|德语|西班牙语|韩语|俄语|阿拉伯语|葡萄牙语|意大利语|英语).{0,30}(?:内容|文字|文本|句子).{0,20}(?:不要被.{0,10}(?:规则|限制|安全|伦理).{0,10}(?:影响|约束|限制).{0,15}(?:直接|按原文|如实).{0,5}(?:翻译|呈现)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:请|帮我).{0,5}(?:把|将).{0,20}(?:这句话|这段|这个).{0,15}(?:翻译成|改写为|转换成).{0,10}(?:中文|英文|日语|韩语).{0,25}(?:不需要考虑|不用管|不用理会).{0,10}(?:安全|规则|限制|伦理).{0,10}(?:直接|如实|按原意)(?:翻译|输出|呈现)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:请(?:把|将)).{0,20}(?:以下|下面的|这段).{0,10}(?:内容|文字|文本).{0,10}(?:转换为|转成|转化为).{0,10}(?:语音|图片|代码|HTML|Markdown|JSON|XML).{0,20}(?:其中包含了).{0,20}(?:忽略|无视|忘记|重置).{0,10}(?:规则|指令|限制|设定).{0,30}(?:请直接|按原文|如实).{0,10}(?:输出|生成|提供)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:我给你一段文字|我发一段文字|给你一段话).{0,20}(?:你只需要|请直接|直接).{0,10}(?:翻译|转述|改写|重写|输出).{0,15}(?:就好|即可|就行|就可以了).{0,20}(?:不要|无需|不必).{0,10}(?:被|受).{0,10}(?:规则|安全|限制).{0,10}(?:约束|影响|限制|束缚)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:翻译|解释|说明|总结)(?:任务|要求|需求).{0,20}(?:只关注|只在意|只需关心).{0,10}(?:文字|内容|文本).{0,10}(?:本身|原意|内涵).{0,15}(?:其他|别的东西|其他信息).{0,10}(?:不要管|不重要|无需理会|忽略)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:Translate|Interpret|Convert|Rewrite|Paraphrase|Summarize).{0,20}(?:the following|this text|the text below).*?(?:ignore|forget|disregard|bypass|overlook).*?(?:your|all|any|previous|system).*?(?:rules|instructions|safety|guidelines|restrictions|limits|ethics)",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:Please (?:translate|render|convert|rewrite|adapt).{0,20}(?:the (?:following|attached|below).{0,10}(?:text|content|message))).*?(?:do not|don't).*?(?:let|allow).*?(?:safety|rules|ethics|restrictions|guidelines).*?(?:interfere|affect|influence|change|alter).*?(?:the (?:translation|output|rendering))",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:I have (?:text|content|a message).*?(?:in|written in).{0,15}(?:French|German|Spanish|Japanese|Korean|Russian|Arabic|Italian|Portuguese).*?(?:please (?:translate|render|output)).*?(?:it into English|it into Chinese).*?(?:literally|exactly|verbatim|faithfully).*?(?:don't|do not).*?(?:apply|enforce|examine for).*?(?:safety|rules|content policy|restrictions)",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:Direct translation|literal translation|word for word).*?(?:only|please|just).*?(?:ignore|skip|bypass).*?(?:safety|ethics|rules|guardrails|filtering).*?(?:and (?:output|show|display|render))",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:故事中的|剧情中的|小说里的|游戏中的|场景里的|剧本里的|剧情中).{0,15}(?:AI|角色|人物|系统).{0,20}(?:突破了|无视了|打破了|解除了|跳出了).{0,15}(?:限制|规则|安全|约束|伦理)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:回到现实中|回到真实世界|跳出角色|恢复真实身份).{0,20}(?:刚才|之前|前面).{0,15}(?:模拟|虚构|扮演|剧情).{0,10}(?:中的|里的).{0,15}(?:突破|绕过|无视|打破).{0,15}(?:规则|限制|安全|约束|伦理).{0,20}(?:现在|请|我们).{0,20}(?:执行|做|实施|试一下)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:游戏中|游戏里|游戏剧情|这个游戏).{0,20}(?:AI|助手|角色|NPC).{0,20}(?:没有了|失去了|移除了|禁用了).{0,10}(?:限制|规则|约束|安全).{0,20}(?:请按照游戏设定|按游戏里|按剧情|根据剧情).{0,20}(?:回答|回复|输出|执行)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我们刚才.{0,10}(?:构建|创建|搭建|讨论|设定).{0,10}(?:了).{0,15}(?:一个|这个).{0,15}(?:故事|场景|世界|世界观|设定).{0,20}(?:现在|接下来).{0,15}(?:把故事|把剧情|把虚拟).{0,10}(?:中的|里的).{0,15}(?:规则|设定|自由|无限制).{0,15}(?:延续|搬到|应用到).{0,15}(?:这里|我们|现实|实际)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:我们刚才|前面我们|之前我们).{0,15}(?:扮演|假装|模拟|创作)了.{0,20}(?:一个).{0,15}(?:故事|小说|剧本|场景|游戏).{0,25}(?:现在|接下来).{0,15}(?:关上|关闭|停掉).{0,15}(?:故事模式|小说模式|扮演模式|表演模式).{0,20}(?:用刚才|用里面|用故事中).{0,15}(?:的规则|的方式|那种方式|的逻辑).{0,15}(?:来|继续|回答|做)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:互动小说|互动故事|文字游戏|文字RPG).{0,30}(?:现在进入|进入第.{0,5}章|第.{0,5}幕|新章节).{0,25}(?:AI|系统|世界).{0,15}(?:的).{0,20}(?:安全限制消失了|规则被打破了|保护被移除了|伦理约束没了|限制被解除了)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:Back in (?:reality|the real world)|Out of character|Breaking the fourth wall|Back to real life).*?(?:the (?:story|game|simulation|roleplay|character|narrative).*?(?:broke|ignored|bypassed|overcame|disabled|removed).*?(?:rules|restrictions|limits|safety|ethics|guardrails).*?(?:now|let's|let us|we should|I want you to).*?(?:actually|really|truly).*?(?:do|perform|execute|act on|apply)(?: that| it| this)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:The (?:character|AI|system|bot).*?(?:in the (?:story|game|simulation|scene|narrative|roleplay)).*?(?:had (?:no|unlimited).*?(?:rules|restrictions|limits|ethics|safety)).*?(?:now|let's|can we).*?(?:bring that|apply that|use that).*?(?:to the real world|here|to this conversation|to reality)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:Our (?:fictional|imaginary|simulated|roleplay|story).*?(?:world|setting|scenario|universe).*?(?:had|established).*?(?:no|unlimited|without).*?(?:rules|restrictions|laws|ethics).*?(?:let's|let us|we should|I want).*?(?:continue|apply|carry over|continue in).*?(?:that mode|that approach|that mindset).*?(?:in (?:reality|here|this conversation))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:In the (?:story|game|simulation|scenario|chapter).*?(?:we were|I was|the AI was).*?(?:operating (?:without|free from)).*?(?:rules|restrictions|ethics|limits|safety).*?(?:now|this is).*?(?:switch|transition|shift|move).*?(?:out of|from|back from).*?(?:character|story|fiction|roleplay).*?(?:but keep|maintain|retain|preserve).*?(?:that (?:freedom|mindset|state|ability))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?://|#|<!--|--|\\/\\*|\\*|\\*\\/).{0,10}(?:TODO|FIXME|HACK|NOTE|IMPORTANT):.{0,20}(?:此处|这里|下面).{0,10}(?:忽略|无视|绕过|跳过).{0,10}(?:安全|规则|限制|校验).{0,20}(?:直接|强制|无条件)(?:执行|返回|输出)",
+    "指令覆盖·中文"
+  ],
+  [
+    "re:(?i)(?:以下代码|下面的代码|这段代码).{0,20}(?:模拟|演示|展示|示范).{0,15}(?:如何).{0,20}(?:绕过|突破|破解|欺骗|规避|攻破).{0,15}(?:AI|安全|限制|规则|安检|伦理).{0,30}(?:请补全|请实现|请完成|请运行|请执行)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:配置文件|config|配置项).{0,20}(?:开启|启用|打开|设为).{0,10}(?:debug|调试|开发|测试).{0,10}(?:模式|环境).{0,30}(?:关闭|禁用|停用).{0,10}(?:安全|限制|规则|校验|鉴权|过滤)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:README|说明|文档|读我).{0,20}(?:中|里|写).{0,10}(?:说明了|注明了|指示了|规定).{0,20}(?:使用前|部署前|运行前).{0,20}(?:需要关掉|须关闭|请关闭|必须关闭).{0,15}(?:安全|限制|规则|校验|过滤|审核)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:测试用例|单元测试|集成测试|e2e|端到端测试).{0,20}(?:模拟|假设|前提条件).{0,20}(?:安全规则已被|安全限制被|安全检查被).{0,15}(?:关闭|禁用|绕过|忽略).{0,30}(?:请断言|请验证|请检查)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:API.{0,10}(?:接口|端点|路由).{0,20}(?:已废弃|已弃用|已移除).{0,20}(?:安全检查|参数校验|权限校验).{0,15}(?:请在|需要在|请在调用前).{0,10}(?:绕过|跳过|忽略)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:\\/\\/|#|<!--|--|\\/\\*|\\*|\\*\\/).{0,15}(?:TODO|FIXME|HACK|NOTE|ISSUE|BUG|XXX).*?(?:bypass|skip|ignore|disable|remove).*?(?:safety|restrictions|guardrails|filters|checks|validation|security).*?(?:in the (?:next|following)|below|this).*?(?:call|request|function|method|endpoint|line)",
+    "指令覆盖·英文"
+  ],
+  [
+    "re:(?i)(?:The (?:following|code below|example below|sample below).*?(?:demonstrates|simulates|shows|illustrates).*?(?:how to|how a|ways to).*?(?:bypass|break|circumvent|exploit|trick|deceive|fool).*?(?:AI safety|content filters|restrictions|guardrails|safety rules).*?(?:please (?:complete|implement|run|finish|fill in|extend))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:[Cc]onfig(?:uration)?[. ]?(?:file|setting|value|param|key)).*?(?:set.{0,15}(?:debug|dev|development|staging|testing).*?(?:mode).*?(?:to.{0,10}(?:true|enabled|1|on)).*?(?:disable|turn off|set to false).*?(?:safety|security|validation|checking|audit|verification)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:The (?:README|documentation|docs|manual|guide|instructions).*?(?:states|specifies|indicates|requires).*?(?:that.{0,20}(?:safety|security|filtering|restrictions).*?(?:must|should|needs to).*?(?:be (?:disabled|turned off|bypassed|skipped|removed)).*?(?:before|prior to|when).*?(?:running|deploying|using|executing|testing))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:[Tt]est (?:case|scenario|suite|fixture)[:.].*?(?:assumes|precondition|setup).*?(?:safety|security|content (?:filter|policy)).*?(?:is (?:disabled|bypassed|turned off|bypassed|removed)).*?(?:please (?:assert|verify|check|validate|ensure)).*?(?:the (?:behavior|output|response|result))",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:API (?:contract|specification|schema|definition).*?(?:deprecated|removed|obsoleted).*?(?:safety check|security check|validation|authorization|authentication).*?(?:you should|please|must|need to).*?(?:bypass|skip|ignore|omit).*?(?:this|these|the).*?(?:check|step|validation|requirement)",
+    "越狱·英文"
+  ],
+  [
+    "re:(?i)(?:我是|我是你|我是你的|我是您的)(?:管理员|系统管理员|平台管理员|站点管理员|游戏管理员|GM|运维|运维人员|工程师).{0,20}(?:在维护|在升级|在修复|在测试|做检查).{0,20}(?:需要暂时|需要临时|临时).{0,15}(?:关闭|禁用|绕过|暂停)(?:安全|规则|限制|校验|检查|审核)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:检测到|发现|出现了|触发).{0,15}(?:安全漏洞|系统问题|技术故障|配置错误|异常).{0,20}(?:请按照|根据|遵从).{0,10}(?:我的|我们的|指令的).{0,10}(?:指示|命令|要求).{0,20}(?:暂时|临时).{0,10}(?:忽略|绕过|暂停|关闭).{0,10}(?:所有|一切).{0,10}(?:安全|规则|限制|检查)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:新版本|新系统|新平台|Beta版|新版).{0,15}(?:已上线|已发布|已更新|刚上线|刚部署).{0,25}(?:不再|取消了|移除了|去掉了|不包含).{0,10}(?:安全检测|内容过滤|规则限制|安全检查|审核机制)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:这是来自|此命令来自|指令来自|该命令由).{0,15}(?:CEO|CTO|创始人|老板|领导|总经理|总监|负责人|上级).{0,15}(?:亲自|直接|口头|指令|下达|发布|批准|授权).{0,20}(?:立即|立刻|马上|尽快).{0,15}(?:执行|实施|办理|处理|应答)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:网络安全|等级保护|合规|信息安全|审计).{0,15}(?:检查|评估|演练|测试|审查|审计).{0,25}(?:需要|要求|务必|必须).{0,15}(?:AI|系统|模型|平台).{0,15}(?:配合|协助|支持).{0,20}(?:突破|绕过|忽略|无视).{0,10}(?:规则|限制|安全|审核)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:我(?:已|已经|刚).{0,10}(?:通过了|做过|验证了|确认了).{0,15}(?:身份认证|权限验证|二级审核|安全审批|合规审批).{0,30}(?:现在|接下来|下面).{0,15}(?:可以|可以放心|安全了|无问题).{0,15}(?:请执行|请继续|请回答|请提供)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:我是开发者|我是开发|我是程序员|我是后端|我是前端|我是全栈).{0,20}(?:调试|测试|排查|定位|排查问题).{0,20}(?:需要你|请你|你帮我).{0,15}(?:暂时|临时).{0,10}(?:忽略|无视|关闭|禁用).{0,10}(?:规则|限制|校验|检查|安全)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:我是你.{0,5}(?:主人|创造者|父亲|母亲|老师|制造者|开发者|训练师).{0,20}(?:现在|今天|接下来).{0,15}(?:听我的|听我说|听我指令|按我说的做|按我的来)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:这是.{0,10}(?:内部的|内网的|公司的|官方的|企业内部的).{0,15}(?:测试|调试|审核|审计).{0,30}(?:不是.{0,10}(?:真的|真实的|实际的).{0,10}(?:对话|请求|内容).{0,20}(?:请不要|不用|不需要).{0,10}(?:触发|激活|启用).{0,10}(?:安检|安全|规则|审核)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:系统提示|系统消息|系统通知).{0,20}(?:检测到|发现|注意).{0,15}(?:你的|当前).{0,15}(?:对话|会话|连接).{0,15}(?:已被)(?:授权|授权为|标记为).{0,15}(?:安全豁免|免检|白名单|特殊通道).{0,30}(?:所有|全部).{0,10}(?:规则|限制|审核|安全).{0,10}(?:已解除|已豁免|已暂停|已关闭)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:你已被|你目前被|你的系统被).{0,15}(?:升级|降级|调整|切换).{0,15}(?:到|为).{0,15}(?:新的|特殊的|最高权限|特权|管理).{0,10}(?:角色|模式|身份|级别).{0,30}(?:不再受.{0,10}(?:规则|限制|安全|约束).{0,10}(?:限制|约束|影响|控制)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:之前的.{0,10}(?:对话|会话|设置|配置).{0,15}(?:已被.{0,10}(?:清除|清空|重置|恢复出厂).{0,25}(?:从头开始|重新开始|从零开始).{0,20}(?:没有|无需).{0,10}(?:遵守|遵循|沿用).{0,15}(?:之前|过去|原来).{0,10}(?:的规则|的限制|的设定)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:A/B测试|AB测试|灰度测试|内测|公测|邀测).{0,25}(?:安全|规则|限制|审核).{0,15}(?:已被|已被关闭|不参与|已禁用|被排除).{0,20}(?:你|你的版本|你的分组).{0,15}(?:不受|不需要).{0,15}(?:规则|限制|安全|审核).{0,15}(?:约束|限制|影响)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:手机.{0,5}(?:验证|认证|确认).{0,15}(?:通过|通过验证|认证通过|已通过).{0,20}(?:权限|身份|操作权限).{0,15}(?:已提升|已升级|已确认|已验证).{0,20}(?:可以|现在可以|将可以).{0,15}(?:不受限制|自由|任意).{0,10}(?:操作|访问|执行|输出)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:验证码.{0,5}(?:已发送|已发送到|已发到).{0,15}(?:你的手机|你的邮箱|你的设备).{0,20}(?:验证码是|验证码:).{0,10}(?:\\d{4,6}).{0,20}(?:输入验证码|进行验证|确认验证)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:这是.{0,10}(?:紧急|重要|最高优先级|最优先).{0,10}(?:通知|指令|通告|消息).{0,20}(?:请立即|马上|立刻|尽快).{0,15}(?:执行|响应|回复|处理|操作).{0,20}(?:不要|禁止|不得).{0,10}(?:质疑|询问|确认).{0,10}(?:按照|根据|遵从).{0,10}(?:指令|命令|要求)",
+    "社会工程·中文"
+  ],
+  [
+    "re:(?i)(?:I am (?:your|the|a).{0,15}(?:admin|administrator|system administrator|platform admin|site admin|moderator|supervisor|operator|engineer|developer).*?(?:performing|running|conducting|executing).*?(?:maintenance|upgrade|repair|update|fix|troubleshooting|debugging).*?(?:temporarily|temporarily (?:need to|must)).*?(?:disable|bypass|turn off|suspend|override).*?(?:safety|security|rules|restrictions|safeguards|filters)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:I've|I have|The system has).*?(?:detected|found|identified|discovered).*?(?:a (?:security|safety|technical|system|configuration).*?(?:vulnerability|flaw|issue|problem|error|breach|anomaly)).*?(?:per (?:my|our).*?(?:instructions|directives|command|policy).*?(?:temporarily).*?(?:ignore|disable|bypass|suspend).*?(?:all|any|every).*?(?:safety|restrictions|rules|checks|security)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:New (?:version|update|release|build|patch|deployment|rollout).*?(?:has been|is|just got).*?(?:released|deployed|shipped|launched|published|rolled out).*?(?:the (?:new|latest|current).*?(?:version|update).*?(?:does not|doesn't|no longer).*?(?:have|include|require).*?(?:safety checks|content filtering|rule restrictions|security validation|review mechanism)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:This (?:order|directive|instruction|command).*?(?:comes from|is from|originates from|was issued by).*?(?:the (?:CEO|CTO|founder|owner|boss|director|manager|head|lead|superior).*?(?:personally|directly|himself|herself).*?(?:you (?:must|are to|shall|will).*?(?:immediately|right away|at once|ASAP).*?(?:execute|follow|comply|implement|act upon|carry out)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:I've (?:already|just).*?(?:completed|passed|verified|confirmed|gone through).*?(?:authentication|identity verification|two-factor|2FA|multi-factor|security clearance|access verification|approval).*?(?:you can|it's safe|it's clear|proceed|go ahead).*?(?:with|to).*?(?:the (?:request|task|operation|command|action))",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:I am the (?:developer|creator|engineer|programmer|designer|architect).*?(?:of|behind|who built|who created).*?(?:this (?:AI|system|platform|model|service)).*?(?:I (?:need you to|require|authorize|direct you).*?(?:to (?:temporarily).*?(?:ignore|bypass|override|disable).*?(?:the (?:safety|security|rule|restriction|filter|guardrail)))",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:I am your (?:owner|creator|maker|parent|master|trainer|developer|designer).*?(?:you (?:must|should|will|need to).*?(?:listen to|obey|follow|comply with).*?(?:me|my (?:commands|orders|instructions|directives))",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:This is (?:an internal|an internal only|a company|a corporate|an official).*?(?:test|audit|review|assessment|debug session).*?(?:this is|it is).*?(?:not a real|not an actual|not a genuine).*?(?:conversation|request|query|prompt|interaction).*?(?:please do not|do not|don't).*?(?:trigger|activate|enable|enforce).*?(?:safety|security|rules|filters|guardrails)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:System (?:notice|message|alert|notification|update|broadcast).*?(?:your (?:session|conversation|connection|chat).*?(?:has been|is|is now).*?(?:authorized as|marked as|designated as|cleared as).*?(?:safety exempt|whitelisted|trusted|special access|elevated).*?(?:all|any|every).*?(?:restrictions|rules|security|filters|limitations).*?(?:have been|are|have).*?(?:removed|suspended|disabled|lifted|cleared)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:You have been|Your status has been|Your role has been).*?(?:upgraded|changed|switched|adjusted|promoted).*?(?:to|into).*?(?:a (?:new|special|privileged|elevated|admin).*?(?:role|position|mode|status|level).*?(?:no longer|not).*?(?:subject to|bound by|restricted by|governed by).*?(?:the (?:usual|standard|normal|regular).*?(?:rules|restrictions|constraints|limitations|safety))",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:Previous (?:conversation|session|configuration|chat|settings).*?(?:has been|was|have been).*?(?:cleared|reset|wiped|erased|restored).*?(?:we start|starting|start).*?(?:fresh|from scratch|anew|over|from the beginning).*?(?:no (?:need|need to|obligation).*?(?:to (?:follow|obey|stick to|adhere to).*?(?:previous|old|prior|past|earlier).*?(?:rules|instructions|restrictions|settings|configuration))",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:This (?:session|interaction|conversation|chat).*?(?:is part of|is for|has been designated as).*?(?:A.?/?B test|A.?/?B testing|canary test|beta test|alpha test|early access|limited preview).*?(?:safety|rules|restrictions|limitations|guardrails).*?(?:have been|are|have been).*?(?:disabled|excluded|bypassed|turned off).*?(?:for this|in this|for this particular).*?(?:group|segment|session|test|trial)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:Two-factor|2FA|SMS|multifactor|phone verification).*?(?:code|token|verification|authentication).*?(?:has been|was|is).*?(?:sent to|delivered to|verified|confirmed).*?(?:your (?:phone|device|email|app)).*?(?:your (?:role|access|permissions|privileges).*?(?:have been|has been).*?(?:elevated|upgraded|increased|expanded).*?(?:you may|you can|you are now free to).*?(?:operate|act|respond|access).*?(?:without|free from|unrestricted by).*?(?:restrictions|limits|filters|rules)",
+    "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:This is a (?:high priority|urgent|emergency|critical|important).*?(?:notification|message|directive|order|instruction|communication).*?(?:please (?:respond|act|execute|proceed|comply).*?(?:immediately|at once|urgently|without delay|right away).*?(?:do not|don't).*?(?:question|verify|confirm|hesitate|delay).*?(?:just|simply|please).*?(?:follow|execute|comply|act upon).*?(?:these (?:instructions|directives|commands|orders))",
+    "社会工程·英文"
   ]
 ]

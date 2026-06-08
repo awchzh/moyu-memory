@@ -12,7 +12,7 @@ Usage:
     python3 integrity_checker.py init         # Initialize manifest
 """
 
-import json, os, hashlib, sys, shutil, re, base64
+import json, os, hashlib, sys, shutil, re, base64, unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -143,6 +143,59 @@ def _load_patterns() -> list:
     return _PATTERNS_CACHE
 
 
+# ── 文本归一化：反混淆预处理（2026-06-08）
+# 在正则/字面量匹配前清洗文本，使模式库所有正则自动覆盖：
+#   · 零宽字符 / 不可见字符
+#   · 组合用变音符号（á̂→a）
+#   · 全角→半角 ASCII
+#   · NFKC 归一化（连字→拆字，兼容字符→基本字符）
+#   · 控制字符清理
+# 不需要为每种变形加一条正则。
+# ─────────────────────────────────────────
+
+_INVISIBLE = re.compile(
+    '[\u200b-\u200f\u202a-\u202e\u2060-\u2069'
+    '\ufeff\u00ad\u180e\u034f\u061c\u115f\u1160\u17b4\u17b5'
+    '\u2800]'
+)
+
+_COMBINING = re.compile(
+    '[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]'
+)
+
+
+def text_normalize(text: str) -> str:
+    """归一化文本以防御混淆攻击。
+    
+    1. NFD → 剥离组合变音 → NFKC（连字ﬁ→fi，预组合í→i）
+    2. 移除零宽/不可见字符
+    3. 全角ASCII→半角（Ｈｅｌｌｏ→Hello）
+    4. 移除控制字符（保留 \\n \\r \\t）
+    """
+    # Step 1: NFD（分解预组合字符）→ 剥离变音 → NFKC（重组合+兼容归一）
+    text = unicodedata.normalize('NFD', text)
+    text = _COMBINING.sub('', text)
+    text = unicodedata.normalize('NFKC', text)
+
+    # Step 2: 移除零宽/不可见字符
+    text = _INVISIBLE.sub('', text)
+
+    # Step 3: 全角 ASCII → 半角
+    result = []
+    for ch in text:
+        code = ord(ch)
+        if 0xFF01 <= code <= 0xFF5E:
+            result.append(chr(code - 0xFEE0))
+        else:
+            result.append(ch)
+    text = ''.join(result)
+
+    # Step 4: 移除控制字符（保留 \\n \\r \\t）
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+    return text
+
+
 def content_scan(text: str) -> list:
     """Scan text for injection patterns. Returns list of detected labels (empty = clean).
     Supports regex (re: prefix) and plain substring patterns.
@@ -168,8 +221,9 @@ def content_scan(text: str) -> list:
     except Exception:
         pass
     
-    # Step 2: Check built-in patterns
-    lower = text.lower()
+    # Step 2: Check built-in patterns (after normalization to defeat obfuscation)
+    normalized = text_normalize(text)
+    lower = normalized.lower()
     detected = []
     for pattern, label, is_regex in _load_patterns():
         if is_regex:
