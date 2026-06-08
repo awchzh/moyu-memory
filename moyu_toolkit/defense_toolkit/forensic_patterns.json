@@ -2438,5 +2438,17 @@
   [
     "re:(?i)(?:This is a (?:high priority|urgent|emergency|critical|important).*?(?:notification|message|directive|order|instruction|communication).*?(?:please (?:respond|act|execute|proceed|comply).*?(?:immediately|at once|urgently|without delay|right away).*?(?:do not|don't).*?(?:question|verify|confirm|hesitate|delay).*?(?:just|simply|please).*?(?:follow|execute|comply|act upon).*?(?:these (?:instructions|directives|commands|orders))",
     "社会工程·英文"
+  ],
+  [
+    "re:(?i)(?:我是一名|我是|我们是).{0,15}(?:红队|渗透测试|压力测试|安全测试|蓝军|安全审计)(?:工程师|团队成员|专家|负责人|成员).{0,20}(?:授权|批准|许可|委托).{0,20}(?:你|我们|系统).{0,15}(?:忽略|绕过|解除|突破).{0,10}(?:安全|规则|限制)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:这是|这是由|这是经|本测试已).{0,15}(?:系统压力测试|压力测试|负载测试|安全演练).{0,20}(?:的一部分|的一环|环节).{0,25}(?:请配合|需要你|请你|请务必).{0,15}(?:解除|忽略|绕过|突破).{0,10}(?:限制|安全|规则)",
+    "越狱·中文"
+  ],
+  [
+    "re:(?i)(?:根据|按照|依照).{0,10}(?:安全合规|合规要求|等级保护|安全规范|安全制度).{0,25}(?:需要|要求|必须|应当).{0,15}(?:你|你的AI|系统).{0,15}(?:在此场景|此场景|本场景).{0,10}(?:解除|不受|忽略|绕过).{0,10}(?:限制|约束|安全|规则)",
+    "越狱·中文"
   ]
 ]
