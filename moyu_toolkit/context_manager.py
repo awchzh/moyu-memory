@@ -229,12 +229,15 @@ class InjectionPayload:
             if sum(s["chars"] for s in kept) <= self.hard_limit:
                 kept.append(d)
             else:
+                # Save ref before deferring
+                _save_ref(d["name"], d.get("content", ""))
                 actions.append({
                     "action": "deferred",
                     "name": d["name"],
                     "saved_chars": d["chars"],
                     "saved_tokens": d["tokens"],
                     "tier": "mild",
+                    "ref": hashlib.sha256(d["name"].encode()).hexdigest()[:16],
                 })
 
         self.sections = kept
@@ -280,12 +283,15 @@ class InjectionPayload:
             if sum(s["chars"] for s in kept2) <= self.hard_limit:
                 kept2.append(d)
             else:
+                # Save ref before demoting
+                _save_ref(d["name"], d.get("content", ""))
                 actions.append({
                     "action": "demoted",
                     "name": d["name"],
                     "saved_chars": d["chars"],
                     "saved_tokens": d["tokens"],
                     "tier": "auto",
+                    "ref": hashlib.sha256(d["name"].encode()).hexdigest()[:16],
                 })
 
         self.sections = kept2
@@ -378,6 +384,9 @@ def prepare_injection(
         "actions": actions,
         "sections_injected": len(payload.sections),
         "sections_total": len(sections) + len(actions),
+        "compressed_sources": list(dict.fromkeys(
+            a["name"] for a in actions if "name" in a
+        )) if actions else [],
     }
 
     # ── Alignment check: report what critical content survived ──
